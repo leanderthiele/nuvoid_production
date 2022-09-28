@@ -18,10 +18,6 @@ export ID="test1"
 # size of the simulation
 export NC=2800
 
-# how many parallel Rockstar processes we allow in maximum (due to memory constraints perhaps)
-# If this is set to zero or not defined, the number of nodes is used
-export NMAX_PARALLEL_ROCKSTAR=0
-
 # =========== GENERAL QUIJOTE =============
 # exports BOX_SIZE, Z_OUT, BASE
 source cmass.sh
@@ -30,9 +26,6 @@ source cmass.sh
 # exports all COSMO_* variables
 source mnu200meV_cosmo.sh
 
-# =========== INPUT FILE TEMPLATES =========
-# exports all *_TEMPLATE variables
-source fid_templates.sh
-
-# =========== RUN ALL CODES ===========
-bash run_reps_fastpm_rockstar.sh
+# =========== RUN CODES ===========
+bash run_class_reps.sh
+bash run_fastpm.sh

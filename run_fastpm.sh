@@ -65,6 +65,10 @@ export OMPI_MCA_mpi_show_mca_params=1
 export SRUN_CPUS_PER_TASK=1
 export OMP_NUM_THREADS=1
 
+# FIXME for testing
+echo "Not actually running FastPM"
+exit 0
+
 # prepare environment for FastPM
 module load "$FASTPM_MODULES"
 conda activate "$FASTPM_CONDA_ENV"

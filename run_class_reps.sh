@@ -74,16 +74,17 @@ for s in $cosmo_info; do echo $s >> $COSMO_INFO_FILE; done
 # prepare the REPS input file
 reps_ini="$COSMO_WRK_DIR/reps.ini"
 cp $REPS_CFG_TEMPLATE $reps_ini
-utils::replace $reps_ini 'WORKDIR'  "$COSMO_WRK_DIR"
-utils::replace $reps_ini 'h'        "$COSMO_HUBBLE"
-utils::replace $reps_ini 'OB0'      "$COSMO_OMEGA_B"
-utils::replace $reps_ini 'OC0'      "$OMEGA_CDM"
-utils::replace $reps_ini 'As'       "$A_s"
-utils::replace $reps_ini 'ns'       "$COSMO_NS"
-utils::replace $reps_ini 'N_nu'     "$(printf '%.1f' $COSMO_N_NU)"
-utils::replace $reps_ini 'wrong_nu' "$(($COSMO_N_NU==0 ? 0 : $COSMO_WRONG_NU))"
-utils::replace $reps_ini 'Neff'     "$N_UR"
-utils::replace $reps_ini 'M_nu'     "$M_NU"
+utils::replace $reps_ini 'WORKDIR'   "$COSMO_WRK_DIR"
+utils::replace $reps_ini 'h'         "$COSMO_HUBBLE"
+utils::replace $reps_ini 'OB0'       "$COSMO_OMEGA_B"
+utils::replace $reps_ini 'OC0'       "$OMEGA_CDM"
+utils::replace $reps_ini 'As'        "$A_s"
+utils::replace $reps_ini 'ns'        "$COSMO_NS"
+utils::replace $reps_ini 'N_nu'      "$(printf '%.1f' $COSMO_N_NU)"
+utils::replace $reps_ini 'wrong_nu'  "$(($COSMO_N_NU==0 ? 0 : $COSMO_WRONG_NU))"
+utils::replace $reps_ini 'Neff'      "$N_UR"
+utils::replace $reps_ini 'M_nu'      "$M_NU"
+utils::replace $reps_ini 'Z_INITIAL' "$(printf '%.1f' $Z_INITIAL)"
 
 # now we get to run REPS
 module load "$REPS_MODULES"

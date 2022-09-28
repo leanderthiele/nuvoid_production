@@ -28,6 +28,9 @@ mkdir -p "$ROOT/powerspectra"
 # hash the ID if seed not defined
 if [ -z $SEED ]; then SEED=$(utils::dec_hash "$ID" 32); fi
 
+# compute the FastPM time steps
+time_steps="$(./timesteps $Z_INITIAL $Z_MID $LOG_STEPS $LIN_STEPS $NUM_SNAPS $TIMES)"
+
 # write our input file
 fastpm_cfg="$ROOT/fastpm_script.lua"
 cp $FASTPM_CFG_TEMPLATE $fastpm_cfg
@@ -39,6 +42,8 @@ utils::replace $fastpm_cfg 'OUT_REDSHIFTS' "$(echo "${Z_ARR[@]}" | tr " " ",")"
 utils::replace $fastpm_cfg 'Omega_m'       "$COSMO_OMEGA_M"
 utils::replace $fastpm_cfg 'h'             "$COSMO_HUBBLE"
 utils::replace $fastpm_cfg 'REPS_OUTPUT'   "$COSMO_WRK_DIR"
+utils::replace $fastpm_cfg 'TIME_STEPS'    "$time_steps"
+utils::replace $fastpm_cfg 'Z_INITIAL'     "$(printf '%.4f' $Z_INITIAL)"
 
 # for the FastPM file, we avoid confusion by removing neutrino part entirely if not necessary
 if [ "$COSMO_N_NU" -eq "0" ]; then

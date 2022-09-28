@@ -9,30 +9,10 @@ boxsize = <<<boxsize>>>
 
 -- time sequence (simulation steps)
 -- I believe these are pretty similar to what was used in Bayer+2020
-
--- log=5 and lin=20 are Bayer+2020
-n_steps_log = 5
-n_steps_lin = 20
-z_i = 99
-z_m = 19
-a_i = 1. / (1. + z_i)
-a_m = 1. / (1. + z_m)
-a_f = 0.6667
-
--- time_step = loglinspace(a_i, a_m, a_f, n_steps_log, n_steps_lin)
-time_step = { 0.01, 0.01495349, 0.02236068, 0.03343702, 0.05,
-              0.08854375, 0.1270875, 0.16563125, 0.204175,
-              0.24271875, 0.2812625, 0.31980625, 0.35835, 0.39689375,
-              0.4354375, 0.47398125, 0.512525, 0.55106875,
-              0.571428571, 0.579710145, 0.588235294, 0.597014925,
-              0.60606061, 0.615384615, 0.625, 0.634920635,
-              0.64516129, 0.677737705, 0.6667, 0.67796602,
-              0.6898 }
--- take the last time-step a bit larger than the final snapshot we want,
---   otherwise FastPM doesn't store the snapshot
+time_step = { <<<TIME_STEPS>>> }
 
 -- write outputs here
-output_redshifts = {<<<OUT_REDSHIFTS>>>}
+output_redshifts = { <<<OUT_REDSHIFTS>>> }
 
 -- LambdaCDM
 -- needs to match the reps.ini file obviously
@@ -40,10 +20,10 @@ Omega_m = <<<Omega_m>>> -- this is (cdm + baryon + ncdm), so includes the neutri
 h = <<<h>>>
 T_cmb = 2.725
 
--- Perturbations, i.e. REPS output
+-- Perturbations, i.e. REPS output. Note the initial redshift is in .4f
 REPS_OUTPUT = "<<<REPS_OUTPUT>>>"
-read_powerspectrum = REPS_OUTPUT .. "/Pcb_rescaled_z99.0000.txt"
-read_linear_growth_rate = REPS_OUTPUT .. "/fcb_z99.0000.txt"
+read_powerspectrum = REPS_OUTPUT .. "/Pcb_rescaled_z<<<Z_INITIAL>>>.txt"
+read_linear_growth_rate = REPS_OUTPUT .. "/fcb_z<<<Z_INITIAL>>>.txt"
 
 -- STARTNEUTRINOS
 N_eff = <<<N_eff>>>
@@ -61,13 +41,13 @@ ncdm_freestreaming = false
 ncdm_matterlike = false
 
 -- the neutrino growth
-read_powerspectrum_ncdm = REPS_OUTPUT .. "/Pn_rescaled_z99.0000.txt"
-read_linear_growth_rate_ncdm = REPS_OUTPUT .. "/fn_z99.0000.txt"
-linear_density_redshift_ncdm = z_i
+read_powerspectrum_ncdm = REPS_OUTPUT .. "/Pn_rescaled_z<<<Z_INITIAL>>>.txt"
+read_linear_growth_rate_ncdm = REPS_OUTPUT .. "/fn_z<<<Z_INITIAL>>>.txt"
+linear_density_redshift_ncdm = <<<Z_INITIAL>>>
 -- ENDNEUTRINOS
 
 -- where these files have been computed
-linear_density_redshift = z_i
+linear_density_redshift = <<<Z_INITIAL>>>
 
 -- initial conditions?
 random_seed = <<<random_seed>>>

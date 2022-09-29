@@ -5,7 +5,7 @@
 #SBATCH -c 1
 #SBATCH --mem=185G
 
-#SBATCH -t 01:00:00
+#SBATCH -t 02:00:00
 
 set -e -x -o pipefail
 
@@ -17,6 +17,9 @@ export ID="test1"
 
 # size of the simulation
 export NC=2800
+
+# random FastPM seed
+export SEED=137
 
 # =========== GENERAL QUIJOTE =============
 # exports BOX_SIZE, Z_OUT, BASE

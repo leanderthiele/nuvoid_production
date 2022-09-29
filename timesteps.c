@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 {
     int ii;
 
-    char **c = argv;
+    char **c = argv+1;
 
     double z_initial = atof(*(c++));
     double z_mid = atof(*(c++));

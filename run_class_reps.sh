@@ -26,7 +26,7 @@ mkdir -p $COSMO_WRK_DIR
 
 # figure A_s out
 
-class_ini="$cosmo_wrk_dir/find_As.ini"
+class_ini="$COSMO_WRK_DIR/find_As.ini"
 cp $CLASS_CFG_TEMPLATE $class_ini
 utils::replace $class_ini 'Omega_m' "$COSMO_OMEGA_M"
 utils::replace $class_ini 'Omega_b' "$COSMO_OMEGA_B"
@@ -38,7 +38,7 @@ utils::replace $class_ini 'N_ncdm'  "$COSMO_N_NU"
 utils::replace $class_ini 'm_ncdm'  "$COMMA_M_NU"
 
 module load "$CLASS_MODULES"
-class_log="$cosmo_wrk_dir/find_As.log"
+class_log="$COSMO_WRK_DIR/find_As.log"
 utils::run "$CLASS_EXE $class_ini" $class_log
 module rm "$CLASS_MODULES"
 
@@ -64,7 +64,7 @@ cosmo_info=$(printf 'hash=%s
                      m_nu=%s
                      Omega_nu=%.8f
                      Omega_cdm=%.8f' \
-             $cosmo_hash  "$(date +%F@%T)" \
+             $COSMO_HASH  "$(date +%F@%T)" \
              $COSMO_OMEGA_M $COSMO_OMEGA_B $COSMO_HUBBLE $COSMO_NS $COSMO_SIGMA8 \
              $COSMO_N_NU $COSMO_M_NU $COSMO_WRONG_NU \
              $A_s $M_NU "($COMMA_M_NU)" $OMEGA_NU $OMEGA_CDM)

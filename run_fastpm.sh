@@ -13,7 +13,7 @@ FASTPM_MODULES="anaconda3/2021.11 intel-mpi/intel/2019.7/64 gsl/2.6"
 FASTPM_CONDA_ENV="fastpm"
 
 # templates used in this script
-FASTPM_CFG_TEMPLATE="$HOME/nuvoid_production/fastpm_cfg.lua"
+FASTPM_CFG_TEMPLATE="$HOME/nuvoid_production/fastpm_script.lua"
 
 # only run FastPM if output not existent
 if [ -d "$ROOT/snap_${TIMES_ARR[$((NUM_SNAPS-1))]}" ]; then
@@ -29,7 +29,9 @@ mkdir -p "$ROOT/powerspectra"
 if [ -z $SEED ]; then SEED=$(utils::dec_hash "$ID" 32); fi
 
 # compute the FastPM time steps
+echo "$Z_INITIAL $Z_MID $LOG_STEPS $LIN_STEPS $NUM_SNAPS $TIMES"
 time_steps="$(./timesteps $Z_INITIAL $Z_MID $LOG_STEPS $LIN_STEPS $NUM_SNAPS $TIMES)"
+echo "$time_steps"
 
 # write our input file
 fastpm_cfg="$ROOT/fastpm_script.lua"
@@ -64,10 +66,6 @@ export OMPI_MCA_mpi_show_mca_params=1
 # for the FastPM call
 export SRUN_CPUS_PER_TASK=1
 export OMP_NUM_THREADS=1
-
-# FIXME for testing
-echo "Not actually running FastPM"
-exit 0
 
 # prepare environment for FastPM
 module load "$FASTPM_MODULES"

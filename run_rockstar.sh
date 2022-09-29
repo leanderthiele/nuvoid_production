@@ -25,7 +25,12 @@ snap_link="${rockstar_dir}/snap_${snap_idx}"
 
 # only run if output does not exist
 if [ -f "$rockstar_dir/out_${snap_idx}.list" ]; then
-  echo "Not running Rockstar as output already exists"
+  echo "Not running Rockstar as .list output already exists"
+  exit 0
+fi
+
+if [ -d "$rockstar_dir/out_${snap_idx}_hosts.bf" ]; then
+  echo "Not running Rockstar as .bf output already exists"
   exit 0
 fi
 

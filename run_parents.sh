@@ -27,6 +27,12 @@ if [ -d "${wparents_base}_hosts.bf" ]; then
   exit 0
 fi
 
+# do nothing if no input available
+if [ ! -f $outfile ]; then
+  echo "Not running parents as input does not exist"
+  exit 0
+fi
+
 module load "$ROCKSTAR_MODULES"
 utils::run "$ROCKSTAR_FINDPARENTS_EXE $wparents_base $outfile" "$LOGS/rockstar_parents_$time.log"
 module rm "$ROCKSTAR_MODULES"

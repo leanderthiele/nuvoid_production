@@ -18,7 +18,7 @@ ROCKSTAR_CFG_TEMPLATE="$HOME/nuvoid_production/rockstar_server.cfg"
 
 
 snap_idx="$1"
-time=${TIMES_ARR[$SNAP_IDX]}
+time=${TIMES_ARR[$snap_idx]}
 snap_dir="$ROOT/snap_$time"
 rockstar_dir="$ROOT/rockstar_$time"
 snap_link="${rockstar_dir}/snap_${snap_idx}"
@@ -26,6 +26,12 @@ snap_link="${rockstar_dir}/snap_${snap_idx}"
 # only run if output does not exist
 if [ -f "$rockstar_dir/out_${snap_idx}.list" ]; then
   echo "Not running Rockstar as output already exists"
+  exit 0
+fi
+
+# check if we actually have the data available
+if [ ! -d $snap_dir ]; then
+  echo "Not running Rockstar as snapshot does not exist"
   exit 0
 fi
 
@@ -71,6 +77,7 @@ module rm "$ROCKSTAR_MODULES"
 
 # if we have finished successfully, we should delete the snapshot
 if [ -f "$rockstar_dir/out_${snap_idx}.list" ]; then
+  rm -f $snap_link &
   rm -rf $snap_dir &
   rm -f $rockstar_dir/halos_* &
   rm -rf $rockstar_dir/profiling &

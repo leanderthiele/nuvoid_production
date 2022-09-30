@@ -17,6 +17,6 @@ for snap_idx in $( seq 0 $((NUM_SNAPS-1)) ); do
   fi
 done
 
-for i in $( seq $rank $world_size ${#todo[@]} ); do
+for i in $( seq $rank $world_size $(( ${#todo[@]} - 1 )) ); do
   bash run_parents.sh ${todo[$i]}
 done

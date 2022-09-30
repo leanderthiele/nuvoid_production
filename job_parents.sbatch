@@ -1,13 +1,10 @@
 #!/bin/bash
 
-#SBATCH -N 8
-#SBATCH --ntasks-per-node=40
+#SBATCH -n 4
 #SBATCH -c 1
-#SBATCH --mem=185G
+#SBATCH --mem-per-cpu=40G
 
-#SBATCH -t 01:00:00
-
-#SBATCH --array=1-2
+#SBATCH -t 00:20:00
 
 set -e -x -o pipefail
 
@@ -32,4 +29,4 @@ source cmass.sh
 source mnu200meV_cosmo.sh
 
 # =========== RUN CODES ===========
-bash run_rockstar_batch.sh $SLURM_ARRAY_TASK_COUNT $((SLURM_ARRAY_TASK_ID-SLURM_ARRAY_TASK_MIN))
+srun -n $SLURM_NTASKS -W 0 bash run_parents_distributed.sh

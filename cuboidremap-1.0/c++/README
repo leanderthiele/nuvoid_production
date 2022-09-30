@@ -1,0 +1,36 @@
+
+This directory contains C++ code to remap a periodic unit cube [0,1]^3 to a
+rectangular cuboid (i.e. a non-cubical box).  The core remapping code is
+encapsulated in the Cuboid class, the declaration of which is given in the
+header file "cuboid.h".  The "remap" program is a wrapper around the Cuboid
+class; it reads in points from a text file, and writes the remapped points
+either to file or stdout.
+
+_________
+| remap |
+---------
+
+To compile:
+    make remap
+
+Edit the Makefile as appropriate for your choice of compiler and optimization
+flags.
+
+General usage:
+    ./remap in="infile" out="outfile" u="u11 u12 u13 u21 u22 u23 u31 u32 u33"
+
+"uMN" are the coefficients of a 3x3 invertible integer matrix that specify a
+particular remapping (as generated e.g. by the "genremap" program).  "infile"
+is the path to a text file containing a list of points within the unit cube,
+with one triple "x y z" per line (blank lines or lines beginning with the '#'
+character are ignored).  The program will remap these points into the cuboid
+[0,L1]x[0,L2]x[0,L3] determined by the matrix uMN, and write these remapped
+points to the file "outfile".  If "infile" is not given, or if it is set to
+"stdin", points are read from stdin.  Likewise if "outfile" is not given or set
+to "stdout", points are written to stdout.
+
+Example:
+    ./remap in=input.dat out=output.dat u="2 2 1   1 -1 0   1 0 0"
+
+This example maps 64 uniformly spaced points in the unit cube into a cuboid
+of dimensions 3 x sqrt(2) x 1/sqrt(18).

@@ -201,6 +201,12 @@ int main (int argc, char **argv)
     }
 
     // output
+    char fname[512];
+    std::sprintf(fname, "%s/galaxies/lightcone_%s.txt", inpath, ident);
+    auto fp = std::fopen(fname, "w");
+    std::fprintf(fp, "# RA, DEC, z\n");
+    for (size_t ii=0; ii<z_out.size(); ++ii)
+        std::fprintf(fp, "%.8f %.8f %.8f\n", ra_out[ii], dec_out[ii], z_out[ii]);
 
     // clean up
     gsl_interp_free(z_chi_interp);

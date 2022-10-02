@@ -3,16 +3,25 @@
 #include <vector>
 #include <functional>
 
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_integration.h>
+#include <gsl/gsl_interp.h>
+
 #include "cuboid.h"
 
 // these are the possible remaps I found
-int remaps[][9] = { { 1, 1, 0,
+int remaps[][9] = { // 1.4142 1.0000 0.7071
+                    { 1, 1, 0,
                       0, 0, 1,
                       1, 0, 0, },
+                    // 1.7321 0.8165 0.7071
                     { 1, 1, 1,
                       1, 0, 0,
                       0, 1, 0, },
                   };
+
+// in units of L1, L2, L3
+double origin[] = { 0.5, -0.058, 0.0 };
 
 template<bool reverse>
 int dbl_cmp (const void *a_, const void *b_)
@@ -21,6 +30,30 @@ int dbl_cmp (const void *a_, const void *b_)
     double b = *(double *)b_;
     int sgn = (reverse) ? -1 : 1;
     return sgn * ( (a>b) ? +1 : -1 );
+}
+
+double integrand (double z, void *p)
+{
+    static const double H0inv = 2.99792458e3; // Mpc/h
+    double Omega_m = *(double *)p;
+    return H0inv / std::sqrt( Omega_m*gsl_pow_3(1.0+z)+(1.0-Omega_m) );
+}
+
+void comoving (double Omega_m, int N, double *z, double *chi)
+// populate chi with chi(z) in Mpc/h
+{
+    gsl_function F;
+    F.function = integrand;
+    F.params = &Omega_m;
+
+    static const size_t ws_size = 1024;
+    gsl_integration_workspace *ws = gsl_integration_workspace_alloc(ws_size);
+
+    double err;
+    for (int ii=0; ii<N; ++ii)
+        gsl_integration_qag(&F, 0.0, z[ii], 1e-2, 0.0, ws_size, 6, ws, chi+ii, &err);
+
+    gsl_integration_workspace_free(ws);
 }
 
 template<typename T>
@@ -36,8 +69,9 @@ int main (int argc, char **argv)
     char **c = argv + 1;
 
     char *inpath = *(c++);
-    char *inpattern = *(c++);
+    char *ident = *(c++);
     double BoxSize = std::atof(*(c++));
+    double Omega_m = std::atof(*(c++));
     double zmin = std::atof(*(c++));
     double zmax = std::atof(*(c++));
     int remap_case = std::atoi(*(c++));
@@ -54,17 +88,40 @@ int main (int argc, char **argv)
     for (int ii=0; ii<Nsnaps; ++ii)
         redshifts[ii] = 1.0/times[ii] - 1.0;
 
+    // define the redshift boundaries
+    // TODO we can maybe do something more sophisticated here
+    double redshift_bounds[Nsnaps+1];
+    redshift_bounds[0] = zmin;
+    redshift_bounds[Nsnaps] = zmax;
+    for (int ii=1; ii<Nsnaps; ++ii)
+        redshift_bounds[ii] = 0.5*(redshifts[ii-1]+redshifts[ii]);
+    
+    // convert to comoving distances
+    double chi_bounds[Nsnaps+1];
+    comoving(Omega_m, Nsnaps+1, redshift_bounds, chi_bounds);
+
+    // initialize the interpolator getting us from comoving to redshift
+    const int Ninterp = 1024;
+    double z_interp_min = zmin-0.01, z_interp_max=zmax+0.01;
+    double z_interp[Ninterp];
+    double chi_interp[Ninterp];
+    for (int ii=0; ii<Ninterp; ++ii)
+        z_interp[ii] = z_interp_min + (z_interp_max-z_interp_min)*(double)ii/(double)(Ninterp-1);
+    comoving(Omega_m, Ninterp, z_interp, chi_interp);
+    gsl_interp *z_chi_interp = gsl_interp_alloc(gsl_interp_cspline, Ninterp);
+    gsl_interp_accel *acc = gsl_interp_accel_alloc();
+    gsl_interp_init(z_chi_interp, chi_interp, z_interp, Ninterp);
+
     // initialize the transformation
     auto C = Cuboid(remaps[remap_case]);
 
     // this is the output
-    std::vector<double> ra, dec, z;
+    std::vector<double> ra_out, dec_out, z_out;
 
     for (int ii=0; ii<Nsnaps; ++ii)
     {
-        char basename[512], fname[512];
-        std::sprintf(basename, inpattern, times[ii]);
-        std::sprintf(fname, "%s/%s", inpath, inpattern);
+        char fname[512];
+        std::sprintf(fname, "%s/galaxies/galaxies_%s_%.4f.bin", inpath, ident, times[ii]);
 
         auto fp = std::fopen(fname, "rb");
 
@@ -103,12 +160,51 @@ int main (int argc, char **argv)
                                 vgal[3*jj+0], vgal[3*jj+1], vgal[3*jj+2]);
         }
 
-        // implement RSD
+        // now perform RSD
+        double L[] = { C.L1, C.L2, C.L3 };
         for (size_t jj=0; jj<Ngal; ++jj)
         {
-        // TODO can't be arsed right now
+            // compute the line-of-sight vector
+            double los[3];
+            for (int kk=0; kk<3; ++kk) los[kk] = xgal[3*jj+kk] - origin[kk]*BoxSize*L[kk];
+
+            // compute length of the line-of-sight vector
+            double abs_los = std::hypot(los[0], los[1], los[2]);
+
+            // compute the velocity projection onto the line of sight
+            double vproj = (los[0]*vgal[3*jj+0]+los[1]*vgal[3*jj+1]+los[2]*vgal[3*jj+2])
+                           / abs_los;
+
+            for (int kk=0; kk<3; ++kk) xgal[3*jj+kk] += rsd_factor_f * vproj * los[kk] / abs_los;
+        }
+
+        // choose the galaxies within this redshift shell
+        for (size_t jj=0; jj<Ngal; ++jj)
+        {
+            double los[3];
+            for (int kk=0; kk<3; ++kk) los[kk] = xgal[3*jj+kk] - origin[kk]*BoxSize*L[kk];
+            
+            double chi = std::hypot(los[0], los[1], los[2]);
+
+            if (chi>chi_bounds[ii] && chi<chi_bounds[ii+1])
+            // we are in the comoving shell that's coming from this snapshot
+            {
+                double z = gsl_interp_eval(z_chi_interp, chi_interp, z_interp, chi, acc);
+                double theta = std::acos(los[1]/chi);
+                double phi = std::atan2(los[0], los[2]);
+
+                z_out.push_back(z);
+                dec_out.push_back(90.0-theta/M_PI*180.0);
+                ra_out.push_back(phi/M_PI*180.0);
+            }
         }
     }
+
+    // output
+
+    // clean up
+    gsl_interp_free(z_chi_interp);
+    gsl_interp_accel_free(acc);
 
     return 0;
 }

@@ -8,7 +8,16 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_interp.h>
 
+namespace cuboid {
 #include "cuboid.h"
+}
+
+namespace cmangle {
+extern "C"
+{
+    #include "pymangle/mangle.h"
+}
+}
 
 // these are the possible remaps I found
 int remaps[][9] =
@@ -29,6 +38,18 @@ const double beta = 6.0; // rotation around z-axis, in degrees
 
 // in units of L1, L2, L3
 const double origin[] = { 0.5, -0.058, 0.0 };
+
+// survey masks
+const char ang_mask_fname[] = "mask_DR12v5_CMASS_North.ply";
+
+const int Nveto = 6;
+const char *veto_fnames[Nveto] =
+    { "badfield_mask_postprocess_pixs8.ply", 
+      "badfield_mask_unphot_seeing_extinction_pixs8_dr12.ply",
+      "allsky_bright_star_mask_pix.ply",
+      "bright_object_mask_rykoff_pix.ply", 
+      "centerpost_mask_dr12.ply", 
+      "collision_priority_mask_dr12.ply" };
 
 template<bool reverse>
 int dbl_cmp (const void *a_, const void *b_)
@@ -83,6 +104,8 @@ int main (int argc, char **argv)
     double zmin = std::atof(*(c++));
     double zmax = std::atof(*(c++));
     int remap_case = std::atoi(*(c++));
+    char *ang_mask_dir = *(c++);
+    int veto = std::atoi(*(c++)); // whether to apply veto
 
     int Nsnaps = 0;
     double times[64];
@@ -121,7 +144,24 @@ int main (int argc, char **argv)
     gsl_interp_init(z_chi_interp, chi_interp, z_interp, Ninterp);
 
     // initialize the transformation
-    auto C = Cuboid(remaps[remap_case]);
+    auto C = cuboid::Cuboid(remaps[remap_case]);
+
+    // initialize the survey footprint
+    char mask_fname[512];
+    cmangle::MangleMask *ang_mask = cmangle::mangle_new();
+    std::sprintf(mask_fname, "%s/%s", ang_mask_dir, ang_mask_fname);
+    cmangle::mangle_read(ang_mask, mask_fname);
+
+    cmangle::MangleMask *veto_masks[Nveto];
+    if (veto)
+    {
+        for (int ii=0; ii<Nveto; ++ii)
+        {
+            veto_masks[ii] = cmangle::mangle_new();
+            std::sprintf(mask_fname, "%s/%s", ang_mask_dir, veto_fnames[ii]);
+            cmangle::mangle_read(veto_masks[ii], mask_fname);
+        }
+    }
 
     // this is the output
     std::vector<double> ra_out, dec_out, z_out;
@@ -212,6 +252,22 @@ int main (int argc, char **argv)
                 double ra = phi/M_PI*180.0;
                 if (ra<0.0) ra += 360.0;
                 ra += beta;
+
+                // for the angular mask
+                cmangle::Point pt;
+                cmangle::point_set_from_radec(&pt, ra, dec);
+                int64_t poly_id; long double weight;
+                cmangle::mangle_polyid_and_weight_nopix(ang_mask, &pt, &poly_id, &weight);
+                if (weight==0.0L) continue;
+
+                bool vetoed = false;
+                if (veto)
+                    for (int kk=0; kk<Nveto && !vetoed; ++kk)
+                    {
+                        cmangle::mangle_polyid_and_weight_nopix(veto_masks[kk], &pt, &poly_id, &weight);
+                        if (weight==0.0L) vetoed = true;
+                    }
+                if (vetoed) continue;
 
                 z_out.push_back(z);
                 dec_out.push_back(dec);

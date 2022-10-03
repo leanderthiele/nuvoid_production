@@ -11,7 +11,7 @@
 #include "cuboid.h"
 
 // these are the possible remaps I found
-const int remaps[][9] =
+int remaps[][9] =
                   { // 1.4142 1.0000 0.7071
                     { 1, 1, 0,
                       0, 0, 1,
@@ -24,7 +24,8 @@ const int remaps[][9] =
 
 // get from the quadrant ra=[-90,90], dec=[0,90] to the NGC footprint
 // we only need a rotation around the y-axis I believe
-const double alpha = 124.0 * M_PI / 180.0;
+const double alpha = 97.0 * M_PI / 180.0; // rotation around y-axis
+const double beta = 6.0; // rotation around z-axis, in degrees
 
 // in units of L1, L2, L3
 const double origin[] = { 0.5, -0.058, 0.0 };
@@ -207,9 +208,14 @@ int main (int argc, char **argv)
                 double theta = std::acos(x3/chi);
                 double phi = std::atan2(x2, x1);
 
+                double dec = 90.0-theta/M_PI*180.0;
+                double ra = phi/M_PI*180.0;
+                if (ra<0.0) ra += 360.0;
+                ra += beta;
+
                 z_out.push_back(z);
-                dec_out.push_back(90.0-theta/M_PI*180.0);
-                ra_out.push_back(phi/M_PI*180.0);
+                dec_out.push_back(dec);
+                ra_out.push_back(ra);
             }
         }
 

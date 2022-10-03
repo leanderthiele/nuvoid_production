@@ -19,11 +19,6 @@ extern "C"
 }
 }
 
-extern "C"
-{
-    #include "fitsio.h"
-}
-
 // these are the possible remaps I found
 int remaps[][9] =
                   { // 1.4142 1.0000 0.7071
@@ -65,7 +60,8 @@ const char *veto_fnames[Nveto] =
 const int N_zbins = 80;
 
 // used for the initial z downsampling, needs to be adjusted
-const double fibcoll_rate = 0.1;
+// In experiments, I found 2.09 %
+const double fibcoll_rate = 0.025;
 
 template<bool reverse>
 int dbl_cmp (const void *a_, const void *b_)
@@ -209,7 +205,7 @@ void fibcoll (std::vector<double> ra_vec, std::vector<double> dec_vec, std::vect
     }
 
     // for debugging
-    std::printf("fiber collision rate: %.2f percent",
+    std::printf("fiber collision rate: %.2f percent\n",
                 100.0*(double)(z_vec.size()-z_tmp.size())/(double)(z_vec.size()));
     
     // assign output

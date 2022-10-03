@@ -42,8 +42,10 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./pymangle/pymangle
   "test" \
   $BOX_SIZE \
   0.25 \
-  0.65 0.70 \
+  0.42 0.70 \
   1 \
   /tigress/lthiele/boss_dr12 \
   1 \
-  0.6930
+  $TIMES
+
+#  0.6930

@@ -8,9 +8,7 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_interp.h>
 
-namespace cuboid {
 #include "cuboid.h"
-}
 
 namespace cmangle {
 extern "C"
@@ -144,7 +142,7 @@ int main (int argc, char **argv)
     gsl_interp_init(z_chi_interp, chi_interp, z_interp, Ninterp);
 
     // initialize the transformation
-    auto C = cuboid::Cuboid(remaps[remap_case]);
+    auto C = Cuboid(remaps[remap_case]);
 
     // initialize the survey footprint
     char mask_fname[512];

@@ -42,8 +42,8 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./pymangle/pymangle
   "test" \
   $BOX_SIZE \
   0.25 \
-  0.42 0.70 \
+  0.65 0.70 \
   1 \
   $HOME/nuvoid_production \
-  0 \
+  1 \
   0.6930

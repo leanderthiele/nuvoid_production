@@ -41,13 +41,16 @@ const double origin[] = { 0.5, -0.058, 0.0 };
 const char ang_mask_fname[] = "mask_DR12v5_CMASS_North.ply";
 
 const int Nveto = 6;
+// we order them by size so the cheap ones go first
 const char *veto_fnames[Nveto] =
-    { "badfield_mask_postprocess_pixs8.ply", 
-      "badfield_mask_unphot_seeing_extinction_pixs8_dr12.ply",
-      "allsky_bright_star_mask_pix.ply",
+    {
       "bright_object_mask_rykoff_pix.ply", 
       "centerpost_mask_dr12.ply", 
-      "collision_priority_mask_dr12.ply" };
+      "collision_priority_mask_dr12.ply",
+      "badfield_mask_postprocess_pixs8.ply", 
+      "allsky_bright_star_mask_pix.ply",
+      "badfield_mask_unphot_seeing_extinction_pixs8_dr12.ply",
+    };
 
 template<bool reverse>
 int dbl_cmp (const void *a_, const void *b_)
@@ -103,7 +106,7 @@ int main (int argc, char **argv)
     double zmax = std::atof(*(c++));
     int remap_case = std::atoi(*(c++));
     char *ang_mask_dir = *(c++);
-    int veto = std::atoi(*(c++)); // whether to apply veto
+    int veto = std::atoi(*(c++)); // whether to apply veto, removes a bit less than 7% of galaxies
 
     int Nsnaps = 0;
     double times[64];
@@ -150,7 +153,7 @@ int main (int argc, char **argv)
     std::sprintf(mask_fname, "%s/%s", ang_mask_dir, ang_mask_fname);
     cmangle::mangle_read(ang_mask, mask_fname);
 
-    // maybe better for efficiency
+    // much more efficient
     cmangle::set_pixel_map(ang_mask);
 
     cmangle::MangleMask *veto_masks[Nveto];
@@ -161,6 +164,7 @@ int main (int argc, char **argv)
             veto_masks[ii] = cmangle::mangle_new();
             std::sprintf(mask_fname, "%s/%s", ang_mask_dir, veto_fnames[ii]);
             cmangle::mangle_read(veto_masks[ii], mask_fname);
+            cmangle::set_pixel_map(veto_masks[ii]);
         }
     }
 
@@ -258,7 +262,6 @@ int main (int argc, char **argv)
                 cmangle::Point pt;
                 cmangle::point_set_from_radec(&pt, ra, dec);
                 int64_t poly_id; long double weight;
-                // cmangle::mangle_polyid_and_weight_nopix(ang_mask, &pt, &poly_id, &weight);
                 cmangle::mangle_polyid_and_weight_pix(ang_mask, &pt, &poly_id, &weight);
                 if (weight==0.0L) continue;
 
@@ -266,8 +269,8 @@ int main (int argc, char **argv)
                 if (veto)
                     for (int kk=0; kk<Nveto && !vetoed; ++kk)
                     {
-                        cmangle::mangle_polyid_and_weight_nopix(veto_masks[kk], &pt, &poly_id, &weight);
-                        if (weight==0.0L) vetoed = true;
+                        cmangle::mangle_polyid_and_weight_pix(veto_masks[kk], &pt, &poly_id, &weight);
+                        if (weight!=0.0L) vetoed = true;
                     }
                 if (vetoed) continue;
 

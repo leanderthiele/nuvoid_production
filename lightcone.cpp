@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <cstdio>
 #include <cmath>
 #include <vector>
 #include <functional>
@@ -198,6 +199,8 @@ int main (int argc, char **argv)
                 ra_out.push_back(phi/M_PI*180.0);
             }
         }
+
+        std::printf("Done with %d\n", ii);
     }
 
     // output

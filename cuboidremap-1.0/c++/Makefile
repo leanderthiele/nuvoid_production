@@ -1,7 +1,7 @@
 # Makefile for C++ cuboid remapping implementation
 
 # Uncomment to use GCC
-CXX = g++
+CXX = g++ --std=c++17
 
 # Uncomment to use Intel compiler
 #CXX = icpc

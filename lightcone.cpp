@@ -69,7 +69,8 @@ int main (int argc, char **argv)
     char **c = argv + 1;
 
     char *inpath = *(c++);
-    char *ident = *(c++);
+    char *inident = *(c++);
+    char *outident = *(c++);
     double BoxSize = std::atof(*(c++));
     double Omega_m = std::atof(*(c++));
     double zmin = std::atof(*(c++));
@@ -121,7 +122,7 @@ int main (int argc, char **argv)
     for (int ii=0; ii<Nsnaps; ++ii)
     {
         char fname[512];
-        std::sprintf(fname, "%s/galaxies/galaxies_%s_%.4f.bin", inpath, ident, times[ii]);
+        std::sprintf(fname, "%s/galaxies/galaxies_%s_%.4f.bin", inpath, inident, times[ii]);
 
         auto fp = std::fopen(fname, "rb");
 
@@ -202,7 +203,7 @@ int main (int argc, char **argv)
 
     // output
     char fname[512];
-    std::sprintf(fname, "%s/galaxies/lightcone_%s.txt", inpath, ident);
+    std::sprintf(fname, "%s/galaxies/lightcone_%s_%s.txt", inpath, inident, outident);
     auto fp = std::fopen(fname, "w");
     std::fprintf(fp, "# RA, DEC, z\n");
     for (size_t ii=0; ii<z_out.size(); ++ii)

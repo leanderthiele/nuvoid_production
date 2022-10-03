@@ -36,6 +36,7 @@ source globals.sh
 ./lightcone \
   "/scratch/gpfs/lthiele/nuvoid_production/test1" \
   "fidhod" \
+  "allsnaps" \
   $BOX_SIZE \
   $COSMO_OMEGA_M \
   0.42 0.70 \

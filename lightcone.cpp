@@ -7,6 +7,8 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_interp.h>
+#include <gsl/gsl_histogram.h>
+#include <gsl/gsl_rng.h>
 
 #include "cuboid.h"
 
@@ -15,6 +17,11 @@ extern "C"
 {
     #include "pymangle/mangle.h"
 }
+}
+
+extern "C"
+{
+    #include "fitsio.h"
 }
 
 // these are the possible remaps I found
@@ -52,6 +59,14 @@ const char *veto_fnames[Nveto] =
       "badfield_mask_unphot_seeing_extinction_pixs8_dr12.ply",
     };
 
+// how many bins we use for redshift histogramming
+// should give redshift slices that are larger than the correlation
+// length but still capture any evolution
+const int N_zbins = 80;
+
+// used for the initial z downsampling, needs to be adjusted
+const double fibcoll_rate = 0.1;
+
 template<bool reverse>
 int dbl_cmp (const void *a_, const void *b_)
 {
@@ -85,6 +100,124 @@ void comoving (double Omega_m, int N, double *z, double *chi)
     gsl_integration_workspace_free(ws);
 }
 
+std::vector<double> read_boss_z (const char *boss_dir)
+{
+    char fname[512];
+    std::sprintf(fname, "%s/galaxy_DR12v5_CMASS_North.bin", boss_dir);
+    auto fp = std::fopen(fname, "rb");
+    // binary file containing ra, dec, z in this order in double
+    
+    // figure out number of galaxies
+    std::fseek(fp, 0, SEEK_END);
+    auto nbytes = std::ftell(fp);
+
+    auto Ngal = nbytes/sizeof(double)/3;
+    if (!(Ngal*3*sizeof(double)==nbytes)) throw std::runtime_error("read_boss_z faield");
+
+    // skip RA and DEC
+    std::fseek(fp, 2*Ngal*sizeof(double), SEEK_SET);
+
+    std::vector<double> out;
+    out.resize(Ngal);
+
+    std::fread(out.data(), sizeof(double), Ngal, fp);
+
+    std::fclose(fp);
+
+    return out;
+}
+
+void downsample (gsl_histogram *target_hist, double plus_factor,
+                 std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::vector<double> &z_vec)
+{
+    gsl_histogram *sim_z_hist = gsl_histogram_clone(target_hist); // get the same ranges
+    gsl_histogram_reset(sim_z_hist);
+    for (auto z : z_vec)
+        gsl_histogram_increment(sim_z_hist, z);
+    double keep_fraction[target_hist->n];
+    for (int ii=0; ii<target_hist->n; ++ii)
+        // note the GSL bin counts are doubles already
+        keep_fraction[ii] = (1.0+plus_factor)
+                            * gsl_histogram_get(target_hist, ii) / gsl_histogram_get(sim_z_hist, ii);
+
+    // for debugging
+    std::printf("keep_fraction:\n");
+    for (int ii=0; ii<target_hist->n; ++ii)
+        std::printf("%.2f ", keep_fraction[ii]);
+    std::printf("\n");
+    
+    std::vector<double> ra_tmp, dec_tmp, z_tmp;
+
+    gsl_rng *rng = gsl_rng_alloc(gsl_rng_default);
+    for (size_t ii=0; ii<ra_vec.size(); ++ii)
+    {
+        size_t idx;
+        gsl_histogram_find(sim_z_hist, z_vec[ii], &idx);
+        if (gsl_rng_uniform(rng) < keep_fraction[idx])
+        {
+            ra_tmp.push_back(ra_vec[ii]);
+            dec_tmp.push_back(dec_vec[ii]);
+            z_tmp.push_back(z_vec[ii]);
+        }
+    }
+
+    // clean up
+    gsl_histogram_free(sim_z_hist);
+    gsl_rng_free(rng);
+
+    // assign output
+    ra_vec = ra_tmp;
+    dec_vec = dec_tmp;
+    z_vec = z_tmp;
+}
+
+void fibcoll (std::vector<double> ra_vec, std::vector<double> dec_vec, std::vector<double> z_vec)
+{
+    // both figures from Chang
+    static const double angscale = 0.01722; // in degrees
+    static const double collrate = 0.6;
+
+    gsl_rng *rng = gsl_rng_alloc(gsl_rng_default);
+
+    // we assume the inputs have sufficient entropy that always removing the first galaxy is fine
+
+    std::vector<double> ra_tmp, dec_tmp, z_tmp;
+
+    for (size_t ii=0; ii<ra_vec.size(); ++ii)
+    {
+        bool collided = false;
+        for (size_t jj=ii+1; jj<ra_vec.size(); ++jj)
+        {
+            double ra1=ra_vec[ii], ra2=ra_vec[jj], dec1=dec_vec[ii], dec2=dec_vec[jj];
+
+            // do cheap test first that will pass in the majority of cases
+            if (std::fabs(ra1-ra2)>angscale || std::fabs(dec1-dec2)>angscale) continue;
+
+            // now do the expensive test, since angscale is small we can just do flat sky
+            if (std::hypot(ra1-ra2, dec1-dec2)>angscale) continue;
+
+            // we have found a collision
+            collided = true;
+            break;
+        }
+
+        if (collided && gsl_rng_uniform(rng)<collrate) continue;
+
+        ra_tmp.push_back(ra_vec[ii]);
+        dec_tmp.push_back(dec_vec[ii]);
+        z_tmp.push_back(z_vec[ii]);
+    }
+
+    // for debugging
+    std::printf("fiber collision rate: %.2f percent",
+                100.0*(double)(z_vec.size()-z_tmp.size())/(double)(z_vec.size()));
+    
+    // assign output
+    ra_vec = ra_tmp;
+    dec_vec = dec_tmp;
+    z_vec = z_tmp;
+}
+
 template<typename T>
 inline double per_unit (T x, double BoxSize)
 {
@@ -105,7 +238,7 @@ int main (int argc, char **argv)
     double zmin = std::atof(*(c++));
     double zmax = std::atof(*(c++));
     int remap_case = std::atoi(*(c++));
-    char *ang_mask_dir = *(c++);
+    char *boss_dir = *(c++);
     int veto = std::atoi(*(c++)); // whether to apply veto, removes a bit less than 7% of galaxies
 
     int Nsnaps = 0;
@@ -150,7 +283,7 @@ int main (int argc, char **argv)
     // initialize the survey footprint
     char mask_fname[512];
     cmangle::MangleMask *ang_mask = cmangle::mangle_new();
-    std::sprintf(mask_fname, "%s/%s", ang_mask_dir, ang_mask_fname);
+    std::sprintf(mask_fname, "%s/%s", boss_dir, ang_mask_fname);
     cmangle::mangle_read(ang_mask, mask_fname);
 
     // much more efficient
@@ -162,10 +295,20 @@ int main (int argc, char **argv)
         for (int ii=0; ii<Nveto; ++ii)
         {
             veto_masks[ii] = cmangle::mangle_new();
-            std::sprintf(mask_fname, "%s/%s", ang_mask_dir, veto_fnames[ii]);
+            std::sprintf(mask_fname, "%s/%s", boss_dir, veto_fnames[ii]);
             cmangle::mangle_read(veto_masks[ii], mask_fname);
             cmangle::set_pixel_map(veto_masks[ii]);
         }
+    }
+
+    // the target redshift distribution
+    std::vector<double> boss_z = read_boss_z(boss_dir);
+    gsl_histogram *boss_z_hist = gsl_histogram_alloc(N_zbins);
+    gsl_histogram_set_ranges_uniform(boss_z_hist, zmin, zmax);
+    for (auto z : boss_z)
+    {
+        if (z<zmin || z>zmax) continue;
+        gsl_histogram_increment(boss_z_hist, z);
     }
 
     // this is the output
@@ -282,6 +425,15 @@ int main (int argc, char **argv)
 
         std::printf("Done with %d\n", ii);
     }
+
+    // first downsampling before fiber collisions are applied
+    downsample(boss_z_hist, fibcoll_rate, ra_out, dec_out, z_out);
+
+    // apply fiber collisions
+    fibcoll(ra_out, dec_out, z_out); 
+
+    // now downsample to our final density
+    downsample(boss_z_hist, 0.0, ra_out, dec_out, z_out);
 
     // output
     char fname[512];

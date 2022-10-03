@@ -44,6 +44,6 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./pymangle/pymangle
   0.25 \
   0.65 0.70 \
   1 \
-  $HOME/nuvoid_production \
+  /tigress/lthiele/boss_dr12 \
   1 \
   0.6930

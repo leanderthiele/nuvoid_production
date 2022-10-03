@@ -43,4 +43,6 @@ source globals.sh
   0.25 \
   0.42 0.70 \
   1 \
+  $HOME/nuvoid_production \
+  1 \
   0.6930

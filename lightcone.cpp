@@ -11,7 +11,8 @@
 #include "cuboid.h"
 
 // these are the possible remaps I found
-int remaps[][9] = { // 1.4142 1.0000 0.7071
+const int remaps[][9] =
+                  { // 1.4142 1.0000 0.7071
                     { 1, 1, 0,
                       0, 0, 1,
                       1, 0, 0, },
@@ -21,8 +22,12 @@ int remaps[][9] = { // 1.4142 1.0000 0.7071
                       0, 1, 0, },
                   };
 
+// get from the quadrant ra=[-90,90], dec=[0,90] to the NGC footprint
+// we only need a rotation around the y-axis I believe
+const double alpha = 124.0 * M_PI / 180.0;
+
 // in units of L1, L2, L3
-double origin[] = { 0.5, -0.058, 0.0 };
+const double origin[] = { 0.5, -0.058, 0.0 };
 
 template<bool reverse>
 int dbl_cmp (const void *a_, const void *b_)
@@ -70,7 +75,8 @@ int main (int argc, char **argv)
     char **c = argv + 1;
 
     char *inpath = *(c++);
-    char *ident = *(c++);
+    char *inident = *(c++);
+    char *outident = *(c++);
     double BoxSize = std::atof(*(c++));
     double Omega_m = std::atof(*(c++));
     double zmin = std::atof(*(c++));
@@ -122,7 +128,7 @@ int main (int argc, char **argv)
     for (int ii=0; ii<Nsnaps; ++ii)
     {
         char fname[512];
-        std::sprintf(fname, "%s/galaxies/galaxies_%s_%.4f.bin", inpath, ident, times[ii]);
+        std::sprintf(fname, "%s/galaxies/galaxies_%s_%.4f.bin", inpath, inident, times[ii]);
 
         auto fp = std::fopen(fname, "rb");
 
@@ -178,7 +184,7 @@ int main (int argc, char **argv)
 
             for (int kk=0; kk<3; ++kk) xgal[3*jj+kk] += rsd_factor_f * vproj * los[kk] / abs_los;
         }
-
+        
         // choose the galaxies within this redshift shell
         for (size_t jj=0; jj<Ngal; ++jj)
         {
@@ -190,9 +196,16 @@ int main (int argc, char **argv)
             if (chi>chi_bounds[ii] && chi<chi_bounds[ii+1])
             // we are in the comoving shell that's coming from this snapshot
             {
+                // rotate the line of sight into the NGC footprint and transpose the axes into
+                // canonical order
+                double x1, x2, x3;
+                x1 = std::cos(alpha) * los[2] - std::sin(alpha) * los[1];
+                x2 = los[0];
+                x3 = std::sin(alpha) * los[2] + std::cos(alpha) * los[1];
+
                 double z = gsl_interp_eval(z_chi_interp, chi_interp, z_interp, chi, acc);
-                double theta = std::acos(los[1]/chi);
-                double phi = std::atan2(los[0], los[2]);
+                double theta = std::acos(x3/chi);
+                double phi = std::atan2(x2, x1);
 
                 z_out.push_back(z);
                 dec_out.push_back(90.0-theta/M_PI*180.0);
@@ -205,7 +218,7 @@ int main (int argc, char **argv)
 
     // output
     char fname[512];
-    std::sprintf(fname, "%s/galaxies/lightcone_%s.txt", inpath, ident);
+    std::sprintf(fname, "%s/galaxies/lightcone_%s_%s.txt", inpath, inident, outident);
     auto fp = std::fopen(fname, "w");
     std::fprintf(fp, "# RA, DEC, z\n");
     for (size_t ii=0; ii<z_out.size(); ++ii)

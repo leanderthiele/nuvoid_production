@@ -150,6 +150,9 @@ int main (int argc, char **argv)
     std::sprintf(mask_fname, "%s/%s", ang_mask_dir, ang_mask_fname);
     cmangle::mangle_read(ang_mask, mask_fname);
 
+    // maybe better for efficiency
+    cmangle::set_pixel_map(ang_mask);
+
     cmangle::MangleMask *veto_masks[Nveto];
     if (veto)
     {
@@ -255,7 +258,8 @@ int main (int argc, char **argv)
                 cmangle::Point pt;
                 cmangle::point_set_from_radec(&pt, ra, dec);
                 int64_t poly_id; long double weight;
-                cmangle::mangle_polyid_and_weight_nopix(ang_mask, &pt, &poly_id, &weight);
+                // cmangle::mangle_polyid_and_weight_nopix(ang_mask, &pt, &poly_id, &weight);
+                cmangle::mangle_polyid_and_weight_pix(ang_mask, &pt, &poly_id, &weight);
                 if (weight==0.0L) continue;
 
                 bool vetoed = false;

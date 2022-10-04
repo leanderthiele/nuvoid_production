@@ -35,7 +35,7 @@ source mnu200meV_cosmo.sh
 # all snapshots:
 # 0.5965 0.6074 0.6152 0.6216 0.6270 0.6320 0.6367 0.6409 0.6449 0.6488 0.6526 0.6563 0.6601 0.6638 0.6676 0.6715 0.6757 0.6803 0.6856 0.6930
 source globals.sh
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./pymangle/pymangle
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./pymangle/pymangle:./healpix_lite
 ./lightcone \
   "/scratch/gpfs/lthiele/nuvoid_production/test1" \
   "fidhod" \

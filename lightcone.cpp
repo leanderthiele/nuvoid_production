@@ -199,7 +199,7 @@ inline double haversine (const pointing &a1, const pointing &a2)
 {
     return hav(a1.theta-a2.theta)
                + hav(a1.phi-a2.phi) 
-                 * ( 1.0 + hav(a1.theta-a2.theta) - hav(a1.theta+a2.theta) );
+                 * ( 1.0 - hav(a1.theta-a2.theta) - hav(a1.theta+a2.theta) );
 }
 
 void fibcoll (std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::vector<double> &z_vec)
@@ -233,15 +233,13 @@ void fibcoll (std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::ve
     std::map<int64_t, std::pair<size_t, size_t>> ranges;
     int64_t current_hp_idx = all_vec[0].hp_idx;
     size_t range_start = 0;
-    auto hint = ranges.begin();
     for (size_t ii=0; ii<all_vec.size(); ++ii)
     {
         const auto &g = all_vec[ii];
         if (g.hp_idx != current_hp_idx)
         {
-            ranges.emplace_hint(hint, current_hp_idx, range_start, ii);
+            ranges[current_hp_idx] = std::pair<size_t, size_t>(range_start, ii);
             range_start = ii;
-            hint = ranges.end();
         }
     }
 

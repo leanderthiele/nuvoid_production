@@ -3,6 +3,8 @@
 #include <cmath>
 #include <vector>
 #include <functional>
+#include <map>
+#include <utility>
 
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_integration.h>
@@ -169,51 +171,119 @@ void downsample (gsl_histogram *target_hist, double plus_factor,
     z_vec = z_tmp;
 }
 
-void fibcoll (std::vector<double> ra_vec, std::vector<double> dec_vec, std::vector<double> z_vec)
+struct GalHelper
+{
+    // we store the coordinates so we have more efficient lookup hopefully
+    // (at the cost of more memory but should be fine)
+    double ra, dec, z;
+    int64_t hp_idx;
+    size_t vec_idx;
+    pointing ang;
+
+    GalHelper (size_t vec_idx_, double ra_, double dec_, double z_, T_Healpix_Base<int64_t> &hp_base) :
+        ra {ra_}, dec {dec_}, z{z_}, vec_idx {vec_idx_}
+    {
+        double theta = (90.0-dec) * M_PI/180.0;
+        double phi = ra * M_PI/180.0;
+        ang = pointing(theta, phi);
+        hp_idx = hp_base.ang2pix(ang);
+    };
+};
+
+inline double hav (double theta)
+{
+    return gsl_pow_2(std::sin(0.5*theta));
+}
+
+inline double haversine (const pointing &a1, const pointing &a2)
+{
+    return hav(a1.theta-a2.theta)
+               + hav(a1.phi-a2.phi) 
+                 * ( 1.0 + hav(a1.theta-a2.theta) - hav(a1.theta+a2.theta) );
+}
+
+void fibcoll (std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::vector<double> &z_vec)
 {
     // both figures from Chang
     static const double angscale = 0.01722; // in degrees
     static const double collrate = 0.6;
 
+    // for sampling from overlapping regions according to collision rate
     gsl_rng *rng = gsl_rng_alloc(gsl_rng_default);
+
+    // for HOPEFULLY efficient nearest neighbour search
+    static const int64_t nside = 128; // can be tuned, with 128 pixarea/discarea~225
+    T_Healpix_Base hp_base (nside, RING, SET_NSIDE);
+
+    std::vector<GalHelper> all_vec;
+    for (size_t ii=0; ii<ra_vec.size(); ++ii)
+        all_vec.emplace_back(ii, ra_vec[ii], dec_vec[ii], z_vec[ii], hp_base);
+
+    // empty the output arrays
+    ra_vec.clear();
+    dec_vec.clear();
+    z_vec.clear();
+
+    // sort these for efficient access with increasing healpix index
+    std::sort(all_vec.begin(), all_vec.end(),
+              [](const GalHelper &a, const GalHelper &b){ return a.hp_idx<b.hp_idx; });
+
+    // again, for efficient access we compute the ranges
+    // As we only cover a small sky area, a map is probably more efficient than an array
+    std::map<int64_t, std::pair<size_t, size_t>> ranges;
+    int64_t current_hp_idx = all_vec[0].hp_idx;
+    size_t range_start = 0;
+    auto hint = ranges.begin();
+    for (size_t ii=0; ii<all_vec.size(); ++ii)
+    {
+        const auto &g = all_vec[ii];
+        if (g.hp_idx != current_hp_idx)
+        {
+            ranges.emplace_hint(hint, current_hp_idx, range_start, ii);
+            range_start = ii;
+            hint = ranges.end();
+        }
+    }
 
     // we assume the inputs have sufficient entropy that always removing the first galaxy is fine
 
-    std::vector<double> ra_tmp, dec_tmp, z_tmp;
+    // allocate for efficiency
+    rangeset<int64_t> query_result;
+    std::vector<int64_t> query_vector;
 
-    for (size_t ii=0; ii<ra_vec.size(); ++ii)
+    for (const auto &g : all_vec)
     {
+        hp_base.query_disc(g.ang, angscale*M_PI/180.0, query_result);
+        query_result.toVector(query_vector);
         bool collided = false;
-        for (size_t jj=ii+1; jj<ra_vec.size(); ++jj)
+        for (auto hp_idx : query_vector)
         {
-            double ra1=ra_vec[ii], ra2=ra_vec[jj], dec1=dec_vec[ii], dec2=dec_vec[jj];
-
-            // do cheap test first that will pass in the majority of cases
-            if (std::fabs(ra1-ra2)>angscale || std::fabs(dec1-dec2)>angscale) continue;
-
-            // now do the expensive test, since angscale is small we can just do flat sky
-            if (std::hypot(ra1-ra2, dec1-dec2)>angscale) continue;
-
-            // we have found a collision
-            collided = true;
-            break;
+            auto this_range = ranges[hp_idx];
+            for (size_t ii=this_range.first; ii<this_range.second; ++ii)
+                if (haversine(g.ang, all_vec[ii].ang) < hav(angscale*M_PI/180.0)
+                    && g.vec_idx != all_vec[ii].vec_idx)
+                // use the fact that haversine is monotonic to avoid inverse operation
+                // also check for identity
+                {
+                    collided = true;
+                    break;
+                }
+            if (collided) break;
         }
 
+        // TODO it could also make sense to call the rng every time we have a collision
+        //      in the above loop instead. Maybe not super important though.
         if (collided && gsl_rng_uniform(rng)<collrate) continue;
 
-        ra_tmp.push_back(ra_vec[ii]);
-        dec_tmp.push_back(dec_vec[ii]);
-        z_tmp.push_back(z_vec[ii]);
+        // no collision, let's keep this galaxy
+        ra_vec.push_back(g.ra);
+        dec_vec.push_back(g.dec);
+        z_vec.push_back(g.z);
     }
 
     // for debugging
     std::printf("fiber collision rate: %.2f percent\n",
-                100.0*(double)(z_vec.size()-z_tmp.size())/(double)(z_vec.size()));
-    
-    // assign output
-    ra_vec = ra_tmp;
-    dec_vec = dec_tmp;
-    z_vec = z_tmp;
+                100.0*(double)(all_vec.size()-z_vec.size())/(double)(all_vec.size()));
 }
 
 template<typename T>

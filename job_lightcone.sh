@@ -46,6 +46,6 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./pymangle/pymangle:./healpix_lite
   1 \
   /tigress/lthiele/boss_dr12 \
   1 \
-  $TIMES
+  0.6930
 
-#  0.6930
+#  $TIMES

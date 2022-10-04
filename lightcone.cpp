@@ -255,6 +255,7 @@ void fibcoll (std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::ve
     {
         hp_base.query_disc(g.ang, angscale*M_PI/180.0, query_result);
         query_result.toVector(query_vector);
+
         bool collided = false;
         for (auto hp_idx : query_vector)
         {

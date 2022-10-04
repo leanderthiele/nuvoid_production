@@ -190,22 +190,24 @@ struct GalHelper
     };
 };
 
-inline double hav (double theta)
+inline long double hav (long double theta)
 {
     return gsl_pow_2(std::sin(0.5*theta));
 }
 
-inline double haversine (const pointing &a1, const pointing &a2)
+inline long double haversine (const pointing &a1, const pointing &a2)
 {
-    return hav(a1.theta-a2.theta)
-               + hav(a1.phi-a2.phi) 
-                 * ( 1.0 - hav(a1.theta-a2.theta) - hav(a1.theta+a2.theta) );
+    long double t1=a1.theta, t2=a2.theta, p1=a1.phi, p2=a2.phi;
+    return hav(t1-t2)
+               + hav(p1-p2) 
+                 * ( - hav(t1-t2) + hav(t1+t2) );
+                 // I believe this is the correct modification
 }
 
 void fibcoll (std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::vector<double> &z_vec)
 {
     // both figures from Chang
-    static const double angscale = 0.01722; // in degrees
+    static const long double angscale = 0.01722; // in degrees
     static const double collrate = 0.6;
 
     // for sampling from overlapping regions according to collision rate

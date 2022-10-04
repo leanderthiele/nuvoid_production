@@ -192,22 +192,21 @@ struct GalHelper
 
 inline long double hav (long double theta)
 {
-    return gsl_pow_2(std::sin(0.5*theta));
+    auto x = std::sin(0.5*theta);
+    return x * x;
 }
 
 inline long double haversine (const pointing &a1, const pointing &a2)
 {
     long double t1=a1.theta, t2=a2.theta, p1=a1.phi, p2=a2.phi;
-    return hav(t1-t2)
-               + hav(p1-p2) 
-                 * ( - hav(t1-t2) + hav(t1+t2) );
-                 // I believe this is the correct modification
+    return hav(t1-t2) + hav(p1-p2) * ( - hav(t1-t2) + hav(t1+t2) );
 }
 
 void fibcoll (std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::vector<double> &z_vec)
 {
     // both figures from Chang
-    static const long double angscale = 0.01722; // in degrees
+    // we are dealing with pretty small angle differences so better do things in long double
+    static const long double angscale = 0.01722L * M_PIl / 180.0L; // in rad
     static const double collrate = 0.6;
 
     // for sampling from overlapping regions according to collision rate
@@ -253,7 +252,8 @@ void fibcoll (std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::ve
 
     for (const auto &g : all_vec)
     {
-        hp_base.query_disc(g.ang, angscale*M_PI/180.0, query_result);
+        // one can gain performance here by playing with "fact"
+        hp_base.query_disc_inclusive(g.ang, angscale, query_result, /*fact=*/4);
         query_result.toVector(query_vector);
 
         bool collided = false;
@@ -261,7 +261,7 @@ void fibcoll (std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::ve
         {
             auto this_range = ranges[hp_idx];
             for (size_t ii=this_range.first; ii<this_range.second; ++ii)
-                if (haversine(g.ang, all_vec[ii].ang) < hav(angscale*M_PI/180.0)
+                if (haversine(g.ang, all_vec[ii].ang) < hav(angscale)
                     && g.vec_idx != all_vec[ii].vec_idx)
                 // use the fact that haversine is monotonic to avoid inverse operation
                 // also check for identity

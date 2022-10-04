@@ -61,11 +61,14 @@ const char *veto_fnames[Nveto] =
 // how many bins we use for redshift histogramming
 // should give redshift slices that are larger than the correlation
 // length but still capture any evolution
-const int N_zbins = 80;
+const int N_zbins = 64;
 
 // used for the initial z downsampling, needs to be adjusted
-// In experiments, I found 2.09 %
-const double fibcoll_rate = 0.025;
+// If this is chosen too large, the nonlinear interplay between fiber collisions
+// and downsampling is too pronounced.
+// If this is chosen too small, we'll end up with fewer galaxies than we need after
+// fiber collisions are removed.
+const double fibcoll_rate = 0.03;
 
 template<bool reverse>
 int dbl_cmp (const void *a_, const void *b_)
@@ -241,6 +244,7 @@ void fibcoll (std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::ve
         {
             ranges[current_hp_idx] = std::pair<size_t, size_t>(range_start, ii);
             range_start = ii;
+            current_hp_idx = g.hp_idx;
         }
     }
 
@@ -262,9 +266,10 @@ void fibcoll (std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::ve
             auto this_range = ranges[hp_idx];
             for (size_t ii=this_range.first; ii<this_range.second; ++ii)
                 if (haversine(g.ang, all_vec[ii].ang) < hav(angscale)
-                    && g.vec_idx != all_vec[ii].vec_idx)
+                    && g.vec_idx > all_vec[ii].vec_idx)
                 // use the fact that haversine is monotonic to avoid inverse operation
-                // also check for identity
+                // by using the greater-than check, we ensure to remove only one member
+                // of each pair
                 {
                     collided = true;
                     break;

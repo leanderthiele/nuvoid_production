@@ -219,6 +219,14 @@ void fibcoll (std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::ve
     for (size_t ii=0; ii<ra_vec.size(); ++ii)
         all_vec.emplace_back(ii, ra_vec[ii], dec_vec[ii], z_vec[ii], hp_base);
 
+    // FIXME for debugging
+    double *map = (double *)std::malloc(hp_base.Npix() * sizeof(double));
+    for (size_t ii=0; ii<hp_base.Npix(); ++ii) map[ii] = 0.0;
+    for (const auto &g : all_vec) map[g.hp_idx] += 1.0;
+    auto fp = std::fopen("hp_test.bin", "wb");
+    std::fwrite(map, sizeof(double), hp_base.Npix(), fp);
+    std::fclose(fp);
+
     // empty the output arrays
     ra_vec.clear();
     dec_vec.clear();

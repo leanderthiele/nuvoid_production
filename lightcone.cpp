@@ -19,6 +19,8 @@ extern "C"
 }
 }
 
+#include "healpix_base.h"
+
 // these are the possible remaps I found
 int remaps[][9] =
                   { // 1.4142 1.0000 0.7071
@@ -274,7 +276,7 @@ int main (int argc, char **argv)
     gsl_interp_init(z_chi_interp, chi_interp, z_interp, Ninterp);
 
     // initialize the transformation
-    auto C = Cuboid(remaps[remap_case]);
+    auto C = cuboid::Cuboid(remaps[remap_case]);
 
     // initialize the survey footprint
     char mask_fname[512];

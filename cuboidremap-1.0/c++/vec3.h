@@ -1,6 +1,7 @@
 #ifndef VEC3_H
 #define VEC3_H
 
+namespace cuboid {
 
 template<typename T>
 struct vec3 {
@@ -153,5 +154,7 @@ template<typename T>
 inline T tsp(const vec3<T>& u, const vec3<T>& v, const vec3<T>& w) {
     return u.x*(v.y*w.z - v.z*w.y) + u.y*(v.z*w.x - v.x*w.z) + u.z*(v.x*w.y - v.y*w.x);
 }
+
+} // namespace cuboid
 
 #endif // VEC3_H

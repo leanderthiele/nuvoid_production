@@ -5,6 +5,8 @@
 
 #include "vec3.h"
 
+namespace cuboid {
+
 /* Plane defined by the relation $a*x + b*y + c*z + d = 0$. */
 struct Plane {
     double a, b, c, d;
@@ -109,5 +111,7 @@ protected:
     /* Initialize from lattice vectors */
     void Initialize(const vec3i& u1, const vec3i& u2, const vec3i& u3);
 };
+
+} // namespace cuboid
 
 #endif // CUBOID_H

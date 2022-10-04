@@ -5,6 +5,7 @@
 #include "cuboid.h"
 
 using namespace std;
+using namespace cuboid;
 
 
 void Cuboid::Initialize() {

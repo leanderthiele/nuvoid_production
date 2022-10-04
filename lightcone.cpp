@@ -144,10 +144,12 @@ int main (int argc, char **argv)
     while (*c) times.push_back(std::atof(*(c++)));
     Nsnaps = times.size();
 
+    std::printf("process_times\n");
     process_times();
 
     z_chi_interp = gsl_spline_alloc(gsl_interp_cspline, N_interp);
     z_chi_interp_acc = gsl_interp_accel_alloc();
+    std::printf("interpolate_chi_z\n");
     interpolate_chi_z();
 
     // initialize the transformation
@@ -157,10 +159,12 @@ int main (int argc, char **argv)
     // initialize survey footprint and veto masks (if requested)
     ang_mask = cmangle::mangle_new();
     if (veto) for (int ii=0; ii<Nveto; ++ii) veto_masks[ii] = cmangle::mangle_new();
+    std::printf("init_masks\n");
     init_masks();
 
     // the target redshift distribution
     boss_z_hist = gsl_histogram_alloc(N_zbins);
+    std::printf("measure_boss_nz\n");
     measure_boss_nz();
 
     for (int ii=0; ii<Nsnaps; ++ii)
@@ -169,31 +173,39 @@ int main (int argc, char **argv)
 
         // contains the 32bit data from disk
         std::vector<float> xgal_f, vgal_f;
+        std::printf("\tread_snapshot\n");
         read_snapshot(ii, xgal_f, vgal_f, Ngal);
 
         // these will contain the outputs of the remapping
         std::vector<double> xgal, vgal;
+        std::printf("\tremap_snapshot\n");
         remap_snapshot(Ngal, xgal_f, vgal_f, xgal, vgal);
 
         // now perform RSD
+        std::printf("\tRSD\n");
         RSD(ii, Ngal, xgal, vgal);
         
         // choose the galaxies within this redshift shell
+        std::printf("\tchoose_galaxies\n");
         choose_galaxies(ii, Ngal, xgal);
 
         std::printf("Done with %d\n", ii);
     }
 
     // first downsampling before fiber collisions are applied
+    std::printf("downsample\n");
     downsample(fibcoll_rate);
 
     // apply fiber collisions
+    std::printf("fibcoll\n");
     fibcoll(); 
 
     // now downsample to our final density
+    std::printf("downsample\n");
     downsample(0.0);
 
     // output
+    std::printf("write_to_disk\n");
     write_to_disk();
 
     // clean up

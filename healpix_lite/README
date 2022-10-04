@@ -1,0 +1,3 @@
+I got too annoyed with the big healpix build system and all the dependencies.
+So this contains just the functionality I believe I'll need --
+	which is just healpix_base.h and its dependencies.

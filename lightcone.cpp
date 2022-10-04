@@ -123,6 +123,7 @@ void RSD (int snap_idx, size_t Ngal, std::vector<double> &xgal, const std::vecto
 // this routine modifies RA, DEC, Z
 void choose_galaxies (int snap_idx, size_t Ngal, const std::vector<double> &xgal);
 
+// writes in the VIDE format
 void write_to_disk (void);
 
 int main (int argc, char **argv)
@@ -609,8 +610,7 @@ void write_to_disk (void)
     char fname[512];
     std::sprintf(fname, "%s/galaxies/lightcone_%s_%s.txt", inpath, inident, outident);
     auto fp = std::fopen(fname, "w");
-    std::fprintf(fp, "# RA, DEC, z\n");
     for (size_t ii=0; ii<Z.size(); ++ii)
-        std::fprintf(fp, "%.8f %.8f %.8f\n", RA[ii], DEC[ii], Z[ii]);
+        std::fprintf(fp, "%lu 0 0 %.10f %.10f %.8f 1.0000 0.0\n", ii, RA[ii], DEC[ii], 299792.458*Z[ii]);
 }
 

@@ -8,7 +8,7 @@
 
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_integration.h>
-#include <gsl/gsl_interp.h>
+#include <gsl/gsl_spline.h>
 #include <gsl/gsl_histogram.h>
 #include <gsl/gsl_rng.h>
 
@@ -70,27 +70,152 @@ const int N_zbins = 64;
 // fiber collisions are removed.
 const double fibcoll_rate = 0.03;
 
-template<bool reverse>
-int dbl_cmp (const void *a_, const void *b_)
+// how many interpolation stencils we use to get from chi to z
+const int N_interp = 1024;
+
+// ---- GLOBAL VARIABLES -----
+char *inpath, *inident, *outident, *boss_dir;
+double BoxSize, Omega_m, zmin, zmax;
+int remap_case, veto, Nsnaps;
+std::vector<double> times, redshifts, redshift_bounds, chi_bounds;
+
+gsl_spline *z_chi_interp; gsl_interp_accel *z_chi_interp_acc;
+
+cuboid::Cuboid C;
+double Li[3]; // the sidelengths in decreasing order
+
+cmangle::MangleMask *ang_mask;
+cmangle::MangleMask *veto_masks[Nveto]; // maybe unused
+
+gsl_histogram *boss_z_hist;
+
+// ----- ROUTINES USED IN MAIN -------
+
+// these are our outputs
+std::vector<double> RA, DEC, Z;
+
+// downsamples to the boss_z_hist, up to plus_factor
+void downsample (double plus_factor);
+
+// modifies RA, DEC, Z
+void fibcoll ();
+
+// sets times, redshifts, redshift_bounds, chi_bounds
+void process_times (void);
+
+// initialize the interpolator getting us from comoving to redshift
+void interpolate_chi_z (void);
+
+// initialize the mangle masks
+void init_masks (void);
+
+// get the target redshift distribution
+void measure_boss_nz (void);
+
+void read_snapshot (int snap_idx, std::vector<float> &xgal_f, std::vector<float> &vgal_f, size_t &Ngal);
+
+void remap_snapshot (size_t Ngal,
+                     const std::vector<float> &xgal_f, const std::vector<float> &vgal_f,
+                     std::vector<double> &xgal, std::vector<double> &vgal);
+
+void RSD (int snap_idx, size_t Ngal, std::vector<double> &xgal, const std::vector<double> &vgal);
+
+// this routine modifies RA, DEC, Z
+void choose_galaxies (int snap_idx, size_t Ngal, const std::vector<double> &xgal);
+
+void write_to_disk (void);
+
+int main (int argc, char **argv)
 {
-    double a = *(double *)a_;
-    double b = *(double *)b_;
-    int sgn = (reverse) ? -1 : 1;
-    return sgn * ( (a>b) ? +1 : -1 );
+    char **c = argv + 1;
+
+    inpath = *(c++);
+    inident = *(c++);
+    outident = *(c++);
+    BoxSize = std::atof(*(c++));
+    Omega_m = std::atof(*(c++));
+    zmin = std::atof(*(c++));
+    zmax = std::atof(*(c++));
+    remap_case = std::atoi(*(c++));
+    boss_dir = *(c++);
+    veto = std::atoi(*(c++)); // whether to apply veto, removes a bit less than 7% of galaxies
+
+    while (*c) times.push_back(std::atof(*(c++)));
+    Nsnaps = times.size();
+
+    process_times();
+
+    z_chi_interp = gsl_spline_alloc(gsl_interp_cspline, N_interp);
+    z_chi_interp_acc = gsl_interp_accel_alloc();
+    interpolate_chi_z();
+
+    // initialize the transformation
+    C = cuboid::Cuboid(remaps[remap_case]);
+    Li[0] = C.L1; Li[1] = C.L2; Li[2] = C.L3;
+
+    // initialize survey footprint and veto masks (if requested)
+    ang_mask = cmangle::mangle_new();
+    if (veto) for (int ii=0; ii<Nveto; ++ii) veto_masks[ii] = cmangle::mangle_new();
+    init_masks();
+
+    // the target redshift distribution
+    boss_z_hist = gsl_histogram_alloc(N_zbins);
+    measure_boss_nz();
+
+    for (int ii=0; ii<Nsnaps; ++ii)
+    {
+        size_t Ngal;
+
+        // contains the 32bit data from disk
+        std::vector<float> xgal_f, vgal_f;
+        read_snapshot(ii, xgal_f, vgal_f, Ngal);
+
+        // these will contain the outputs of the remapping
+        std::vector<double> xgal, vgal;
+        remap_snapshot(Ngal, xgal_f, vgal_f, xgal, vgal);
+
+        // now perform RSD
+        RSD(ii, Ngal, xgal, vgal);
+        
+        // choose the galaxies within this redshift shell
+        choose_galaxies(ii, Ngal, xgal);
+
+        std::printf("Done with %d\n", ii);
+    }
+
+    // first downsampling before fiber collisions are applied
+    downsample(fibcoll_rate);
+
+    // apply fiber collisions
+    fibcoll(); 
+
+    // now downsample to our final density
+    downsample(0.0);
+
+    // output
+    write_to_disk();
+
+    // clean up
+    gsl_spline_free(z_chi_interp); gsl_interp_accel_free(z_chi_interp_acc);
+    gsl_histogram_free(boss_z_hist);
+    cmangle::mangle_free(ang_mask);
+    if (veto) for (int ii=0; ii<Nveto; ++ii) cmangle::mangle_free(veto_masks[ii]);
+
+    return 0;
 }
 
-double integrand (double z, void *p)
+double comoving_integrand (double z, void *p)
 {
     static const double H0inv = 2.99792458e3; // Mpc/h
     double Omega_m = *(double *)p;
     return H0inv / std::sqrt( Omega_m*gsl_pow_3(1.0+z)+(1.0-Omega_m) );
 }
 
-void comoving (double Omega_m, int N, double *z, double *chi)
+void comoving (int N, double *z, double *chi)
 // populate chi with chi(z) in Mpc/h
 {
     gsl_function F;
-    F.function = integrand;
+    F.function = comoving_integrand;
     F.params = &Omega_m;
 
     static const size_t ws_size = 1024;
@@ -103,7 +228,54 @@ void comoving (double Omega_m, int N, double *z, double *chi)
     gsl_integration_workspace_free(ws);
 }
 
-std::vector<double> read_boss_z (const char *boss_dir)
+void process_times (void)
+{
+    // get increasing redshifts
+    std::sort(times.begin(), times.end(), [](double a, double b){ return a>b; });
+
+    for (int ii=0; ii<Nsnaps; ++ii) redshifts.push_back(1.0/times[ii] - 1.0);
+
+    // define the redshift boundaries
+    // TODO we can maybe do something more sophisticated here
+    redshift_bounds.push_back(zmin);
+    for (int ii=1; ii<Nsnaps; ++ii)
+        redshift_bounds.push_back(0.5*(redshifts[ii-1]+redshifts[ii]));
+    redshift_bounds.push_back(zmax);
+    
+    // convert to comoving distances
+    chi_bounds.resize(Nsnaps+1);
+    comoving(Nsnaps+1, redshift_bounds.data(), chi_bounds.data());
+}
+
+void interpolate_chi_z (void)
+{
+    double z_interp_min = zmin-0.01, z_interp_max=zmax+0.01;
+    double *z_interp = (double *)std::malloc(N_interp * sizeof(double));
+    double *chi_interp = (double *)std::malloc(N_interp * sizeof(double));
+    for (int ii=0; ii<N_interp; ++ii)
+        z_interp[ii] = z_interp_min + (z_interp_max-z_interp_min)*(double)ii/(double)(N_interp-1);
+    comoving(N_interp, z_interp, chi_interp);
+    gsl_spline_init(z_chi_interp, chi_interp, z_interp, N_interp);
+    std::free(z_interp); std::free(chi_interp);
+}
+
+void init_masks (void)
+{
+    char mask_fname[512];
+    std::sprintf(mask_fname, "%s/%s", boss_dir, ang_mask_fname);
+    cmangle::mangle_read(ang_mask, mask_fname);
+    cmangle::set_pixel_map(ang_mask);
+
+    if (veto)
+        for (int ii=0; ii<Nveto; ++ii)
+        {
+            std::sprintf(mask_fname, "%s/%s", boss_dir, veto_fnames[ii]);
+            cmangle::mangle_read(veto_masks[ii], mask_fname);
+            cmangle::set_pixel_map(veto_masks[ii]);
+        }
+}
+
+void measure_boss_nz (void)
 {
     char fname[512];
     std::sprintf(fname, "%s/galaxy_DR12v5_CMASS_North.bin", boss_dir);
@@ -120,22 +292,157 @@ std::vector<double> read_boss_z (const char *boss_dir)
     // skip RA and DEC
     std::fseek(fp, 2*Ngal*sizeof(double), SEEK_SET);
 
-    std::vector<double> out;
-    out.resize(Ngal);
+    double *boss_z = (double *)std::malloc(Ngal * sizeof(double));
 
-    std::fread(out.data(), sizeof(double), Ngal, fp);
+    std::fread(boss_z, sizeof(double), Ngal, fp);
 
     std::fclose(fp);
 
-    return out;
+    gsl_histogram_set_ranges_uniform(boss_z_hist, zmin, zmax);
+    for (size_t ii=0; ii<Ngal; ++ii)
+    {
+        double z = boss_z[ii];
+        if (z<zmin || z>zmax) continue;
+        gsl_histogram_increment(boss_z_hist, z);
+    }
+
+    std::free(boss_z);
 }
 
-void downsample (gsl_histogram *target_hist, double plus_factor,
-                 std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::vector<double> &z_vec)
+void read_snapshot (int snap_idx, std::vector<float> &xgal_f, std::vector<float> &vgal_f, size_t &Ngal)
 {
+    char fname[512];
+    std::sprintf(fname, "%s/galaxies/galaxies_%s_%.4f.bin", inpath, inident, times[snap_idx]);
+
+    auto fp = std::fopen(fname, "rb");
+
+    // figure out number of galaxies
+    std::fseek(fp, 0, SEEK_END);
+    auto nbytes = std::ftell(fp);
+
+    Ngal = nbytes/sizeof(float)/6;
+    if (!(6*Ngal*sizeof(float)==nbytes)) throw std::runtime_error("failed in read_snapshot");
+
+    // go back to beginning
+    std::fseek(fp, 0, SEEK_SET);
+
+    xgal_f.resize(3 * Ngal);
+    vgal_f.resize(3 * Ngal);
+    std::fread(xgal_f.data(), sizeof(float), 3*Ngal, fp);
+    std::fread(vgal_f.data(), sizeof(float), 3*Ngal, fp);
+
+    // now we can close
+    std::fclose(fp);
+}
+
+template<typename T>
+inline double per_unit (T x)
+{
+    double x1 = (double)x / BoxSize;
+    x1 = std::fmod(x, 1.0);
+    return (x1<0.0) ? x1+1.0 : x1;
+}
+
+void remap_snapshot (size_t Ngal,
+                     const std::vector<float> &xgal_f, const std::vector<float> &vgal_f,
+                     std::vector<double> &xgal, std::vector<double> &vgal)
+{
+    xgal.resize(3 * Ngal); vgal.resize(3 * Ngal);
+
+    for (size_t jj=0; jj<Ngal; ++jj)
+    {
+        C.Transform(per_unit(xgal_f[3*jj+0]),
+                    per_unit(xgal_f[3*jj+1]),
+                    per_unit(xgal_f[3*jj+2]),
+                    xgal[3*jj+0], xgal[3*jj+1], xgal[3*jj+2]);
+        for (int kk=0; kk<3; ++kk) xgal[3*jj+kk] *= BoxSize;
+
+        C.VelocityTransform(vgal_f[3*jj+0], vgal_f[3*jj+1], vgal_f[3*jj+2],
+                            vgal[3*jj+0], vgal[3*jj+1], vgal[3*jj+2]);
+    }
+}
+
+void RSD (int snap_idx, size_t Ngal, std::vector<double> &xgal, const std::vector<double> &vgal)
+{
+    double rsd_factor = (1.0+redshifts[snap_idx])
+                        / ( 100.0 * std::sqrt(Omega_m * gsl_pow_3(1.0+redshifts[snap_idx]) + (1.0-Omega_m)) );
+    for (size_t jj=0; jj<Ngal; ++jj)
+    {
+        // compute the line-of-sight vector
+        double los[3];
+        for (int kk=0; kk<3; ++kk) los[kk] = xgal[3*jj+kk] - origin[kk]*BoxSize*Li[kk];
+
+        // compute length of the line-of-sight vector
+        double abs_los = std::hypot(los[0], los[1], los[2]);
+
+        // compute the velocity projection onto the line of sight
+        double vproj = (los[0]*vgal[3*jj+0]+los[1]*vgal[3*jj+1]+los[2]*vgal[3*jj+2])
+                       / abs_los;
+
+        for (int kk=0; kk<3; ++kk)
+            xgal[3*jj+kk] += rsd_factor * vproj * los[kk] / abs_los;
+    }
+}
+
+void choose_galaxies (int snap_idx, size_t Ngal, const std::vector<double> &xgal)
+{
+    for (size_t jj=0; jj<Ngal; ++jj)
+    {
+        double los[3];
+        for (int kk=0; kk<3; ++kk) los[kk] = xgal[3*jj+kk] - origin[kk]*BoxSize*Li[kk];
+        
+        double chi = std::hypot(los[0], los[1], los[2]);
+
+        if (chi>chi_bounds[snap_idx] && chi<chi_bounds[snap_idx+1])
+        // we are in the comoving shell that's coming from this snapshot
+        {
+            // rotate the line of sight into the NGC footprint and transpose the axes into
+            // canonical order
+            double x1, x2, x3;
+            x1 = std::cos(alpha) * los[2] - std::sin(alpha) * los[1];
+            x2 = los[0];
+            x3 = std::sin(alpha) * los[2] + std::cos(alpha) * los[1];
+
+            double z = gsl_spline_eval(z_chi_interp, chi, z_chi_interp_acc);
+            double theta = std::acos(x3/chi);
+            double phi = std::atan2(x2, x1);
+
+            double dec = 90.0-theta/M_PI*180.0;
+            double ra = phi/M_PI*180.0;
+            if (ra<0.0) ra += 360.0;
+            ra += beta;
+
+            // for the angular mask
+            cmangle::Point pt;
+            cmangle::point_set_from_radec(&pt, ra, dec);
+            int64_t poly_id; long double weight;
+            cmangle::mangle_polyid_and_weight_pix(ang_mask, &pt, &poly_id, &weight);
+            if (weight==0.0L) continue;
+
+            bool vetoed = false;
+            if (veto)
+                for (int kk=0; kk<Nveto && !vetoed; ++kk)
+                {
+                    cmangle::mangle_polyid_and_weight_pix(veto_masks[kk], &pt, &poly_id, &weight);
+                    if (weight!=0.0L) vetoed = true;
+                }
+            if (vetoed) continue;
+
+            RA.push_back(ra);
+            DEC.push_back(dec);
+            Z.push_back(z);
+        }
+    }
+}
+
+void downsample (double plus_factor)
+// downsamples to the boss_z_hist, up to plus_factor
+{
+    const gsl_histogram *target_hist = boss_z_hist;
+
     gsl_histogram *sim_z_hist = gsl_histogram_clone(target_hist); // get the same ranges
     gsl_histogram_reset(sim_z_hist);
-    for (auto z : z_vec)
+    for (auto z : Z)
         gsl_histogram_increment(sim_z_hist, z);
     double keep_fraction[target_hist->n];
     for (int ii=0; ii<target_hist->n; ++ii)
@@ -152,15 +459,16 @@ void downsample (gsl_histogram *target_hist, double plus_factor,
     std::vector<double> ra_tmp, dec_tmp, z_tmp;
 
     gsl_rng *rng = gsl_rng_alloc(gsl_rng_default);
-    for (size_t ii=0; ii<ra_vec.size(); ++ii)
+
+    for (size_t ii=0; ii<RA.size(); ++ii)
     {
         size_t idx;
-        gsl_histogram_find(sim_z_hist, z_vec[ii], &idx);
+        gsl_histogram_find(sim_z_hist, Z[ii], &idx);
         if (gsl_rng_uniform(rng) < keep_fraction[idx])
         {
-            ra_tmp.push_back(ra_vec[ii]);
-            dec_tmp.push_back(dec_vec[ii]);
-            z_tmp.push_back(z_vec[ii]);
+            ra_tmp.push_back(RA[ii]);
+            dec_tmp.push_back(DEC[ii]);
+            z_tmp.push_back(Z[ii]);
         }
     }
 
@@ -169,9 +477,9 @@ void downsample (gsl_histogram *target_hist, double plus_factor,
     gsl_rng_free(rng);
 
     // assign output
-    ra_vec = ra_tmp;
-    dec_vec = dec_tmp;
-    z_vec = z_tmp;
+    RA = ra_tmp;
+    DEC = dec_tmp;
+    Z = z_tmp;
 }
 
 struct GalHelper
@@ -205,7 +513,7 @@ inline long double haversine (const pointing &a1, const pointing &a2)
     return hav(t1-t2) + hav(p1-p2) * ( - hav(t1-t2) + hav(t1+t2) );
 }
 
-void fibcoll (std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::vector<double> &z_vec)
+void fibcoll ()
 {
     // both figures from Chang
     // we are dealing with pretty small angle differences so better do things in long double
@@ -220,13 +528,13 @@ void fibcoll (std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::ve
     T_Healpix_Base hp_base (nside, RING, SET_NSIDE);
 
     std::vector<GalHelper> all_vec;
-    for (size_t ii=0; ii<ra_vec.size(); ++ii)
-        all_vec.emplace_back(ii, ra_vec[ii], dec_vec[ii], z_vec[ii], hp_base);
+    for (size_t ii=0; ii<RA.size(); ++ii)
+        all_vec.emplace_back(ii, RA[ii], DEC[ii], Z[ii], hp_base);
 
     // empty the output arrays
-    ra_vec.clear();
-    dec_vec.clear();
-    z_vec.clear();
+    RA.clear();
+    DEC.clear();
+    Z.clear();
 
     // sort these for efficient access with increasing healpix index
     std::sort(all_vec.begin(), all_vec.end(),
@@ -282,244 +590,27 @@ void fibcoll (std::vector<double> &ra_vec, std::vector<double> &dec_vec, std::ve
         if (collided && gsl_rng_uniform(rng)<collrate) continue;
 
         // no collision, let's keep this galaxy
-        ra_vec.push_back(g.ra);
-        dec_vec.push_back(g.dec);
-        z_vec.push_back(g.z);
+        RA.push_back(g.ra);
+        DEC.push_back(g.dec);
+        Z.push_back(g.z);
     }
+
+    // clean up
+    gsl_rng_free(rng);
 
     // for debugging
     std::printf("fiber collision rate: %.2f percent\n",
-                100.0*(double)(all_vec.size()-z_vec.size())/(double)(all_vec.size()));
+                100.0*(double)(all_vec.size()-Z.size())/(double)(all_vec.size()));
 }
 
-template<typename T>
-inline double per_unit (T x, double BoxSize)
+
+void write_to_disk (void)
 {
-    double x1 = (double)x / BoxSize;
-    x1 = std::fmod(x, 1.0);
-    return (x1<0.0) ? x1+1.0 : x1;
-}
-
-int main (int argc, char **argv)
-{
-    char **c = argv + 1;
-
-    char *inpath = *(c++);
-    char *inident = *(c++);
-    char *outident = *(c++);
-    double BoxSize = std::atof(*(c++));
-    double Omega_m = std::atof(*(c++));
-    double zmin = std::atof(*(c++));
-    double zmax = std::atof(*(c++));
-    int remap_case = std::atoi(*(c++));
-    char *boss_dir = *(c++);
-    int veto = std::atoi(*(c++)); // whether to apply veto, removes a bit less than 7% of galaxies
-
-    int Nsnaps = 0;
-    double times[64];
-    while (*c)
-        times[Nsnaps++] = std::atof(*(c++));
-
-    // get increasing redshifts
-    std::qsort(times, Nsnaps, sizeof(double), dbl_cmp</*reverse=*/true>);
-
-    double redshifts[Nsnaps];
-    for (int ii=0; ii<Nsnaps; ++ii)
-        redshifts[ii] = 1.0/times[ii] - 1.0;
-
-    // define the redshift boundaries
-    // TODO we can maybe do something more sophisticated here
-    double redshift_bounds[Nsnaps+1];
-    redshift_bounds[0] = zmin;
-    redshift_bounds[Nsnaps] = zmax;
-    for (int ii=1; ii<Nsnaps; ++ii)
-        redshift_bounds[ii] = 0.5*(redshifts[ii-1]+redshifts[ii]);
-    
-    // convert to comoving distances
-    double chi_bounds[Nsnaps+1];
-    comoving(Omega_m, Nsnaps+1, redshift_bounds, chi_bounds);
-
-    // initialize the interpolator getting us from comoving to redshift
-    const int Ninterp = 1024;
-    double z_interp_min = zmin-0.01, z_interp_max=zmax+0.01;
-    double z_interp[Ninterp];
-    double chi_interp[Ninterp];
-    for (int ii=0; ii<Ninterp; ++ii)
-        z_interp[ii] = z_interp_min + (z_interp_max-z_interp_min)*(double)ii/(double)(Ninterp-1);
-    comoving(Omega_m, Ninterp, z_interp, chi_interp);
-    gsl_interp *z_chi_interp = gsl_interp_alloc(gsl_interp_cspline, Ninterp);
-    gsl_interp_accel *acc = gsl_interp_accel_alloc();
-    gsl_interp_init(z_chi_interp, chi_interp, z_interp, Ninterp);
-
-    // initialize the transformation
-    auto C = cuboid::Cuboid(remaps[remap_case]);
-
-    // initialize the survey footprint
-    char mask_fname[512];
-    cmangle::MangleMask *ang_mask = cmangle::mangle_new();
-    std::sprintf(mask_fname, "%s/%s", boss_dir, ang_mask_fname);
-    cmangle::mangle_read(ang_mask, mask_fname);
-
-    // much more efficient
-    cmangle::set_pixel_map(ang_mask);
-
-    cmangle::MangleMask *veto_masks[Nveto];
-    if (veto)
-    {
-        for (int ii=0; ii<Nveto; ++ii)
-        {
-            veto_masks[ii] = cmangle::mangle_new();
-            std::sprintf(mask_fname, "%s/%s", boss_dir, veto_fnames[ii]);
-            cmangle::mangle_read(veto_masks[ii], mask_fname);
-            cmangle::set_pixel_map(veto_masks[ii]);
-        }
-    }
-
-    // the target redshift distribution
-    std::vector<double> boss_z = read_boss_z(boss_dir);
-    gsl_histogram *boss_z_hist = gsl_histogram_alloc(N_zbins);
-    gsl_histogram_set_ranges_uniform(boss_z_hist, zmin, zmax);
-    for (auto z : boss_z)
-    {
-        if (z<zmin || z>zmax) continue;
-        gsl_histogram_increment(boss_z_hist, z);
-    }
-
-    // this is the output
-    std::vector<double> ra_out, dec_out, z_out;
-
-    for (int ii=0; ii<Nsnaps; ++ii)
-    {
-        char fname[512];
-        std::sprintf(fname, "%s/galaxies/galaxies_%s_%.4f.bin", inpath, inident, times[ii]);
-
-        auto fp = std::fopen(fname, "rb");
-
-        // figure out number of galaxies
-        std::fseek(fp, 0, SEEK_END);
-        auto nbytes = std::ftell(fp);
-
-        auto Ngal = (nbytes/sizeof(float)-1/*rsd factor*/)/6;
-        if (!((6*Ngal+1)*sizeof(float)==nbytes)) return 1;
-
-        // go back to beginning
-        std::fseek(fp, 0, SEEK_SET);
-
-        float rsd_factor_f;
-        std::fread(&rsd_factor_f, sizeof(float), 1, fp);
-
-        float *xgal_f = (float *)std::malloc(3 * Ngal * sizeof(float));
-        float *vgal_f = (float *)std::malloc(3 * Ngal * sizeof(float));
-        std::fread(xgal_f, sizeof(float), 3*Ngal, fp);
-        std::fread(vgal_f, sizeof(float), 3*Ngal, fp);
-
-        // these will contain the outputs
-        double *xgal = (double *)std::malloc(3 * Ngal * sizeof(double));
-        double *vgal = (double *)std::malloc(3 * Ngal * sizeof(double));
-
-        // now transform the positions and velocities
-        for (size_t jj=0; jj<Ngal; ++jj)
-        {
-            C.Transform(per_unit(xgal_f[3*jj+0], BoxSize),
-                        per_unit(xgal_f[3*jj+1], BoxSize),
-                        per_unit(xgal_f[3*jj+2], BoxSize),
-                        xgal[3*jj+0], xgal[3*jj+1], xgal[3*jj+2]);
-            for (int kk=0; kk<3; ++kk) xgal[3*jj+kk] *= BoxSize;
-
-            C.VelocityTransform(vgal_f[3*jj+0], vgal_f[3*jj+1], vgal_f[3*jj+2],
-                                vgal[3*jj+0], vgal[3*jj+1], vgal[3*jj+2]);
-        }
-
-        // now perform RSD
-        double L[] = { C.L1, C.L2, C.L3 };
-        for (size_t jj=0; jj<Ngal; ++jj)
-        {
-            // compute the line-of-sight vector
-            double los[3];
-            for (int kk=0; kk<3; ++kk) los[kk] = xgal[3*jj+kk] - origin[kk]*BoxSize*L[kk];
-
-            // compute length of the line-of-sight vector
-            double abs_los = std::hypot(los[0], los[1], los[2]);
-
-            // compute the velocity projection onto the line of sight
-            double vproj = (los[0]*vgal[3*jj+0]+los[1]*vgal[3*jj+1]+los[2]*vgal[3*jj+2])
-                           / abs_los;
-
-            for (int kk=0; kk<3; ++kk) xgal[3*jj+kk] += rsd_factor_f * vproj * los[kk] / abs_los;
-        }
-        
-        // choose the galaxies within this redshift shell
-        for (size_t jj=0; jj<Ngal; ++jj)
-        {
-            double los[3];
-            for (int kk=0; kk<3; ++kk) los[kk] = xgal[3*jj+kk] - origin[kk]*BoxSize*L[kk];
-            
-            double chi = std::hypot(los[0], los[1], los[2]);
-
-            if (chi>chi_bounds[ii] && chi<chi_bounds[ii+1])
-            // we are in the comoving shell that's coming from this snapshot
-            {
-                // rotate the line of sight into the NGC footprint and transpose the axes into
-                // canonical order
-                double x1, x2, x3;
-                x1 = std::cos(alpha) * los[2] - std::sin(alpha) * los[1];
-                x2 = los[0];
-                x3 = std::sin(alpha) * los[2] + std::cos(alpha) * los[1];
-
-                double z = gsl_interp_eval(z_chi_interp, chi_interp, z_interp, chi, acc);
-                double theta = std::acos(x3/chi);
-                double phi = std::atan2(x2, x1);
-
-                double dec = 90.0-theta/M_PI*180.0;
-                double ra = phi/M_PI*180.0;
-                if (ra<0.0) ra += 360.0;
-                ra += beta;
-
-                // for the angular mask
-                cmangle::Point pt;
-                cmangle::point_set_from_radec(&pt, ra, dec);
-                int64_t poly_id; long double weight;
-                cmangle::mangle_polyid_and_weight_pix(ang_mask, &pt, &poly_id, &weight);
-                if (weight==0.0L) continue;
-
-                bool vetoed = false;
-                if (veto)
-                    for (int kk=0; kk<Nveto && !vetoed; ++kk)
-                    {
-                        cmangle::mangle_polyid_and_weight_pix(veto_masks[kk], &pt, &poly_id, &weight);
-                        if (weight!=0.0L) vetoed = true;
-                    }
-                if (vetoed) continue;
-
-                z_out.push_back(z);
-                dec_out.push_back(dec);
-                ra_out.push_back(ra);
-            }
-        }
-
-        std::printf("Done with %d\n", ii);
-    }
-
-    // first downsampling before fiber collisions are applied
-    downsample(boss_z_hist, fibcoll_rate, ra_out, dec_out, z_out);
-
-    // apply fiber collisions
-    fibcoll(ra_out, dec_out, z_out); 
-
-    // now downsample to our final density
-    downsample(boss_z_hist, 0.0, ra_out, dec_out, z_out);
-
-    // output
     char fname[512];
     std::sprintf(fname, "%s/galaxies/lightcone_%s_%s.txt", inpath, inident, outident);
     auto fp = std::fopen(fname, "w");
     std::fprintf(fp, "# RA, DEC, z\n");
-    for (size_t ii=0; ii<z_out.size(); ++ii)
-        std::fprintf(fp, "%.8f %.8f %.8f\n", ra_out[ii], dec_out[ii], z_out[ii]);
-
-    // clean up
-    gsl_interp_free(z_chi_interp);
-    gsl_interp_accel_free(acc);
-
-    return 0;
+    for (size_t ii=0; ii<Z.size(); ++ii)
+        std::fprintf(fp, "%.8f %.8f %.8f\n", RA[ii], DEC[ii], Z[ii]);
 }
+

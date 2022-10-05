@@ -18,7 +18,7 @@ numZobovThreads = 4
 numZobovDivisions = 2
 mergingThreshold = 1e-9
 
-dataSampleList = [Sample(dataFile='lightcone_fidhod_test.dat',
+dataSampleList = [Sample(dataFile='lightcone_fidhod_test.txt',
                          fullName='test', nickName='test',
                          dataType='observation',
                          volumeLimited=True, # TODO

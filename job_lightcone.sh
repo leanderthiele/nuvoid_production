@@ -45,4 +45,4 @@ source globals.sh
   1 \
   /tigress/lthiele/boss_dr12 \
   1 \
-  $TIMES
+  0.6152 0.6488 0.6715

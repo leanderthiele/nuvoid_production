@@ -123,7 +123,8 @@ void remap_snapshot (size_t Ngal,
                      const std::vector<float> &xgal_f, const std::vector<float> &vgal_f,
                      std::vector<double> &xgal, std::vector<double> &vgal);
 
-void RSD (int snap_idx, size_t Ngal, std::vector<double> &xgal, const std::vector<double> &vgal);
+// not used anymore as a separate routine, we do it within choose_galaxies
+// void RSD (int snap_idx, size_t Ngal, std::vector<double> &xgal, const std::vector<double> &vgal);
 
 // this routine modifies RA, DEC, Z
 void choose_galaxies (int snap_idx, size_t Ngal,
@@ -187,12 +188,9 @@ int main (int argc, char **argv)
         std::printf("\tremap_snapshot\n");
         remap_snapshot(Ngal, xgal_f, vgal_f, xgal, vgal);
 
-        // now perform RSD
-        // TODO we now implement this within choose_galaxies, can probably take out
-        // std::printf("\tRSD\n");
-        // RSD(ii, Ngal, xgal, vgal);
-        
         // choose the galaxies within this redshift shell
+        // This routine also implements lightcone correction
+        // and RSD
         std::printf("\tchoose_galaxies\n");
         choose_galaxies(ii, Ngal, xgal, vgal);
 
@@ -385,6 +383,7 @@ void remap_snapshot (size_t Ngal,
     }
 }
 
+/* not used anymore
 void RSD (int snap_idx, size_t Ngal, std::vector<double> &xgal, const std::vector<double> &vgal)
 {
     double rsd_factor = (1.0+snap_redshifts[snap_idx])
@@ -406,6 +405,7 @@ void RSD (int snap_idx, size_t Ngal, std::vector<double> &xgal, const std::vecto
             xgal[3*jj+kk] += rsd_factor * vproj * los[kk] / abs_los;
     }
 }
+*/
 
 void choose_galaxies (int snap_idx, size_t Ngal,
                       const std::vector<double> &xgal, const std::vector<double> &vgal)

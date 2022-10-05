@@ -18,8 +18,8 @@ numZobovThreads = 16
 numZobovDivisions = 2
 mergingThreshold = 1e-9
 
-dataSampleList = [Sample(dataFile='lightcone_fidhod_time_samples_%d.txt'%idx,
-                         fullName='time_samples_%d'%idx, nickName='time_samples_%d'%idx,
+dataSampleList = [Sample(dataFile='lightcone_fidhod_time_samples_%d_lcorrection.txt'%idx,
+                         fullName='time_samples_%d_lcorrection'%idx, nickName='time_samples_%d_lcorrection'%idx,
                          dataType='observation',
                          volumeLimited=True, # TODO
                          maskFile='/tigress/lthiele/boss_dr12/mask_DR12v5_CMASS_North_nside256.fits',

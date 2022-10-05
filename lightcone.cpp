@@ -33,6 +33,11 @@ int remaps[][9] =
                     { 1, 1, 1,
                       1, 0, 0,
                       0, 1, 0, },
+                    // 1.0000 1.0000 1.0000
+                    // trivial case, only for debugging
+                    { 1, 0, 0,
+                      0, 1, 0,
+                      0, 0, 1 },
                   };
 
 // get from the quadrant ra=[-90,90], dec=[0,90] to the NGC footprint

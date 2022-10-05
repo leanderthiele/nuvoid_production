@@ -42,7 +42,7 @@ source globals.sh
   $BOX_SIZE \
   0.25 \
   0.42 0.70 \
-  1 \
+  0 \
   /tigress/lthiele/boss_dr12 \
   1 \
   0.6152 0.6488 0.6715

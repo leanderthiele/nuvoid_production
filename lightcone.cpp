@@ -82,7 +82,7 @@ const int N_interp = 1024;
 char *inpath, *inident, *outident, *boss_dir;
 double BoxSize, Omega_m, zmin, zmax;
 int remap_case, veto, Nsnaps;
-std::vector<double> times, redshifts, redshift_bounds, chi_bounds;
+std::vector<double> snap_times, snap_redshifts, snap_chis, redshift_bounds, chi_bounds;
 
 gsl_spline *z_chi_interp; gsl_interp_accel *z_chi_interp_acc;
 
@@ -126,7 +126,8 @@ void remap_snapshot (size_t Ngal,
 void RSD (int snap_idx, size_t Ngal, std::vector<double> &xgal, const std::vector<double> &vgal);
 
 // this routine modifies RA, DEC, Z
-void choose_galaxies (int snap_idx, size_t Ngal, const std::vector<double> &xgal);
+void choose_galaxies (int snap_idx, size_t Ngal,
+                      const std::vector<double> &xgal, const std::vector<double> &vgal);
 
 // writes in the VIDE format
 void write_to_disk (void);
@@ -146,8 +147,8 @@ int main (int argc, char **argv)
     boss_dir = *(c++);
     veto = std::atoi(*(c++)); // whether to apply veto, removes a bit less than 7% of galaxies
 
-    while (*c) times.push_back(std::atof(*(c++)));
-    Nsnaps = times.size();
+    while (*c) snap_times.push_back(std::atof(*(c++)));
+    Nsnaps = snap_times.size();
 
     std::printf("process_times\n");
     process_times();
@@ -187,12 +188,13 @@ int main (int argc, char **argv)
         remap_snapshot(Ngal, xgal_f, vgal_f, xgal, vgal);
 
         // now perform RSD
-        std::printf("\tRSD\n");
-        RSD(ii, Ngal, xgal, vgal);
+        // TODO we now implement this within choose_galaxies, can probably take out
+        // std::printf("\tRSD\n");
+        // RSD(ii, Ngal, xgal, vgal);
         
         // choose the galaxies within this redshift shell
         std::printf("\tchoose_galaxies\n");
-        choose_galaxies(ii, Ngal, xgal);
+        choose_galaxies(ii, Ngal, xgal, vgal);
 
         std::printf("Done with %d\n", ii);
     }
@@ -249,15 +251,18 @@ void comoving (int N, double *z, double *chi)
 void process_times (void)
 {
     // get increasing redshifts
-    std::sort(times.begin(), times.end(), [](double a, double b){ return a>b; });
+    std::sort(snap_times.begin(), snap_times.end(), [](double a, double b){ return a>b; });
 
-    for (int ii=0; ii<Nsnaps; ++ii) redshifts.push_back(1.0/times[ii] - 1.0);
+    for (int ii=0; ii<Nsnaps; ++ii) snap_redshifts.push_back(1.0/snap_times[ii] - 1.0);
+
+    snap_chis.resize(Nsnaps);
+    comoving(Nsnaps, snap_redshifts.data(), snap_chis.data());
 
     // define the redshift boundaries
     // TODO we can maybe do something more sophisticated here
     redshift_bounds.push_back(zmin);
     for (int ii=1; ii<Nsnaps; ++ii)
-        redshift_bounds.push_back(0.5*(redshifts[ii-1]+redshifts[ii]));
+        redshift_bounds.push_back(0.5*(snap_redshifts[ii-1]+snap_redshifts[ii]));
     redshift_bounds.push_back(zmax);
     
     // convert to comoving distances
@@ -330,7 +335,7 @@ void measure_boss_nz (void)
 void read_snapshot (int snap_idx, std::vector<float> &xgal_f, std::vector<float> &vgal_f, size_t &Ngal)
 {
     char fname[512];
-    std::sprintf(fname, "%s/galaxies/galaxies_%s_%.4f.bin", inpath, inident, times[snap_idx]);
+    std::sprintf(fname, "%s/galaxies/galaxies_%s_%.4f.bin", inpath, inident, snap_times[snap_idx]);
 
     auto fp = std::fopen(fname, "rb");
 
@@ -382,8 +387,8 @@ void remap_snapshot (size_t Ngal,
 
 void RSD (int snap_idx, size_t Ngal, std::vector<double> &xgal, const std::vector<double> &vgal)
 {
-    double rsd_factor = (1.0+redshifts[snap_idx])
-                        / ( 100.0 * std::sqrt(Omega_m * gsl_pow_3(1.0+redshifts[snap_idx]) + (1.0-Omega_m)) );
+    double rsd_factor = (1.0+snap_redshifts[snap_idx])
+                        / ( 100.0 * std::sqrt(Omega_m * gsl_pow_3(1.0+snap_redshifts[snap_idx]) + (1.0-Omega_m)) );
     for (size_t jj=0; jj<Ngal; ++jj)
     {
         // compute the line-of-sight vector
@@ -402,8 +407,14 @@ void RSD (int snap_idx, size_t Ngal, std::vector<double> &xgal, const std::vecto
     }
 }
 
-void choose_galaxies (int snap_idx, size_t Ngal, const std::vector<double> &xgal)
+void choose_galaxies (int snap_idx, size_t Ngal,
+                      const std::vector<double> &xgal, const std::vector<double> &vgal)
 {
+    // h km/s/Mpc
+    const double Hz = 100.0 * std::sqrt(Omega_m*gsl_pow_3(1.0+snap_redshifts[snap_idx])+(1.0-Omega_m));
+
+    double rsd_factor = (1.0+snap_redshifts[snap_idx]) / Hz;
+
     for (size_t jj=0; jj<Ngal; ++jj)
     {
         double los[3];
@@ -411,6 +422,27 @@ void choose_galaxies (int snap_idx, size_t Ngal, const std::vector<double> &xgal
         
         double chi = std::hypot(los[0], los[1], los[2]);
 
+        // the radial velocity
+        double vproj = (los[0]*vgal[3*jj+0]+los[1]*vgal[3*jj+1]+los[2]*vgal[3*jj+2])
+                       / chi;
+
+        // map onto the lightcone -- we assume that this is a relatively small correction
+        //                           so we just do it to first order
+        double delta_z = (chi - snap_chis[snap_idx]) / (299792.458 + vproj) * Hz;
+
+        // correct the position accordingly
+        for (int kk=0; kk<3; ++kk) los[kk] -= delta_z * vgal[3*jj+kk] / Hz;
+
+        // only a small correction I assume
+        chi = std::hypot(los[0], los[1], los[2]);
+
+        // now add RSD (the order is important here, as RSD can be a pretty severe effect)
+        for (int kk=0; kk<3; ++kk) los[kk] += rsd_factor * vproj * los[kk] / chi;
+
+        // I'm lazy
+        chi = std::hypot(los[0], los[1], los[2]);
+
+        // TODO maybe we want to bin by redshift *before* RSD here???
         if (chi>chi_bounds[snap_idx] && chi<chi_bounds[snap_idx+1])
         // we are in the comoving shell that's coming from this snapshot
         {

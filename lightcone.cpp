@@ -73,7 +73,7 @@ const int N_zbins = 64;
 // and downsampling is too pronounced.
 // If this is chosen too small, we'll end up with fewer galaxies than we need after
 // fiber collisions are removed.
-const double fibcoll_rate = 0.03;
+const double fibcoll_rate = 0.06;
 
 // how many interpolation stencils we use to get from chi to z
 const int N_interp = 1024;

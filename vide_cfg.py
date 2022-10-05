@@ -14,12 +14,12 @@ workDir = '/scratch/gpfs/lthiele/nuvoid_production/test1/voids'
 logDir = os.path.join(workDir, 'logs')
 figDir = os.path.join(workDir, 'figs')
 
-numZobovThreads = 4
+numZobovThreads = 16
 numZobovDivisions = 2
 mergingThreshold = 1e-9
 
-dataSampleList = [Sample(dataFile='lightcone_fidhod_test.txt',
-                         fullName='test', nickName='test',
+dataSampleList = [Sample(dataFile='lightcone_fidhod_time_samples_%d.txt'%idx,
+                         fullName='time_samples_%d'%idx, nickName='time_samples_%d'%idx,
                          dataType='observation',
                          volumeLimited=True, # TODO
                          maskFile='/tigress/lthiele/boss_dr12/mask_DR12v5_CMASS_North_nside256.fits',
@@ -29,4 +29,5 @@ dataSampleList = [Sample(dataFile='lightcone_fidhod_test.txt',
                          minVoidRadius=-1,
                          fakeDensity=2e-3,
                          useComoving=True,
-                         omegaM=0.3)]
+                         omegaM=0.3)
+                  for idx in range(7)]

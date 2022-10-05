@@ -81,7 +81,7 @@ const int N_interp = 1024;
 // ---- GLOBAL VARIABLES -----
 char *inpath, *inident, *outident, *boss_dir;
 double BoxSize, Omega_m, zmin, zmax;
-int remap_case, veto, Nsnaps;
+int remap_case, correct, veto, Nsnaps;
 unsigned augment;
 std::vector<double> snap_times, snap_redshifts, snap_chis, redshift_bounds, chi_bounds;
 
@@ -146,6 +146,7 @@ int main (int argc, char **argv)
     zmin = std::atof(*(c++));
     zmax = std::atof(*(c++));
     remap_case = std::atoi(*(c++));
+    correct = std::atoi(*(c++));
     augment = std::atoi(*(c++));
     boss_dir = *(c++);
     veto = std::atoi(*(c++)); // whether to apply veto, removes a bit less than 7% of galaxies
@@ -465,15 +466,18 @@ void choose_galaxies (int snap_idx, size_t Ngal,
         double vproj = (los[0]*vgal[3*jj+0]+los[1]*vgal[3*jj+1]+los[2]*vgal[3*jj+2])
                        / chi;
 
-        // map onto the lightcone -- we assume that this is a relatively small correction
-        //                           so we just do it to first order
-        double delta_z = (chi - snap_chis[snap_idx]) / (299792.458 + vproj) * Hz;
+        if (correct)
+        {
+            // map onto the lightcone -- we assume that this is a relatively small correction
+            //                           so we just do it to first order
+            double delta_z = (chi - snap_chis[snap_idx]) / (299792.458 + vproj) * Hz;
 
-        // correct the position accordingly
-        for (int kk=0; kk<3; ++kk) los[kk] -= delta_z * vgal[3*jj+kk] / Hz;
+            // correct the position accordingly
+            for (int kk=0; kk<3; ++kk) los[kk] -= delta_z * vgal[3*jj+kk] / Hz;
 
-        // only a small correction I assume
-        chi = std::hypot(los[0], los[1], los[2]);
+            // only a small correction I assume
+            chi = std::hypot(los[0], los[1], los[2]);
+        }
 
         // now add RSD (the order is important here, as RSD can be a pretty severe effect)
         for (int kk=0; kk<3; ++kk) los[kk] += rsd_factor * vproj * los[kk] / chi;

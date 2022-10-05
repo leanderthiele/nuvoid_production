@@ -49,6 +49,10 @@ samples=(
          "       0.6074                             0.6367                             0.6563                             0.6757               0.6930"
         )
 
+remap_case=1
+correct=0
+veto=1
+
 ii=0
 
 for time_samples in "${samples[@]}"; do
@@ -62,10 +66,11 @@ for time_samples in "${samples[@]}"; do
       $BOX_SIZE \
       0.30 \
       0.42 0.70 \
-      1 \
-      ${augment} \
+      $remap_case \
+      $correct \
+      $augment \
       "/tigress/lthiele/boss_dr12" \
-      1 \
+      $veto \
       $time_samples
   done
   

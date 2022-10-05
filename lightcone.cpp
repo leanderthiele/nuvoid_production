@@ -82,6 +82,7 @@ const int N_interp = 1024;
 char *inpath, *inident, *outident, *boss_dir;
 double BoxSize, Omega_m, zmin, zmax;
 int remap_case, veto, Nsnaps;
+unsigned augment;
 std::vector<double> snap_times, snap_redshifts, snap_chis, redshift_bounds, chi_bounds;
 
 gsl_spline *z_chi_interp; gsl_interp_accel *z_chi_interp_acc;
@@ -145,6 +146,7 @@ int main (int argc, char **argv)
     zmin = std::atof(*(c++));
     zmax = std::atof(*(c++));
     remap_case = std::atoi(*(c++));
+    augment = std::atoi(*(c++));
     boss_dir = *(c++);
     veto = std::atoi(*(c++)); // whether to apply veto, removes a bit less than 7% of galaxies
 
@@ -364,21 +366,58 @@ inline double per_unit (T x)
     return (x1<0.0) ? x1+1.0 : x1;
 }
 
+inline void reflect (unsigned r, double *x, double *v)
+{
+    for (unsigned ii=0; ii<3; ++ii)
+        if (r & (1<<ii))
+        {
+            x[ii] = BoxSize - x[ii];
+            v[ii] *= -1.0;
+        }
+}
+
+inline void transpose (unsigned t, double *x)
+{
+    if      (t==0) return;
+    else if (t==1) std::swap(x[0], x[1]);
+    else if (t & 1)
+    {
+        std::swap(x[0], x[2]);
+        if (t & 4) std::swap(x[0], x[1]);
+    }
+    else
+    {
+        std::swap(x[1], x[2]);
+        if (t & 4) std::swap(x[0], x[1]);
+    }
+}
+
 void remap_snapshot (size_t Ngal,
                      const std::vector<float> &xgal_f, const std::vector<float> &vgal_f,
                      std::vector<double> &xgal, std::vector<double> &vgal)
 {
     xgal.resize(3 * Ngal); vgal.resize(3 * Ngal);
 
+    unsigned r = augment / 6; // labels the 8 reflection cases
+    unsigned t = augment % 6; // labels the 6 transposition cases
+
     for (size_t jj=0; jj<Ngal; ++jj)
     {
-        C.Transform(per_unit(xgal_f[3*jj+0]),
-                    per_unit(xgal_f[3*jj+1]),
-                    per_unit(xgal_f[3*jj+2]),
+        double x[3], v[3];
+        for (int kk=0; kk<3; ++kk)
+        {
+            x[kk] = xgal_f[3*jj+kk];
+            v[kk] = vgal_f[3*jj+kk];
+        }
+
+        reflect(r, x, v);
+        transpose(t, x); transpose(t, v);
+
+        C.Transform(per_unit(x[0]), per_unit(x[1]), per_unit(x[2]),
                     xgal[3*jj+0], xgal[3*jj+1], xgal[3*jj+2]);
         for (int kk=0; kk<3; ++kk) xgal[3*jj+kk] *= BoxSize;
 
-        C.VelocityTransform(vgal_f[3*jj+0], vgal_f[3*jj+1], vgal_f[3*jj+2],
+        C.VelocityTransform(v[0], v[1], v[2],
                             vgal[3*jj+0], vgal[3*jj+1], vgal[3*jj+2]);
     }
 }

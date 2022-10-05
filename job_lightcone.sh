@@ -54,17 +54,20 @@ ii=0
 for time_samples in "${samples[@]}"; do
   echo "$time_samples" >> "/scratch/gpfs/lthiele/nuvoid_production/test1/galaxies/time_samples_$ii.info"
 
-  ./lightcone \
-    "/scratch/gpfs/lthiele/nuvoid_production/test1" \
-    "fidhod" \
-    "time_samples_${ii}_lcorrection" \
-    $BOX_SIZE \
-    0.30 \
-    0.42 0.70 \
-    1 \
-    "/tigress/lthiele/boss_dr12" \
-    1 \
-    $time_samples
+  for augment in $(seq 0 47); do
+    ./lightcone \
+      "/scratch/gpfs/lthiele/nuvoid_production/test1" \
+      "fidhod" \
+      "time_samples_${ii}_${augment}_lcorrection" \
+      $BOX_SIZE \
+      0.30 \
+      0.42 0.70 \
+      1 \
+      ${augment} \
+      "/tigress/lthiele/boss_dr12" \
+      1 \
+      $time_samples
+  done
   
   ii=$((ii+1))
 done

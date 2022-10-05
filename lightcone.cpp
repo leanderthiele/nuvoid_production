@@ -357,7 +357,7 @@ template<typename T>
 inline double per_unit (T x)
 {
     double x1 = (double)x / BoxSize;
-    x1 = std::fmod(x, 1.0);
+    x1 = std::fmod(x1, 1.0);
     return (x1<0.0) ? x1+1.0 : x1;
 }
 

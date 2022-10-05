@@ -506,11 +506,11 @@ struct GalHelper
     // (at the cost of more memory but should be fine)
     double ra, dec, z;
     int64_t hp_idx;
-    size_t vec_idx;
+    unsigned long id;
     pointing ang;
 
-    GalHelper (size_t vec_idx_, double ra_, double dec_, double z_, T_Healpix_Base<int64_t> &hp_base) :
-        ra {ra_}, dec {dec_}, z{z_}, vec_idx {vec_idx_}
+    GalHelper (unsigned long id_, double ra_, double dec_, double z_, T_Healpix_Base<int64_t> &hp_base) :
+        ra {ra_}, dec {dec_}, z{z_}, id {id_}
     {
         double theta = (90.0-dec) * M_PI/180.0;
         double phi = ra * M_PI/180.0;
@@ -539,15 +539,21 @@ void fibcoll ()
     static const double collrate = 0.6;
 
     // for sampling from overlapping regions according to collision rate
+    // and assignment of random galaxy IDs
     gsl_rng *rng = gsl_rng_alloc(gsl_rng_default);
 
     // for HOPEFULLY efficient nearest neighbour search
     static const int64_t nside = 128; // can be tuned, with 128 pixarea/discarea~225
     T_Healpix_Base hp_base (nside, RING, SET_NSIDE);
 
+    // we assign random 64bit IDs to the galaxies
+    // This is better than using their index in the input arrays, since these arrays
+    // have some ordering (low redshifts go first), and this would slightly bias
+    // the fiber collision removal implmented later
+    // The collision rate is tiny for 64bit random numbers and thus has no impact.
     std::vector<GalHelper> all_vec;
     for (size_t ii=0; ii<RA.size(); ++ii)
-        all_vec.emplace_back(ii, RA[ii], DEC[ii], Z[ii], hp_base);
+        all_vec.emplace_back(gsl_rng_get(rng), RA[ii], DEC[ii], Z[ii], hp_base);
 
     // empty the output arrays
     RA.clear();
@@ -591,8 +597,8 @@ void fibcoll ()
         {
             auto this_range = ranges[hp_idx];
             for (size_t ii=this_range.first; ii<this_range.second; ++ii)
-                if (haversine(g.ang, all_vec[ii].ang) < hav(angscale)
-                    && g.vec_idx > all_vec[ii].vec_idx)
+                if (g.id > all_vec[ii].id
+                    && haversine(g.ang, all_vec[ii].ang) < hav(angscale))
                 // use the fact that haversine is monotonic to avoid inverse operation
                 // by using the greater-than check, we ensure to remove only one member
                 // of each pair

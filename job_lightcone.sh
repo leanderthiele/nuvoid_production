@@ -51,7 +51,7 @@ ii=0
 for time_samples in "${samples[@]}"; do
   echo "$time_samples" >> "/scratch/gpfs/lthiele/nuvoid_production/test1/galaxies/time_samples_$ii.info"
   
-  srun -n 48 -W 0 bash lightcone.sh "$time_samples"
+  srun -n 48 -W 0 bash lightcone.sh $ii "$time_samples"
 
   ii=$((ii+1))
 done

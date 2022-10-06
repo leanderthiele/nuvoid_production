@@ -11,7 +11,7 @@ augment=$SLURM_PROCID
 ./lightcone \
   "/scratch/gpfs/lthiele/nuvoid_production/test1" \
   "fidhod" \
-  "time_samples_${samples_idx}_augment${augment}" \
+  "time_samples_${samples_idx}_augment${augment}_remap${REMAP_CASE}" \
   $BOX_SIZE \
   0.30 \
   0.42 0.70 \

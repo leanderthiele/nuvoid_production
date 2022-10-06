@@ -22,9 +22,9 @@ numZobovThreads = 8
 numZobovDivisions = 2
 mergingThreshold = 1e-9
 
-dataSampleList = [Sample(dataFile='lightcone_fidhod_time_samples_%d_augment%d.txt'%(idx, AUGMENT),
-                         fullName='time_samples_%d_augment%d'%(idx, AUGMENT),
-                         nickName='time_samples_%d_augment%d'%(idx, AUGMENT),
+dataSampleList = [Sample(dataFile='lightcone_fidhod_time_samples_%d_augment%d_remap0.txt'%(idx, AUGMENT),
+                         fullName='time_samples_%d_augment%d_remap0'%(idx, AUGMENT),
+                         nickName='time_samples_%d_augment%d_remap0'%(idx, AUGMENT),
                          dataType='observation',
                          volumeLimited=True, # TODO
                          maskFile='/tigress/lthiele/boss_dr12/mask_DR12v5_CMASS_North_nside256.fits',

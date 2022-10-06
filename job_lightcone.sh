@@ -3,7 +3,7 @@
 #SBATCH -n 48
 #SBATCH -c 1
 #SBATCH --mem-per-cpu=4G
-#SBATCH -t 01:00:00
+#SBATCH -t 00:10:00
 
 set -e -x -o pipefail
 
@@ -42,7 +42,7 @@ samples=(
          "       0.6074                             0.6367                             0.6563                             0.6757               0.6930"
         )
 
-export REMAP_CASE=1
+export REMAP_CASE=0
 export CORRECT=0
 export VETO=1
 

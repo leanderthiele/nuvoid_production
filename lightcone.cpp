@@ -11,6 +11,7 @@
 #include <gsl/gsl_spline.h>
 #include <gsl/gsl_histogram.h>
 #include <gsl/gsl_rng.h>
+#include <gsl/gsl_statistics_double.h>
 
 #include "cuboid.h"
 
@@ -62,11 +63,6 @@ const char *veto_fnames[Nveto] =
       "allsky_bright_star_mask_pix.ply",
       "badfield_mask_unphot_seeing_extinction_pixs8_dr12.ply",
     };
-
-// how many bins we use for redshift histogramming
-// should give redshift slices that are larger than the correlation
-// length but still capture any evolution
-const int N_zbins = 64;
 
 // used for the initial z downsampling, needs to be adjusted
 // If this is chosen too large, the nonlinear interplay between fiber collisions
@@ -173,7 +169,6 @@ int main (int argc, char **argv)
     init_masks();
 
     // the target redshift distribution
-    boss_z_hist = gsl_histogram_alloc(N_zbins);
     std::printf("measure_boss_nz\n");
     measure_boss_nz();
 
@@ -315,22 +310,28 @@ void measure_boss_nz (void)
 
     // skip RA and DEC
     std::fseek(fp, 2*Ngal*sizeof(double), SEEK_SET);
-
-    double *boss_z = (double *)std::malloc(Ngal * sizeof(double));
-
-    std::fread(boss_z, sizeof(double), Ngal, fp);
-
+    std::vector<double> boss_z;
+    boss_z.resize(Ngal);
+    std::fread(boss_z.data(), sizeof(double), Ngal, fp);
     std::fclose(fp);
 
-    gsl_histogram_set_ranges_uniform(boss_z_hist, zmin, zmax);
-    for (size_t ii=0; ii<Ngal; ++ii)
-    {
-        double z = boss_z[ii];
-        if (z<zmin || z>zmax) continue;
-        gsl_histogram_increment(boss_z_hist, z);
-    }
+    // remove values outside our bounds
+    std::vector<double> boss_z_cleaned;
+    std::copy_if(boss_z.begin(), boss_z.end(), std::back_inserter(boss_z_cleaned),
+                 [](double this_z){ return this_z>zmin && this_z<zmax; });
 
-    std::free(boss_z);
+    // measure the standard deviation for Scott's rule
+    double sd = gsl_stats_sd(boss_z_cleaned.data(), 1, boss_z_cleaned.size());
+
+    // Scott's rule
+    double dz = 3.5 * sd / std::cbrt((double)boss_z_cleaned.size());
+    size_t Nbins = std::round((zmax-zmin)/dz);
+
+    boss_z_hist = gsl_histogram_alloc(Nbins);
+    gsl_histogram_set_ranges_uniform(boss_z_hist, zmin, zmax);
+
+    std::for_each(boss_z_cleaned.begin(), boss_z_cleaned.end(),
+                  [](double this_z){ gsl_histogram_increment(boss_z_hist, this_z); });
 }
 
 void read_snapshot (int snap_idx, std::vector<float> &xgal_f, std::vector<float> &vgal_f, size_t &Ngal)

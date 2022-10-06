@@ -570,9 +570,9 @@ void downsample (double plus_factor)
     gsl_rng_free(rng);
 
     // assign output
-    RA = ra_tmp;
-    DEC = dec_tmp;
-    Z = z_tmp;
+    RA = std::move(ra_tmp);
+    DEC = std::move(dec_tmp);
+    Z = std::move(z_tmp);
 }
 
 struct GalHelper

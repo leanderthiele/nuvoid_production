@@ -67,11 +67,10 @@ ii=0
 
 for time_samples in "${samples[@]}"; do
 
-  if [ $ii -lt 7 ]; then continue; fi
-
-  echo "$time_samples" >> "/scratch/gpfs/lthiele/nuvoid_production/test1/galaxies/time_samples_$ii.info"
-  
-  srun -n 48 -W 0 bash lightcone.sh $ii "$time_samples"
+  if [ $ii -ge 7 ]; then
+    echo "$time_samples" >> "/scratch/gpfs/lthiele/nuvoid_production/test1/galaxies/time_samples_$ii.info"
+    srun -n 48 -W 0 bash lightcone.sh $ii "$time_samples"
+  fi
 
   ii=$((ii+1))
 done

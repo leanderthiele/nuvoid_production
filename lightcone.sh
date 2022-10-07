@@ -8,6 +8,8 @@ source globals.sh
 
 augment=$SLURM_PROCID
 
+module load gsl/2.6
+
 ./lightcone \
   "/scratch/gpfs/lthiele/nuvoid_production/test1" \
   "fidhod" \

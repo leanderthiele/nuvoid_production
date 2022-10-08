@@ -35,4 +35,4 @@ dataSampleList = [Sample(dataFile='lightcone_fidhod_time_samples_%d_augment%d_re
                          fakeDensity=2e-3,
                          useComoving=True,
                          omegaM=0.3)
-                  for idx in range(7,12)]
+                  for idx in range(12,19)]

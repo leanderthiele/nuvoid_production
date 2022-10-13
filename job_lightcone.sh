@@ -3,7 +3,7 @@
 #SBATCH -n 48
 #SBATCH -c 1
 #SBATCH --mem-per-cpu=4G
-#SBATCH -t 00:10:00
+#SBATCH -t 00:30:00
 
 set -e -x -o pipefail
 
@@ -93,12 +93,13 @@ samples=(
 export REMAP_CASE=0
 export CORRECT=0
 export VETO=1
+export STITCH_BEFORE_RSD=1
 
 ii=0
 
 for time_samples in "${samples[@]}"; do
 
-  if [ $ii -ge 12 ]; then
+  if [ $ii -ge 0 ]; then
     echo "$time_samples" >> "/scratch/gpfs/lthiele/nuvoid_production/test1/galaxies/time_samples_$ii.info"
     srun -n 48 -W 0 bash lightcone.sh $ii "$time_samples"
   fi

@@ -13,7 +13,7 @@ module load gsl/2.6
 ./lightcone \
   "/scratch/gpfs/lthiele/nuvoid_production/test1" \
   "fidhod" \
-  "time_samples_${samples_idx}_augment${augment}_remap${REMAP_CASE}" \
+  "time_samples_${samples_idx}_augment${augment}_remap${REMAP_CASE}_stitch${STITCH_BEFORE_RSD}" \
   $BOX_SIZE \
   0.30 \
   0.42 0.70 \
@@ -22,4 +22,5 @@ module load gsl/2.6
   $augment \
   "/tigress/lthiele/boss_dr12" \
   $VETO \
+  ${STITCH_BEFORE_RSD} \
   $time_samples

@@ -537,7 +537,7 @@ void choose_galaxies (int snap_idx, size_t Ngal,
         if (chi_stitch>chi_bounds[snap_idx] && chi_stitch<chi_bounds[snap_idx+1]
             // prevent from falling out of the redshift interval we're mapping into
             // (only relevent if stitching based on chi before RSD)
-            && (!stitch_before_RSD || (chi>chi_bounds[0] && chi<chi_bounds[Nsnaps+1])))
+            && (!stitch_before_RSD || (chi>chi_bounds[0] && chi<chi_bounds[Nsnaps])))
         // we are in the comoving shell that's coming from this snapshot
         {
             // rotate the line of sight into the NGC footprint and transpose the axes into

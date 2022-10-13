@@ -75,32 +75,45 @@ const double fibcoll_rate = 0.06;
 const int N_interp = 1024;
 
 // ---- GLOBAL VARIABLES -----
-char *inpath, *inident, *outident, *boss_dir;
+
+// these are the input variables, populated from command line
+const char *inpath, *inident, *outident, *boss_dir;
 double BoxSize, Omega_m, zmin, zmax;
-int remap_case, correct, veto, Nsnaps;
+int remap_case, Nsnaps;
+bool correct, veto, stitch_before_RSD;
 unsigned augment;
+
+// describe the available snapshots and redshift stitching
 std::vector<double> snap_times, snap_redshifts, snap_chis, redshift_bounds, chi_bounds;
 
+// utilities for converting between redshift and comoving distance
 gsl_spline *z_chi_interp; gsl_interp_accel *z_chi_interp_acc;
 
+// describe the remapping
 cuboid::Cuboid C;
 double Li[3]; // the sidelengths in decreasing order
 
+// describe the survey footprint
 cmangle::MangleMask *ang_mask;
 cmangle::MangleMask *veto_masks[Nveto]; // maybe unused
 
+// contains the measured redshift distribution used to downsample the theory catalog
 gsl_histogram *boss_z_hist;
-
-// ----- ROUTINES USED IN MAIN -------
 
 // these are our outputs
 std::vector<double> RA, DEC, Z;
+
+// ----- ROUTINES USED IN MAIN -------
+// due to laziness, we rely on global variables, so the order of calls
+// is important...
+
+void process_args (const char **argv);
 
 // downsamples to the boss_z_hist, up to plus_factor
 void downsample (double plus_factor);
 
 // modifies RA, DEC, Z
-void fibcoll ();
+void fibcoll (void);
 
 // sets times, redshifts, redshift_bounds, chi_bounds
 void process_times (void);
@@ -130,25 +143,10 @@ void choose_galaxies (int snap_idx, size_t Ngal,
 // writes in the VIDE format
 void write_to_disk (void);
 
-int main (int argc, char **argv)
+int main (int argc, const char **argv)
 {
-    char **c = argv + 1;
-
-    inpath = *(c++);
-    inident = *(c++);
-    outident = *(c++);
-    BoxSize = std::atof(*(c++));
-    Omega_m = std::atof(*(c++));
-    zmin = std::atof(*(c++));
-    zmax = std::atof(*(c++));
-    remap_case = std::atoi(*(c++));
-    correct = std::atoi(*(c++));
-    augment = std::atoi(*(c++));
-    boss_dir = *(c++);
-    veto = std::atoi(*(c++)); // whether to apply veto, removes a bit less than 7% of galaxies
-
-    while (*c) snap_times.push_back(std::atof(*(c++)));
-    Nsnaps = snap_times.size();
+    std::printf("process_args\n");
+    process_args(argv);
 
     std::printf("process_times\n");
     process_times();
@@ -218,6 +216,50 @@ int main (int argc, char **argv)
     if (veto) for (int ii=0; ii<Nveto; ++ii) cmangle::mangle_free(veto_masks[ii]);
 
     return 0;
+}
+
+// ------ IMPLEMENTATION ------
+
+void process_args (const char **argv)
+{
+    const char **c = argv + 1;
+
+    if (!*c) // can call without arguments to get usage information
+    {
+        std::printf("COMMAND LINE ARGUMENTS:\n"
+                    "\tinpath\n"
+                    "\tinident\n"
+                    "\toutident\n"
+                    "\tBoxSize\n"
+                    "\tOmega_m\n"
+                    "\tzmin\n"
+                    "\tzmax\n"
+                    "\tremap_case\n"
+                    "\tcorrect\n"
+                    "\taugment\n"
+                    "\tboss_dir\n"
+                    "\tveto\n"
+                    "\tstitch_before_RSD\n"
+                    "\tsnap_times[...]\n");
+        throw std::runtime_error("Invalid arguments");
+    }
+
+    inpath = *(c++);
+    inident = *(c++);
+    outident = *(c++);
+    BoxSize = std::atof(*(c++));
+    Omega_m = std::atof(*(c++));
+    zmin = std::atof(*(c++));
+    zmax = std::atof(*(c++));
+    remap_case = std::atoi(*(c++));
+    correct = std::atoi(*(c++));
+    augment = std::atoi(*(c++));
+    boss_dir = *(c++);
+    veto = std::atoi(*(c++)); // whether to apply veto, removes a bit less than 7% of galaxies
+    stitch_before_RSD = std::atoi(*(c++));
+
+    while (*c) snap_times.push_back(std::atof(*(c++)));
+    Nsnaps = snap_times.size();
 }
 
 double comoving_integrand (double z, void *p)
@@ -480,14 +522,19 @@ void choose_galaxies (int snap_idx, size_t Ngal,
             chi = std::hypot(los[0], los[1], los[2]);
         }
 
+        double chi_stitch; // the one used for stitching
+
+        if (stitch_before_RSD) chi_stitch = chi;
+
         // now add RSD (the order is important here, as RSD can be a pretty severe effect)
         for (int kk=0; kk<3; ++kk) los[kk] += rsd_factor * vproj * los[kk] / chi;
 
         // I'm lazy
         chi = std::hypot(los[0], los[1], los[2]);
 
-        // TODO maybe we want to bin by redshift *before* RSD here???
-        if (chi>chi_bounds[snap_idx] && chi<chi_bounds[snap_idx+1])
+        if (!stitch_before_RSD) chi_stitch = chi;
+
+        if (chi_stitch>chi_bounds[snap_idx] && chi_stitch<chi_bounds[snap_idx+1])
         // we are in the comoving shell that's coming from this snapshot
         {
             // rotate the line of sight into the NGC footprint and transpose the axes into

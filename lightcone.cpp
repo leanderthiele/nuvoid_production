@@ -15,6 +15,8 @@
 
 #include "cuboid.h"
 
+#include <sys/auxv.h>
+
 namespace cmangle {
 extern "C"
 {

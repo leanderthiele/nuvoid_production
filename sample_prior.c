@@ -61,10 +61,24 @@ int main (int argc, char **argv)
 
     read_mu_cov();
     prepare();
+
+    #ifndef TEST
     compute_sample(N+1);
 
     for (int ii=0; ii<d; ++ii)
         printf("%.15f%s", NmC_sample[ii], (ii==(d-1))?"":",");
+    #else
+    double *x = malloc(N * d * sizeof(double));
+    for (int ii=0; ii<N; ++ii)
+    {
+        compute_sample(ii+1);
+        for (int jj=0; jj<d; ++jj)
+            x[ii*d+jj] = NmC_sample[jj];
+    }
+    FILE *fp = fopen("sample_prior_test.bin", "wb");
+    fwrite(x, sizeof(double), N*d, fp);
+    fclose(fp);
+    #endif
 
     return 0;
 }

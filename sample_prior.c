@@ -4,6 +4,7 @@
 //  [2] index of the sample requested (>=0)
 //  [3] file that contains as first line the mean vector
 //      and in the following lines the covariance matrix
+//      [lines starting with # are ignored]
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -86,6 +87,7 @@ void read_mu_cov (void)
     double data_buffer[d];
     while (fscanf(fp, "%[^\n]\n", line_buffer) != EOF)
     {
+        if (line_buffer[0] == '#') continue;
         ++line_no;
         assert(line_no<=d+1);
         for (int ii=0; ii<d; ++ii)

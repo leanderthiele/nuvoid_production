@@ -12,7 +12,7 @@ from sys import argv
 
 import camb
 
-omegabh2, omegach2, thetaMC, tau, logA, ns, Mnu = argv[1:]
+omegabh2, omegach2, thetaMC, tau, logA, ns, Mnu = map(float, argv[1:])
 
 p = camb.model.CAMBparams()
 p.set_cosmology(H0=None, cosmomc_theta=thetaMC*1e-2,
@@ -20,5 +20,4 @@ p.set_cosmology(H0=None, cosmomc_theta=thetaMC*1e-2,
                 neutrino_hierarchy='degenerate', num_massive_neutrinos=3, mnu=Mnu,
                 tau=tau)
 
-print(p)
 print(p.H0)

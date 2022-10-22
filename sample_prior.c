@@ -1,14 +1,15 @@
 // Some code to produce QRNG samples from a Gaussian prior
-// in conjunction with a 1-d uniform distribution
+// in conjunction with possible uniform distributions
 // Command line arguments:
-//  [1] dimensionality d (integer)
-//  [2] index of the sample requested (>=0)
+//  [1] index of the sample requested (>=0)
+//  [2] dimensionality of gaussian part (integer)
 //  [3] file that contains as first line the mean vector
 //      and in the following lines the covariance matrix
 //      [lines starting with # are ignored]
 //      The covariance matrix/mean vector are d-1 dimensional
-//  [4] min of uniform
-//  [5] max of uniform
+//  [4] dimensionality of uniform part (integer)
+//  [5] file that contains in lines the min, max values of
+//      the uniform part
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -27,14 +28,14 @@
                        // this value is in our uint64_t representation
 
 // ---- global input variables ----
-int d, gauss_d; // dimensionality
+int d, gauss_d, uniform_d; // dimensionality
 
-char *mu_cov_fname;
+char *mu_cov_fname, *uniform_fname;
 
-double cov[MAX_D*MAX_D]; // covariance matrix, d x d
-double mu[MAX_D]; // mean vector, d
+double cov[MAX_D*MAX_D]; // covariance matrix, gauss_d x gauss_d
+double mu[MAX_D]; // mean vector, gauss_d
 
-double Umin, Umax; // for the uniform distribution
+double Umin[MAX_D], Umax[MAX_D]; // for the uniform distribution
 
 // ---- global work/output variables ----
 
@@ -44,32 +45,41 @@ double chol[MAX_D*MAX_D];
 
 // the basis vector to traverse the unit hypercube
 // mapped to the integers for stability
-uint64_t alpha[MAX_D];
+// d dimensional
+uint64_t alpha[2*MAX_D];
 
-// the Nth sample in the unit hypercube
-double U01_sample[MAX_D];
+// the Nth sample in the unit hypercube, d
+double U01_sample[2*MAX_D];
 
-// the Nth sample in the standard normal
+// the Nth sample in the standard normal, gauss_d
 double N01_sample[MAX_D];
 
-// the Nth sample in the multivariate normal
-double NmC_sample[MAX_D];
+// the Nth sample in the multivariate normal, gauss_d+1
+// [last entry is from uniform]
+double NmC_sample[2*MAX_D];
 
 void read_mu_cov (void);
+void read_uniform (void);
 void prepare (void);
 void compute_sample (uint64_t N);
 
 int main (int argc, char **argv)
 {
     char **c = argv+1;    
-    d = atoi(*(c++)); gauss_d = d-1;
     uint64_t N = atoi(*(c++));
+    gauss_d = atoi(*(c++));
     mu_cov_fname = *(c++);
-    Umin = atof(*(c++));
-    Umax = atof(*(c++));
+    uniform_d = atoi(*(c++));
+    uniform_fname = *(c++);
+
+    assert(d<=MAX_D);
+    assert(uniform_d<=MAX_D);
     assert((c-argv)==argc);
 
+    d = gauss_d + uniform_d;
+
     read_mu_cov();
+    read_uniform();
     prepare();
 
     #ifndef TEST
@@ -109,19 +119,46 @@ void read_mu_cov (void)
     FILE *fp = fopen(mu_cov_fname, "r");
     int line_no = 0;
     double data_buffer[gauss_d];
+    int read;
     while (fscanf(fp, "%[^\n]\n", line_buffer) != EOF)
     {
         if (line_buffer[0] == '#') continue;
         ++line_no;
         assert(line_no<=gauss_d+1);
         for (int ii=0; ii<gauss_d; ++ii)
-            sscanf(line_buffer, fmt[ii], data_buffer+ii);
+        {
+            read = sscanf(line_buffer, fmt[ii], data_buffer+ii);
+            assert(read == 1);
+        }
         if (line_no==1)
             for (int ii=0; ii<gauss_d; ++ii) mu[ii] = data_buffer[ii];
         else
             for (int ii=0; ii<gauss_d; ++ii) cov[(line_no-2)*gauss_d+ii] = data_buffer[ii];
     }
     assert(line_no==gauss_d+1);
+    fclose(fp);
+}
+
+void read_uniform (void)
+{
+    char line_buffer[512];
+    char fmt[2][32] = { "%lf%*lf", "%*lf%lf" };
+
+    FILE *fp = fopen(uniform_fname, "r");
+    int line_no = 0;
+    int read;
+    while (fscanf(fp, "%[^\n]\n", line_buffer) != EOF)
+    {
+        if (line_buffer[0] == '#') continue;
+        ++line_no;
+        assert(line_no<=uniform_d);
+        read = sscanf(line_buffer, fmt[0], Umin+line_no-1);
+        assert(read == 1);
+        read = sscanf(line_buffer, fmt[1], Umax+line_no-1);
+        assert(read == 1);
+        assert(Umax[line_no-1] > Umin[line_no-1]);
+    }
+    assert(line_no==uniform_d);
     fclose(fp);
 }
 
@@ -190,8 +227,9 @@ void compute_NmC_sample (void)
                 /*X=*/N01_sample, /*incX=*/1,
                 /*beta=*/1.0, /*Y=*/NmC_sample, /*incY=*/1);
 
-    // add the uniform sample
-    NmC_sample[d-1] = Umin + U01_sample[d-1] * (Umax-Umin);
+    // add the uniform samples
+    for (int ii=0; ii<uniform_d; ++ii)
+        NmC_sample[gauss_d+ii] = Umin[ii] + U01_sample[gauss_d+ii] * (Umax[ii] - Umin[ii]);
 }
 
 void compute_sample (uint64_t N)

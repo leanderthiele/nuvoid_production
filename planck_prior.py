@@ -1,6 +1,6 @@
 import numpy as np
 
-PARAMS = ['omegabh2', 'omegach2', 'theta', 'tau', 'logA', 'ns', ]
+PARAMS = ['omegabh2', 'omegach2', 'theta', 'logA', 'ns', ]
 FACTOR = 2 # by which we enlarge the error bars
 
 LIKE = 'plikHM_TTTEEE_lowl_lowE'

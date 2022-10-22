@@ -176,7 +176,7 @@ void compute_U01_sample (uint64_t N)
 
 void compute_N01_sample (void)
 {
-    for (int ii=0; ii<d; ++ii)
+    for (int ii=0; ii<gauss_d; ++ii)
         N01_sample[ii] = gsl_cdf_ugaussian_Pinv(U01_sample[ii]);
 }
 
@@ -191,7 +191,7 @@ void compute_NmC_sample (void)
                 /*beta=*/1.0, /*Y=*/NmC_sample, /*incY=*/1);
 
     // add the uniform sample
-    NmC_sample[d-1] = Umin + N01_sample[d-1] * (Umax-Umin);
+    NmC_sample[d-1] = Umin + U01_sample[d-1] * (Umax-Umin);
 }
 
 void compute_sample (uint64_t N)

@@ -14,6 +14,9 @@ import camb
 
 omegabh2, omegach2, thetaMC, tau, logA, ns, Mnu = map(float, argv[1:])
 
+# we want to keep Omega_M fixed, which is why we need to change omegach2
+# depending on neutrino mass sum
+
 p = camb.model.CAMBparams()
 p.set_cosmology(H0=None, cosmomc_theta=thetaMC*1e-2,
                 ombh2=omegabh2, omch2=omegach2, omk=0.0,

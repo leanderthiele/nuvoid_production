@@ -58,8 +58,13 @@ OMEGA_CDM=$(utils::feval "$COSMO_OMEGA_M - $COSMO_OMEGA_B - $OMEGA_NU" '%.16f')
 # ============ HASH OUR COSMOLOGY AND POINT OUTPUT DIRECTORY TO IT =================
 
 # in order to avoid duplicates which are just source of error, we hash our cosmology
+if [ -z $COSMO_AS ]
+  amplitude=$COSMO_SIGMA8
+else
+  # since we use .8f below we need to shift
+  amplitude=$(utils::feval "$COSMO_AS * 1e9" '%.16f')
 COSMO_HASH_STR="$(printf '%.8f %.8f %.8f %.8f %.8f %d' \
-                  $COSMO_OMEGA_M $COSMO_OMEGA_B $COSMO_HUBBLE $COSMO_NS $COSMO_SIGMA8 $COSMO_N_NU)"
+                  $COSMO_OMEGA_M $COSMO_OMEGA_B $COSMO_HUBBLE $COSMO_NS $amplitude $COSMO_N_NU)"
 
 if [ "$COSMO_N_NU" -gt "0" ]; then
   COSMO_HASH_STR="$COSMO_HASH_STR $(printf '%.8f %d' $COSMO_M_NU $COSMO_WRONG_NU)"

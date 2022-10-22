@@ -12,7 +12,8 @@ REPS_EXE="$HOME/reps/reps"
 REPS_MODULES="gsl/2.6"
 
 # templates used in this script
-CLASS_CFG_TEMPLATE="$HOME/nuvoid_production/find_As.ini"
+CLASS_CFG_AS_TEMPLATE="$HOME/nuvoid_production/find_As.ini"
+CLASS_CFG_S8_TEMPLATE="$HOME/nuvoid_production/find_sigma8.ini"
 REPS_CFG_TEMPLATE="$HOME/nuvoid_production/reps.ini"
 
 # check if maybe we don't need to do anything (other process already doing/done it)
@@ -24,26 +25,54 @@ fi
 
 mkdir -p $COSMO_WRK_DIR
 
-# figure A_s out
+function class_ini_common {
+  ini="$1"
+  output_dir="${COSMO_WRK_DIR}/class_output"
+  mkdir -p $output_dir
 
-class_ini="$COSMO_WRK_DIR/find_As.ini"
-cp $CLASS_CFG_TEMPLATE $class_ini
-utils::replace $class_ini 'Omega_m' "$COSMO_OMEGA_M"
-utils::replace $class_ini 'Omega_b' "$COSMO_OMEGA_B"
-utils::replace $class_ini 'h'       "$COSMO_HUBBLE"
-utils::replace $class_ini 'n_s'     "$COSMO_NS"
-utils::replace $class_ini 'sigma8'  "$COSMO_SIGMA8"
-utils::replace $class_ini 'N_ur'    "$N_UR"
-utils::replace $class_ini 'N_ncdm'  "$COSMO_N_NU"
-utils::replace $class_ini 'm_ncdm'  "$COMMA_M_NU"
+  utils::replace $ini 'Omega_m' "$COSMO_OMEGA_M"
+  utils::replace $ini 'Omega_b' "$COSMO_OMEGA_B"
+  utils::replace $ini 'h'       "$COSMO_HUBBLE"
+  utils::replace $ini 'n_s'     "$COSMO_NS"
+  utils::replace $ini 'N_ur'    "$N_UR"
+  utils::replace $ini 'N_ncdm'  "$COSMO_N_NU"
+  utils::replace $ini 'm_ncdm'  "$COMMA_M_NU"
+  utils::replace $ini 'output'  "$output_dir"
 
-module load "$CLASS_MODULES"
-class_log="$COSMO_WRK_DIR/find_As.log"
-utils::run "$CLASS_EXE $class_ini" $class_log
-module rm "$CLASS_MODULES"
+  return 0
+}
 
-# now we know A_s
-A_s=$(grep -m 1 -oP "A\_s\s=\s+\K\d{1}\.\d*e-09" $class_log)
+if [ -z $COSMO_AS ]; then
+  # figure A_s out
+
+  class_ini="$COSMO_WRK_DIR/find_As.ini"
+  cp $CLASS_CFG_AS_TEMPLATE $class_ini
+  class_ini_common $class_ini
+  utils::replace $class_ini 'sigma8' "$COSMO_SIGMA8"
+
+  module load "$CLASS_MODULES"
+  class_log="$COSMO_WRK_DIR/find_As.log"
+  utils::run "$CLASS_EXE $class_ini" $class_log
+  module rm "$CLASS_MODULES"
+
+  # now we know A_s
+  COSMO_AS=$(grep -m 1 -oP "A\_s\s=\s+\K\d{1}\.\d*e-09" $class_log)
+else
+  # figure sigma_8 out
+  
+  class_ini="$COSMO_WRK_DIR/find_sigma8.ini"
+  cp $CLASS_CFG_S8_TEMPLATE $class_ini
+  class_ini_common $class_ini
+  utils::replace $class_ini 'A_s' "$COSMO_AS"
+
+  module load "$CLASS_MODULES"
+  class_log="$COSMO_WKR_DIR/find_sigma8.log"
+  utils::run "$CLASS_EXE $class_ini" $class_log
+  module rm "$CLASS_MODULES"
+
+  # NOTE that the first sigma8 printout is for total matter so we are good
+  COSMO_SIGMA8=$(grep -m 1 -oP "sigma8=+\K\d{1}\.\d*" $class_log)
+fi
 
 # have some human-readable string that we can store wherever and use to debug anything
 # NOTE that I'm not very careful here, individual lines can't have spaces in them...
@@ -67,7 +96,7 @@ cosmo_info=$(printf 'hash=%s
              $COSMO_HASH  "$(date +%F@%T)" \
              $COSMO_OMEGA_M $COSMO_OMEGA_B $COSMO_HUBBLE $COSMO_NS $COSMO_SIGMA8 \
              $COSMO_N_NU $COSMO_M_NU $COSMO_WRONG_NU \
-             $A_s $M_NU "($COMMA_M_NU)" $OMEGA_NU $OMEGA_CDM)
+             $COSMO_AS $M_NU "($COMMA_M_NU)" $OMEGA_NU $OMEGA_CDM)
 
 for s in $cosmo_info; do echo $s >> $COSMO_INFO_FILE; done
 
@@ -78,7 +107,7 @@ utils::replace $reps_ini 'WORKDIR'   "$COSMO_WRK_DIR"
 utils::replace $reps_ini 'h'         "$COSMO_HUBBLE"
 utils::replace $reps_ini 'OB0'       "$COSMO_OMEGA_B"
 utils::replace $reps_ini 'OC0'       "$OMEGA_CDM"
-utils::replace $reps_ini 'As'        "$A_s"
+utils::replace $reps_ini 'As'        "$COSMO_AS"
 utils::replace $reps_ini 'ns'        "$COSMO_NS"
 utils::replace $reps_ini 'N_nu'      "$(printf '%.1f' $COSMO_N_NU)"
 utils::replace $reps_ini 'wrong_nu'  "$(($COSMO_N_NU==0 ? 0 : $COSMO_WRONG_NU))"

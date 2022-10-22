@@ -1,10 +1,14 @@
 // Some code to produce QRNG samples from a Gaussian prior
+// in conjunction with a 1-d uniform distribution
 // Command line arguments:
-//  [1] dimensionality (integer)
+//  [1] dimensionality d (integer)
 //  [2] index of the sample requested (>=0)
 //  [3] file that contains as first line the mean vector
 //      and in the following lines the covariance matrix
 //      [lines starting with # are ignored]
+//      The covariance matrix/mean vector are d-1 dimensional
+//  [4] min of uniform
+//  [5] max of uniform
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -19,14 +23,18 @@
 #include <gsl/gsl_cblas.h>
 
 #define MAX_D 16
+#define SEED (1UL<<63) // can be anything but 0.5 recommended
+                       // this value is in our uint64_t representation
 
 // ---- global input variables ----
-int d; // dimensionality
+int d, gauss_d; // dimensionality
 
 char *mu_cov_fname;
 
 double cov[MAX_D*MAX_D]; // covariance matrix, d x d
 double mu[MAX_D]; // mean vector, d
+
+double Umin, Umax; // for the uniform distribution
 
 // ---- global work/output variables ----
 
@@ -54,9 +62,11 @@ void compute_sample (uint64_t N);
 int main (int argc, char **argv)
 {
     char **c = argv+1;    
-    d = atoi(*(c++));
+    d = atoi(*(c++)); gauss_d = d-1;
     uint64_t N = atoi(*(c++));
     mu_cov_fname = *(c++);
+    Umin = atof(*(c++));
+    Umax = atof(*(c++));
     assert((c-argv)==argc);
 
     read_mu_cov();
@@ -88,46 +98,46 @@ int main (int argc, char **argv)
 void read_mu_cov (void)
 {
     char line_buffer[512];
-    char fmt[d][512];
-    for (int ii=0; ii<d; ++ii)
+    char fmt[gauss_d][512];
+    for (int ii=0; ii<gauss_d; ++ii)
     {
         fmt[ii][0] = '\0'; // make strlen work
-        for (int jj=0; jj<d; ++jj)
+        for (int jj=0; jj<gauss_d; ++jj)
             sprintf(fmt[ii]+strlen(fmt[ii]), "%s", (ii==jj)?"%lf":"%*lf");
     }
 
     FILE *fp = fopen(mu_cov_fname, "r");
     int line_no = 0;
-    double data_buffer[d];
+    double data_buffer[gauss_d];
     while (fscanf(fp, "%[^\n]\n", line_buffer) != EOF)
     {
         if (line_buffer[0] == '#') continue;
         ++line_no;
-        assert(line_no<=d+1);
-        for (int ii=0; ii<d; ++ii)
+        assert(line_no<=gauss_d+1);
+        for (int ii=0; ii<gauss_d; ++ii)
             sscanf(line_buffer, fmt[ii], data_buffer+ii);
         if (line_no==1)
-            for (int ii=0; ii<d; ++ii) mu[ii] = data_buffer[ii];
+            for (int ii=0; ii<gauss_d; ++ii) mu[ii] = data_buffer[ii];
         else
-            for (int ii=0; ii<d; ++ii) cov[(line_no-2)*d+ii] = data_buffer[ii];
+            for (int ii=0; ii<gauss_d; ++ii) cov[(line_no-2)*gauss_d+ii] = data_buffer[ii];
     }
-    assert(line_no==d+1);
+    assert(line_no==gauss_d+1);
     fclose(fp);
 }
 
 void compute_chol (void)
 {
-    gsl_matrix *C = gsl_matrix_alloc(d, d);
-    for (int ii=0; ii<d; ++ii)
-        for (int jj=0; jj<d; ++jj)
-            gsl_matrix_set(C, ii, jj, cov[ii*d+jj]);
+    gsl_matrix *C = gsl_matrix_alloc(gauss_d, gauss_d);
+    for (int ii=0; ii<gauss_d; ++ii)
+        for (int jj=0; jj<gauss_d; ++jj)
+            gsl_matrix_set(C, ii, jj, cov[ii*gauss_d+jj]);
 
     gsl_linalg_cholesky_decomp1(C);
 
-    for (int ii=0; ii<d*d; ++ii) chol[ii] = 0.0;
-    for (int ii=0; ii<d; ++ii)
+    for (int ii=0; ii<gauss_d*gauss_d; ++ii) chol[ii] = 0.0;
+    for (int ii=0; ii<gauss_d; ++ii)
         for (int jj=0; jj<=ii; ++jj)
-            chol[ii*d+jj] = gsl_matrix_get(C, ii, jj);
+            chol[ii*gauss_d+jj] = gsl_matrix_get(C, ii, jj);
 
     gsl_matrix_free(C);
 }
@@ -146,7 +156,7 @@ void compute_alpha (void)
     {
         long double a = 1.0L / powl(phid, 1.0L+ii);
         assert(a<1.0L);
-        alpha[ii] = (uint64_t)((1UL<<63) * a)<<1;
+        alpha[ii] = (uint64_t)(((long double)(UINT64_MAX)+1.0L) * a);
     }
 }
 
@@ -161,7 +171,7 @@ void compute_U01_sample (uint64_t N)
 {
     assert(N>0); // otherwise the Pinv call below will produce NaN
     for (int ii=0; ii<d; ++ii)
-        U01_sample[ii] = (long double)((N * alpha[ii])>>1)/(long double)(1UL<<63);
+        U01_sample[ii] = (long double)((SEED + N * alpha[ii]))/((long double)(UINT64_MAX)+1.0L);
 }
 
 void compute_N01_sample (void)
@@ -173,12 +183,15 @@ void compute_N01_sample (void)
 void compute_NmC_sample (void)
 {
     // overwrites the vector Y, which is the offset
-    for (int ii=0; ii<d; ++ii) NmC_sample[ii] = mu[ii];
+    for (int ii=0; ii<gauss_d; ++ii) NmC_sample[ii] = mu[ii];
 
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, d, d,
-                /*alpha=*/1.0, chol, /*lda=*/d,
+    cblas_dgemv(CblasRowMajor, CblasNoTrans, gauss_d, gauss_d,
+                /*alpha=*/1.0, chol, /*lda=*/gauss_d,
                 /*X=*/N01_sample, /*incX=*/1,
                 /*beta=*/1.0, /*Y=*/NmC_sample, /*incY=*/1);
+
+    // add the uniform sample
+    NmC_sample[d-1] = Umin + N01_sample[d-1] * (Umax-Umin);
 }
 
 void compute_sample (uint64_t N)

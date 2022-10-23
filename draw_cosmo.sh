@@ -6,18 +6,20 @@
 # Prints out comma separated list of our 6-parameter model,
 #    Omega_B, Omega_M, h0, A_s, n_s, M_nu
 
+codebase=$HOME/nuvoid_production
+
 # codes to use
 SAMPLE_PRIOR_MODULES="gsl/2.6"
 SAMPLE_PRIOR_EXE="$HOME/nuvoid_production/sample_prior"
 REPARAMATERIZE_MODULES="anaconda3/2021.11"
 REPARAMATERIZE_CONDA_ENV="galaxies"
-REPARAMATERIZE_EXE="python $HOME/nuvoid_production/reparameterize.py"
+REPARAMATERIZE_EXE="python $codebase/reparameterize.py"
 
 # priors
 GAUSS_PRIOR_DIM=5
-GAUSS_PRIOR_FILE="$HOME/nuvoid_production/mu_cov_plikHM_TTTEEE_lowl_lowE_lensing.dat"
+GAUSS_PRIOR_FILE="$codebase/mu_cov_plikHM_TTTEEE_lowl_lowE.dat"
 UNIFORM_PRIOR_DIM=1
-UNIFORM_PRIOR_FILE="$HOME/nuvoid_production/mnu_prior.dat"
+UNIFORM_PRIOR_FILE="$codebase/mnu_prior.dat"
 
 # the index
 IDX="$1"

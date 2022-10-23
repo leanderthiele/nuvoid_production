@@ -13,6 +13,7 @@ function get_jobid {
   if [ ${#jobid} -ne $len ]; then
     return 1
   fi
+  echo $jobid
   return 0
 }
 

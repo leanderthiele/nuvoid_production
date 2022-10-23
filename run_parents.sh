@@ -6,8 +6,10 @@
 
 set -e -o pipefail
 
-source utils.sh
-source globals.sh
+codebase=$HOME/nuvoid_production
+
+source $codebase/utils.sh
+source $codebase/globals.sh
 
 # codes used in this script
 ROCKSTAR_FINDPARENTS_EXE="$HOME/rockstar_bigfile/util/find_parents_bigfile"

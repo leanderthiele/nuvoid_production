@@ -2,6 +2,7 @@
 
 # size of the simulation
 export BOX_SIZE=2500 # Mpc/h
+export NC=2800
 
 # FastPM settings
 export Z_INITIAL=99.0

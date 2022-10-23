@@ -2,8 +2,10 @@
 
 set -e -o pipefail
 
-source utils.sh
-source globals.sh
+codebase=$HOME/nuvoid_production
+
+source $codebase/utils.sh
+source $codebase/globals.sh
 
 # codes used in this script
 CLASS_EXE="$HOME/class_public/class"
@@ -12,9 +14,9 @@ REPS_EXE="$HOME/reps/reps"
 REPS_MODULES="gsl/2.6"
 
 # templates used in this script
-CLASS_CFG_AS_TEMPLATE="$HOME/nuvoid_production/find_As.ini"
-CLASS_CFG_S8_TEMPLATE="$HOME/nuvoid_production/find_sigma8.ini"
-REPS_CFG_TEMPLATE="$HOME/nuvoid_production/reps.ini"
+CLASS_CFG_AS_TEMPLATE="$codebase/find_As.ini"
+CLASS_CFG_S8_TEMPLATE="$codebase/find_sigma8.ini"
+REPS_CFG_TEMPLATE="$codebase/reps.ini"
 
 # check if maybe we don't need to do anything (other process already doing/done it)
 if [ -d "$COSMO_WRK_DIR" ]; then
@@ -30,14 +32,15 @@ function class_ini_common {
   output_dir="${COSMO_WRK_DIR}/class_output"
   mkdir -p $output_dir
 
-  utils::replace $ini 'Omega_m' "$COSMO_OMEGA_M"
-  utils::replace $ini 'Omega_b' "$COSMO_OMEGA_B"
-  utils::replace $ini 'h'       "$COSMO_HUBBLE"
-  utils::replace $ini 'n_s'     "$COSMO_NS"
-  utils::replace $ini 'N_ur'    "$N_UR"
-  utils::replace $ini 'N_ncdm'  "$COSMO_N_NU"
-  utils::replace $ini 'm_ncdm'  "$COMMA_M_NU"
-  utils::replace $ini 'output'  "$output_dir"
+  utils::replace $ini 'Omega_m'  "$COSMO_OMEGA_M"
+  utils::replace $ini 'Omega_b'  "$COSMO_OMEGA_B"
+  utils::replace $ini 'h'        "$COSMO_HUBBLE"
+  utils::replace $ini 'n_s'      "$COSMO_NS"
+  utils::replace $ini 'N_ur'     "$N_UR"
+  utils::replace $ini 'N_ncdm'   "$COSMO_N_NU"
+  utils::replace $ini 'm_ncdm'   "$COMMA_M_NU"
+  utils::replace $ini 'tau_reio' "$COSMO_TAU"
+  utils::replace $ini 'output'   "$output_dir"
 
   return 0
 }
@@ -113,6 +116,7 @@ utils::replace $reps_ini 'N_nu'      "$(printf '%.1f' $COSMO_N_NU)"
 utils::replace $reps_ini 'wrong_nu'  "$(($COSMO_N_NU==0 ? 0 : $COSMO_WRONG_NU))"
 utils::replace $reps_ini 'Neff'      "$N_UR"
 utils::replace $reps_ini 'M_nu'      "$M_NU"
+utils::replace $reps_ini 'tau_reio'  "$COSMO_TAU"
 utils::replace $reps_ini 'Z_INITIAL' "$(printf '%.1f' $Z_INITIAL)"
 
 # now we get to run REPS

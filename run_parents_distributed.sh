@@ -4,8 +4,10 @@
 
 set -e -o pipefail
 
-source utils.sh
-source globals.sh
+codebase=$HOME/nuvoid_production
+
+source $codebase/utils.sh
+source $codebase/globals.sh
 
 rank=$SLURM_PROCID
 world_size=$SLURM_NTASKS
@@ -18,5 +20,5 @@ for snap_idx in $( seq 0 $((NUM_SNAPS-1)) ); do
 done
 
 for i in $( seq $rank $world_size $(( ${#todo[@]} - 1 )) ); do
-  bash run_parents.sh ${todo[$i]}
+  bash $codebase/run_parents.sh ${todo[$i]}
 done

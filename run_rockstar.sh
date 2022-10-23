@@ -6,15 +6,17 @@
 
 set -e -o pipefail
 
-source utils.sh
-source globals.sh
+codebase=$HOME/nuvoid_production
+
+source $codebase/utils.sh
+source $codebase/globals.sh
 
 # codes used in this script
 ROCKSTAR_EXE="$HOME/rockstar_bigfile/rockstar"
 ROCKSTAR_MODULES="hdf5/gcc/1.10.0"
 
 # templates used in this script
-ROCKSTAR_CFG_TEMPLATE="$HOME/nuvoid_production/rockstar_server.cfg"
+ROCKSTAR_CFG_TEMPLATE="$codebase/rockstar_server.cfg"
 
 
 snap_idx="$1"

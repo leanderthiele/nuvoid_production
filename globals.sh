@@ -4,7 +4,9 @@
 
 set -e -o pipefail
 
-source utils.sh
+codebase=$HOME/nuvoid_production
+
+source $codebase/utils.sh
 
 ROOT="$BASE/$ID"
 COSMO_ROOT="$BASE/cosmologies"

@@ -4,8 +4,10 @@
 
 set -e -o pipefail
 
-source utils.sh
-source globals.sh
+codebase=$HOME/nuvoid_production
+
+source $codebase/utils.sh
+source $codebase/globals.sh
 
 # codes used in this script
 FASTPM_EXE="$HOME/fastpm_allintel/src/fastpm"
@@ -13,7 +15,7 @@ FASTPM_MODULES="anaconda3/2021.11 intel-mpi/intel/2019.7/64 gsl/2.6"
 FASTPM_CONDA_ENV="fastpm"
 
 # templates used in this script
-FASTPM_CFG_TEMPLATE="$HOME/nuvoid_production/fastpm_script.lua"
+FASTPM_CFG_TEMPLATE="$codebase/fastpm_script.lua"
 
 # only run FastPM if output not existent
 if [ -d "$ROOT/snap_${TIMES_ARR[$((NUM_SNAPS-1))]}" ]; then

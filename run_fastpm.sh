@@ -10,6 +10,7 @@ source $codebase/utils.sh
 source $codebase/globals.sh
 
 # codes used in this script
+TIMESTEPS_EXE="$codebase/timesteps"
 FASTPM_EXE="$HOME/fastpm_allintel/src/fastpm"
 FASTPM_MODULES="anaconda3/2021.11 intel-mpi/intel/2019.7/64 gsl/2.6"
 FASTPM_CONDA_ENV="fastpm"
@@ -32,7 +33,7 @@ if [ -z $SEED ]; then SEED=$(utils::dec_hash "$ID" 32); fi
 
 # compute the FastPM time steps
 echo "$Z_INITIAL $Z_MID $LOG_STEPS $LIN_STEPS $NUM_SNAPS $TIMES"
-time_steps="$(./timesteps $Z_INITIAL $Z_MID $LOG_STEPS $LIN_STEPS $NUM_SNAPS $TIMES)"
+time_steps="$($TIMESTEPS_EXE $Z_INITIAL $Z_MID $LOG_STEPS $LIN_STEPS $NUM_SNAPS $TIMES)"
 echo "$time_steps"
 
 # write our input file

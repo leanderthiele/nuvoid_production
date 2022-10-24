@@ -31,7 +31,7 @@ N_nu = <<<N_nu>>>
 m_ncdm = {<<<m_nu>>>} -- comma separated individual masses in eV
 n_shell = 10
 ncdm_sphere_scheme = "fibonacci"
-n_side = 3 -- maybe worth playing with (e.g. 10, 20 -- but only on pretty small scales)
+n_side = 5 -- maybe worth playing with (e.g. 10, 20 -- but only on pretty small scales)
 every_ncdm = 4 -- increase to have fewer neutrinos relative to CDM, 4 is the Bayer+2020 choice
                -- consider setting to 1
 lvk = true

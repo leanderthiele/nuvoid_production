@@ -43,7 +43,9 @@ elif [ $(utils::feval "$COSMO_M_NU < 0.4" '%d') -eq 1 ]; then
 else
   early_steps=$EARLY_LOG_STEPS
 fi
-time_steps="$($TIMESTEPS_EXE $Z_INITIAL $Z_MID $Z_EARLY $LOG_STEPS $LIN_STEPS $early_steps $NUM_SNAPS $TIMES)"
+echo "$Z_INITIAL $Z_MID $EARLY_Z_MID $LOG_STEPS $LIN_STEPS $early_steps $NUM_SNAPS"
+time_steps="$($TIMESTEPS_EXE $Z_INITIAL $Z_MID $EARLY_Z_MID $LOG_STEPS $LIN_STEPS $early_steps $NUM_SNAPS $TIMES)"
+echo "$time_steps"
 
 # write our input file
 fastpm_cfg="$ROOT/fastpm_script.lua"
@@ -68,9 +70,6 @@ else
   utils::replace $fastpm_cfg 'N_nu'  "$COSMO_N_NU"
   utils::replace $fastpm_cfg 'm_nu'  "$COMMA_M_NU"
 fi
-
-# FIXME
-exit 1
 
 # no idea what these do
 export OMPI_MCA_rmaps_base_no_oversubscribe=0

@@ -32,7 +32,18 @@ mkdir -p "$ROOT/powerspectra"
 if [ -z $SEED ]; then SEED=$(utils::dec_hash "$ID" 32); fi
 
 # compute the FastPM time steps
-time_steps="$($TIMESTEPS_EXE $Z_INITIAL $Z_MID $LOG_STEPS $LIN_STEPS $NUM_SNAPS $TIMES)"
+# as recommended by Bayer+2020, we take a bunch of early logarithmic steps
+# if the neutrino mass is quite large
+if [ $(utils::feval "$COSMO_M_NU < 0.1" '%d') -eq 1 ]; then
+  early_steps=0
+elif [ $(utils::feval "$COSMO_M_NU < 0.2" '%d') -eq 1 ]; then
+  early_steps=$((EARLY_LOG_STEPS / 4))
+elif [ $(utils::feval "$COSMO_M_NU < 0.4" '%d') -eq 1 ]; then
+  early_steps=$((EARLY_LOG_STEPS / 2))
+else
+  early_steps=$EARLY_LOG_STEPS
+fi
+time_steps="$($TIMESTEPS_EXE $Z_INITIAL $Z_MID $Z_EARLY $LOG_STEPS $LIN_STEPS $early_steps $NUM_SNAPS $TIMES)"
 
 # write our input file
 fastpm_cfg="$ROOT/fastpm_script.lua"

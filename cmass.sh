@@ -12,7 +12,7 @@ export LIN_STEPS=10
 
 # these are only relevant for large neutrino masses,
 # as recommended by Bayer+2020
-export EARLY_LOG_STEPS=10
+export EARLY_LOG_STEPS=8 # take as power of 2
 export EARLY_Z_MID=79.0
 
 # where we generate snapshots (order irrelevant, separate by spaces)

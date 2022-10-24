@@ -32,9 +32,7 @@ mkdir -p "$ROOT/powerspectra"
 if [ -z $SEED ]; then SEED=$(utils::dec_hash "$ID" 32); fi
 
 # compute the FastPM time steps
-echo "$Z_INITIAL $Z_MID $LOG_STEPS $LIN_STEPS $NUM_SNAPS $TIMES"
 time_steps="$($TIMESTEPS_EXE $Z_INITIAL $Z_MID $LOG_STEPS $LIN_STEPS $NUM_SNAPS $TIMES)"
-echo "$time_steps"
 
 # write our input file
 fastpm_cfg="$ROOT/fastpm_script.lua"
@@ -59,6 +57,9 @@ else
   utils::replace $fastpm_cfg 'N_nu'  "$COSMO_N_NU"
   utils::replace $fastpm_cfg 'm_nu'  "$COMMA_M_NU"
 fi
+
+# FIXME
+exit 1
 
 # no idea what these do
 export OMPI_MCA_rmaps_base_no_oversubscribe=0

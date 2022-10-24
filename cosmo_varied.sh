@@ -13,5 +13,6 @@ export COSMO_AS=<<<A_s>>>
 export COSMO_M_NU=<<<M_nu>>>
 
 # fixed
+export COSMO_WRONG_NU=1
 export COSMO_N_NU=3
 export COSMO_TAU=0.0544

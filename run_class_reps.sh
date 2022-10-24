@@ -69,7 +69,7 @@ else
   utils::replace $class_ini 'A_s' "$COSMO_AS"
 
   module load "$CLASS_MODULES"
-  class_log="$COSMO_WKR_DIR/find_sigma8.log"
+  class_log="$COSMO_WRK_DIR/find_sigma8.log"
   utils::run "$CLASS_EXE $class_ini" $class_log
   module rm "$CLASS_MODULES"
 

@@ -6,7 +6,7 @@
 #SBATCH --mail-type=FAIL,TIME_LIMIT
 #SBATCH --mail-user=lthiele@princeton.edu
 
-#SBATCH -t 00:20:00
+#SBATCH -t 01:30:00
 
 #SBATCH -o <<<output>>>
 

@@ -34,3 +34,12 @@ PORTNR=3310
 
 NOTE one may have to increase the max_connections variable for larger
      jobs, this can be done in the [mysqld] section in my.cnf
+
+PERFORMANCE
+I have done a test with 96 separate optuna processes, where the
+objective evaluation takes ~1 sec.
+This results in appreciable load on the head node SQL process.
+(a lot of threads with low CPU utilization).
+When I increase the objective evaluation time to 20 sec, we still
+have a lot of head node SQL processes but they are idle -- as expected.
+Hopefully sysadmins won't hate us for this...

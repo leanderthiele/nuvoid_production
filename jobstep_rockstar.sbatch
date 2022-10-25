@@ -9,7 +9,7 @@
 
 #SBATCH -t 01:30:00
 
-#SBATCH --array=0-4
+#SBATCH --array=1-4
 
 #SBATCH -o <<<output>>>_%a
 

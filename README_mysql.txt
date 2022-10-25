@@ -31,3 +31,6 @@ mydb=optunadb
 myser=optunausr
 mypwd=pwd
 PORTNR=3310
+
+NOTE one may have to increase the max_connections variable for larger
+     jobs, this can be done in the [mysqld] section in my.cnf

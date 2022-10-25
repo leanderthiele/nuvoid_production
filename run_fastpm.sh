@@ -43,9 +43,7 @@ elif [ $(utils::feval "$COSMO_M_NU < 0.4" '%d') -eq 1 ]; then
 else
   early_steps=$EARLY_LOG_STEPS
 fi
-echo "$Z_INITIAL $Z_MID $EARLY_Z_MID $LOG_STEPS $LIN_STEPS $early_steps $NUM_SNAPS"
 time_steps="$($TIMESTEPS_EXE $Z_INITIAL $Z_MID $EARLY_Z_MID $LOG_STEPS $LIN_STEPS $early_steps $NUM_SNAPS $TIMES)"
-echo "$time_steps"
 
 # write our input file
 fastpm_cfg="$ROOT/fastpm_script.lua"

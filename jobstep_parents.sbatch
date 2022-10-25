@@ -3,7 +3,7 @@
 #SBATCH -n 4
 #SBATCH -c 1
 #SBATCH --mem-per-cpu=40G
-#SBATCH --mail-type=FAIL
+#SBATCH --mail-type=FAIL,TIME_LIMIT
 #SBATCH --mail-user=lthiele@princeton.edu
 
 #SBATCH -t 00:20:00

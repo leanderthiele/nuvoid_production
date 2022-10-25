@@ -4,7 +4,7 @@
 #SBATCH --ntasks-per-node=40
 #SBATCH -c 1
 #SBATCH --mem=185G
-#SBATCH --mail-type=FAIL
+#SBATCH --mail-type=FAIL,TIME_LIMIT
 #SBATCH --mail-user=lthiele@princeton.edu
 
 #SBATCH -t 01:00:00

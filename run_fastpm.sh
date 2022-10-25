@@ -88,3 +88,7 @@ utils::run "mpirun -n $SLURM_NTASKS $FASTPM_EXE -T $OMP_NUM_THREADS $fastpm_cfg"
 
 conda deactivate
 module rm "$FASTPM_MODULES"
+
+# give some output about the temporary size for orientation
+size="$(du -sh $ROOT | tr '\t' '\n' | head -1)"
+echo "Temporary files take $size of disk space"

@@ -7,12 +7,12 @@ export NC=2800
 # FastPM settings
 export Z_INITIAL=99.0
 export Z_MID=19.0
-export LOG_STEPS=5
-export LIN_STEPS=10
+export LOG_STEPS=7
+export LIN_STEPS=12
 
 # these are only relevant for large neutrino masses,
 # as recommended by Bayer+2020
-export EARLY_LOG_STEPS=8 # take as power of 2
+export EARLY_LOG_STEPS=12 # should be divisible by 4
 export EARLY_Z_MID=79.0
 
 # where we generate snapshots (order irrelevant, separate by spaces)

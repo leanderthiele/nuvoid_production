@@ -11,7 +11,7 @@
 
 #SBATCH -o <<<output>>>
 
-#SBATCH --jobname=<<<jobname>>>
+#SBATCH --job-name=<<<jobname>>>
 #SBATCH --dependency=singleton
 
 set -e -o pipefail

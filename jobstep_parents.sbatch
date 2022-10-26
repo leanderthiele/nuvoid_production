@@ -5,6 +5,7 @@
 #SBATCH --mem-per-cpu=40G
 #SBATCH --mail-type=FAIL,TIME_LIMIT
 #SBATCH --mail-user=lthiele@princeton.edu
+#SBATCH --spread-job
 
 #SBATCH -t 01:30:00
 

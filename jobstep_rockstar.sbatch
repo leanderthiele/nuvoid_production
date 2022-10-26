@@ -1,13 +1,13 @@
 #!/bin/bash
 
-#SBATCH -N 2
+#SBATCH -N 8
 #SBATCH --ntasks-per-node=40
 #SBATCH -c 1
-#SBATCH --mem=750G
+#SBATCH --mem=185G
 #SBATCH --mail-type=FAIL,TIME_LIMIT
 #SBATCH --mail-user=lthiele@princeton.edu
 
-#SBATCH -t 03:00:00
+#SBATCH -t 02:30:00
 
 #SBATCH --array=1-4
 

@@ -9,7 +9,7 @@
 # running simultaneously.
 # At the moment we can only hope that slurm is clever enough to
 # run Rockstar before it moves on to the next FastPM.
-MAX_SIMULTANEOUS=3
+MAX_SIMULTANEOUS=2
 
 codebase=$HOME/nuvoid_production
 

@@ -7,7 +7,7 @@
 #SBATCH --mail-type=FAIL,TIME_LIMIT
 #SBATCH --mail-user=lthiele@princeton.edu
 
-#SBATCH -t 01:30:00
+#SBATCH -t 02:00:00
 
 #SBATCH --array=1-4
 

@@ -7,7 +7,7 @@
 #SBATCH --mail-user=lthiele@princeton.edu
 #SBATCH --spread-job
 
-#SBATCH -t 01:30:00
+#SBATCH -t 02:00:00
 
 #SBATCH -o <<<output>>>
 

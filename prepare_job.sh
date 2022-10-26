@@ -4,13 +4,6 @@
 # Command line arguments:
 #   [1] index (for the cosmology)
 
-# by using the singleton dependency construct in conjuction
-# with job-name, we can prevent too many FastPM instances from
-# running simultaneously.
-# At the moment we can only hope that slurm is clever enough to
-# run Rockstar before it moves on to the next FastPM.
-MAX_SIMULTANEOUS=2
-
 codebase=$HOME/nuvoid_production
 
 source $codebase/utils.sh
@@ -53,7 +46,6 @@ utils::replace $cosmo_sh 'M_nu'    "$M_nu"
 # write the fastpm file
 fastpm_sbatch=$JOB_DIR/jobstep_fastpm_$idx.sbatch
 cp $FASTPM_TEMPLATE $fastpm_sbatch
-utils::replace $fastpm_sbatch 'jobname' "cosmo_varied_fastpm_$((idx % MAX_SIMULTANEOUS))"
 utils::replace $fastpm_sbatch 'cosmo'   "$cosmo_sh"
 utils::replace $fastpm_sbatch 'output'  "${OUT_ROOT}_fastpm.out"
 

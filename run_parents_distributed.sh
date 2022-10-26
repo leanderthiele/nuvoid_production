@@ -19,6 +19,23 @@ for snap_idx in $( seq 0 $((NUM_SNAPS-1)) ); do
   fi
 done
 
-for i in $( seq $rank $world_size $(( ${#todo[@]} - 1 )) ); do
-  bash $codebase/run_parents.sh ${todo[$i]}
+# because the later times have systematically more halos which increases runtime
+# for the parents code, it is better to do some reordering here
+myindices=()
+for i in $( seq 0 $(( ${#todo[@]} - 1 )) ); do
+  if [ $(( (i/world_size) % 2 )) -eq 1 ]; then
+    # odd portion
+    if [ $(( i%world_size )) -eq $rank ]; then
+      myindices+=(${todo[$i]})
+    fi
+  else
+    # even portion
+    if [ $(( world_size - (i%world_size) - 1 )) -eq $rank ]; then
+      myindices+=(${todo[$i]})
+    fi
+  fi
+done
+
+for i in ${myindices[@]}; do
+  bash $codebase/run_parents.sh $i
 done

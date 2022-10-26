@@ -75,9 +75,10 @@ write_snapshot = FASTPM_OUTPUT .. "/snap"
 write_powerspectrum = FASTPM_OUTPUT .. "/powerspectra/powerspectrum"
 
 -- TODO running into SIGSEGV when RFOF is on...
-write_fof = FASTPM_OUTPUT .. "/fof"
--- write_rfof = FASTPM_OUTPUT .. "/rfof" -- TODO =relaxed-FOF, what is this?
+-- write_fof = FASTPM_OUTPUT .. "/fof"
+write_rfof = FASTPM_OUTPUT .. "/rfof" -- apparently an improved version of FOF tailored for FastPM
 
--- fof parameters
+-- (r)fof parameters
 fof_linkinglength = 0.2 -- default: 0.2
 fof_nmin = 20 -- default: 20
+rfof_nmin = 20 -- default: 20

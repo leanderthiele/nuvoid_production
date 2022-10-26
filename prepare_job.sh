@@ -53,7 +53,7 @@ utils::replace $cosmo_sh 'M_nu'    "$M_nu"
 # write the fastpm file
 fastpm_sbatch=$JOB_DIR/jobstep_fastpm_$idx.sbatch
 cp $FASTPM_TEMPLATE $fastpm_sbatch
-utils::replace $fastpm_sbatch 'jobname' "fastpm_$((idx % MAX_SIMULTANEOUS))"
+utils::replace $fastpm_sbatch 'jobname' "cosmo_varied_fastpm_$((idx % MAX_SIMULTANEOUS))"
 utils::replace $fastpm_sbatch 'cosmo'   "$cosmo_sh"
 utils::replace $fastpm_sbatch 'output'  "${OUT_ROOT}_fastpm.out"
 

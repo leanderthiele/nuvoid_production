@@ -11,6 +11,9 @@
 
 #SBATCH -o <<<output>>>
 
+#SBATCH --jobname=<<<jobname>>>
+#SBATCH --dependency=singleton
+
 set -e -o pipefail
 
 codebase=$HOME/nuvoid_production

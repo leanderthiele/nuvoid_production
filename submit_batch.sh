@@ -27,7 +27,8 @@ fi
 for queue in $queues; do
   fastpm_dependency=""
   for i in $( seq $((start_idx+queue-1)) $MAX_SIMULTANEOUS $end_idx ); do
-    fastpm_dependency=$(bash jobs_cosmo_varied/submit_$i.sh $fastpm_dependency)
+    # use tail here so we don't capture some potential other printouts
+    fastpm_dependency=$(bash jobs_cosmo_varied/submit_$i.sh $fastpm_dependency | tail -1)
   done
   echo "Finished building queue $queue / $MAX_SIMULTANEOUS"
 done

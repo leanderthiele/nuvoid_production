@@ -1,6 +1,11 @@
 #!/bin/bash
+#
+# Call with optional command line argument:
+#   [1] jobid that fastpm is dependent on
 
 set -e -o pipefail
+
+fastpm_dependency=$1
 
 # the sbatch scripts, to be populated
 jobstep_fastpm=<<<jobstep_fastpm>>>
@@ -17,7 +22,12 @@ function get_jobid {
   return 0
 }
 
-result="$(sbatch $jobstep_fastpm)"
+if [ -z $fastpm_dependency ]; then
+  dependency_str=""
+else
+  dependency_str="--dependency=afterok:$fastpm_dependency"
+fi
+result="$(sbatch $dependency_str $jobstep_fastpm)"
 fastpm_jobid=$(get_jobid "$result")
 
 result="$(sbatch --dependency=afterok:$fastpm_jobid $jobstep_rockstar)"
@@ -25,3 +35,7 @@ rockstar_jobid=$(get_jobid "$result")
 
 result="$(sbatch --dependency=afterok:$rockstar_jobid $jobstep_parents)"
 parents_jobid=$(get_jobid "$result")
+
+# this is the indicator that the next fastpm job can start
+# since disk space is free again
+echo $rockstar_jobid

@@ -5,6 +5,8 @@
 #   [2] last index to be submitted
 #   [3] (optional) only work on the queue starting at index [1]
 #                  Any argument can be given.
+#   [4] (optional, only if [3] is given)
+#                  Dependence for the first fastpm job
 
 set -e -o pipefail
 
@@ -14,6 +16,7 @@ MAX_SIMULTANEOUS=2
 start_idx=$1
 end_idx=$2
 specific_queue=$3
+first_dependence=$4
 
 if [ -z $specific_queue ]; then
   echo "Submitting for all queues"
@@ -25,7 +28,11 @@ fi
   
 
 for queue in $queues; do
-  fastpm_dependency=""
+  if [ -z $first_dependence ]; then
+    fastpm_dependency=""
+  else
+    fastpm_dependency=$first_dependence
+  fi
   for i in $( seq $((start_idx+queue-1)) $MAX_SIMULTANEOUS $end_idx ); do
     # use tail here so we don't capture some potential other printouts
     fastpm_dependency=$(bash jobs_cosmo_varied/submit_$i.sh $fastpm_dependency | tail -1)

@@ -1,7 +1,8 @@
 #!/bin/bash
 #
 # Call with optional command line argument:
-#   [1] jobid that fastpm is dependent on
+#   [1] jobid that fastpm is dependent on,
+#       which has to be Rockstar!
 
 set -e -o pipefail
 
@@ -25,12 +26,12 @@ function get_jobid {
 if [ -z $fastpm_dependency ]; then
   dependency_str=""
 else
-  dependency_str="--dependency=afterok:$fastpm_dependency"
+  dependency_str="--dependency=after:${fastpm_dependency}_4+30"
 fi
 result="$(sbatch $dependency_str $jobstep_fastpm)"
 fastpm_jobid=$(get_jobid "$result")
 
-result="$(sbatch --dependency=afterok:$fastpm_jobid $jobstep_rockstar)"
+result="$(sbatch --dependency=after:$fastpm_jobid+60 $jobstep_rockstar)"
 rockstar_jobid=$(get_jobid "$result")
 
 result="$(sbatch --dependency=afterok:$rockstar_jobid $jobstep_parents)"

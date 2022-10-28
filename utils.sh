@@ -167,7 +167,7 @@ function utils::wait_for_file {
 
     currenttime=$(date +%s)
     if [ $((currenttime-starttime)) -gt $timeout ]; then
-      utils::printerr '[Error] utils::wait_for_file: TIMEOUT'
+      utils::printerr "[Error] utils::wait_for_file $file: TIMEOUT"
       return 1
     fi
   done

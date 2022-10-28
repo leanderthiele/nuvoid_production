@@ -18,7 +18,6 @@ ROCKSTAR_MODULES="hdf5/gcc/1.10.0"
 # templates used in this script
 ROCKSTAR_CFG_TEMPLATE="$codebase/rockstar_server.cfg"
 
-
 snap_idx="$1"
 time=${TIMES_ARR[$snap_idx]}
 snap_dir="$ROOT/snap_$time"
@@ -36,10 +35,16 @@ if [ -d "$rockstar_dir/out_${snap_idx}_hosts.bf" ]; then
   exit 0
 fi
 
+# we use the fact that FastPM writes the RFOF *after* the snapshot to ensure
+# the snap is completely written
+# (header gets written first)
+rfof_file="$ROOT/rfof_$time/RFOF/header"
+utils::wait_for_file $rfof_file 300 5
+
 # check if we actually have the data available
 if [ ! -d $snap_dir ]; then
-  echo "Not running Rockstar as snapshot does not exist"
-  exit 0
+  utils::printerr "Not running Rockstar as snapshot $snap_dir does not exist"
+  exit 1
 fi
 
 mkdir -p $rockstar_dir

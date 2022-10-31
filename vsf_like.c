@@ -28,9 +28,17 @@ int main(int argc, char **argv)
     long double out = 0.0L;
 
     for (unsigned ii=0; ii<N; ++ii)
-        out += (xo[ii]-xs[ii]) * M_LN2
-               + gsl_sf_lnchoose(xo[ii]+xs[ii], xo[ii])
-               - gsl_sf_lnchoose(2U*xo[ii], xo[ii]);
+    {
+        gsl_sf_result r1, r2;
+        gsl_sf_lnchoose_e(xo[ii]+xs[ii], xo[ii], &r1);
+        gsl_sf_lnchoose_e(2U*xo[ii], xo[ii], &r2);
+
+        printf("val=%.16e err=%.16e\n", r1.val, r1.err);
+        printf("val=%.16e err=%.16e\n", r2.val, r2.err);
+        printf("diff=%.16e err=%.16e\n", fabs(r1.val-r2.val), fmax(r1.err, r2.err));
+
+        out += (xo[ii]-xs[ii]) * M_LN2 + r1.val - r2.val;
+    }
 
     printf("%.16Le\n", out);
 

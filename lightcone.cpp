@@ -127,18 +127,22 @@ void init_masks (void);
 // get the target redshift distribution
 void measure_boss_nz (void);
 
-void read_snapshot (int snap_idx, std::vector<float> &xgal_f, std::vector<float> &vgal_f, size_t &Ngal);
+void read_snapshot (int snap_idx,
+                    std::vector<float> &xgal_f, std::vector<float> &vgal_f, std::vector<float> &vhlo_f,
+                    size_t &Ngal);
 
 void remap_snapshot (size_t Ngal,
                      const std::vector<float> &xgal_f, const std::vector<float> &vgal_f,
-                     std::vector<double> &xgal, std::vector<double> &vgal);
+                     std::vector<double> &xgal, std::vector<double> &vgal, std::vector<double> &vhlo);
 
 // not used anymore as a separate routine, we do it within choose_galaxies
 // void RSD (int snap_idx, size_t Ngal, std::vector<double> &xgal, const std::vector<double> &vgal);
 
 // this routine modifies RA, DEC, Z
 void choose_galaxies (int snap_idx, size_t Ngal,
-                      const std::vector<double> &xgal, const std::vector<double> &vgal);
+                      const std::vector<double> &xgal,
+                      const std::vector<double> &vgal,
+                      const std::vector<double> &vhlo);
 
 // writes in the VIDE format
 void write_to_disk (void);
@@ -175,20 +179,20 @@ int main (int argc, const char **argv)
         size_t Ngal;
 
         // contains the 32bit data from disk
-        std::vector<float> xgal_f, vgal_f;
+        std::vector<float> xgal_f, vgal_f, vhlo_f;
         std::printf("\tread_snapshot\n");
-        read_snapshot(ii, xgal_f, vgal_f, Ngal);
+        read_snapshot(ii, xgal_f, vgal_f, vhlo_f, Ngal);
 
         // these will contain the outputs of the remapping
-        std::vector<double> xgal, vgal;
+        std::vector<double> xgal, vgal, vhlo;
         std::printf("\tremap_snapshot\n");
-        remap_snapshot(Ngal, xgal_f, vgal_f, xgal, vgal);
+        remap_snapshot(Ngal, xgal_f, vgal_f, vhlo_f, xgal, vgal, vhlo);
 
         // choose the galaxies within this redshift shell
         // This routine also implements lightcone correction
         // and RSD
         std::printf("\tchoose_galaxies\n");
-        choose_galaxies(ii, Ngal, xgal, vgal);
+        choose_galaxies(ii, Ngal, xgal, vgal, vhlo);
 
         std::printf("Done with %d\n", ii);
     }
@@ -376,7 +380,7 @@ void measure_boss_nz (void)
                   [](double this_z){ gsl_histogram_increment(boss_z_hist, this_z); });
 }
 
-void read_snapshot (int snap_idx, std::vector<float> &xgal_f, std::vector<float> &vgal_f, size_t &Ngal)
+void read_snapshot (int snap_idx, std::vector<float> &xgal_f, std::vector<float> &vgal_f, std::vector<float> &vhlo_f, size_t &Ngal)
 {
     char fname[512];
     std::sprintf(fname, "%s/galaxies/galaxies_%s_%.4f.bin", inpath, inident, snap_times[snap_idx]);
@@ -387,16 +391,18 @@ void read_snapshot (int snap_idx, std::vector<float> &xgal_f, std::vector<float>
     std::fseek(fp, 0, SEEK_END);
     auto nbytes = std::ftell(fp);
 
-    Ngal = nbytes/sizeof(float)/6;
-    if (!(6*Ngal*sizeof(float)==nbytes)) throw std::runtime_error("failed in read_snapshot");
+    Ngal = nbytes/sizeof(float)/9;
+    if (!(9*Ngal*sizeof(float)==nbytes)) throw std::runtime_error("failed in read_snapshot");
 
     // go back to beginning
     std::fseek(fp, 0, SEEK_SET);
 
     xgal_f.resize(3 * Ngal);
     vgal_f.resize(3 * Ngal);
+    vhlo_f.resize(3 * Ngal);
     std::fread(xgal_f.data(), sizeof(float), 3*Ngal, fp);
     std::fread(vgal_f.data(), sizeof(float), 3*Ngal, fp);
+    std::fread(vhlo_f.data(), sizeof(float), 3*Ngal, fp);
 
     // now we can close
     std::fclose(fp);
@@ -410,13 +416,14 @@ inline double per_unit (T x)
     return (x1<0.0) ? x1+1.0 : x1;
 }
 
-inline void reflect (unsigned r, double *x, double *v)
+inline void reflect (unsigned r, double *x, double *v, double *vh)
 {
     for (unsigned ii=0; ii<3; ++ii)
         if (r & (1<<ii))
         {
             x[ii] = BoxSize - x[ii];
             v[ii] *= -1.0;
+            if (correct) vh[ii] *= -1.0;
         }
 }
 
@@ -437,32 +444,43 @@ inline void transpose (unsigned t, double *x)
 }
 
 void remap_snapshot (size_t Ngal,
-                     const std::vector<float> &xgal_f, const std::vector<float> &vgal_f,
-                     std::vector<double> &xgal, std::vector<double> &vgal)
+                     const std::vector<float> &xgal_f,
+                     const std::vector<float> &vgal_f,
+                     const std::vector<float> &vhlo_f,
+                     std::vector<double> &xgal,
+                     std::vector<double> &vgal,
+                     std::vector<double> &vhlo)
 {
     xgal.resize(3 * Ngal); vgal.resize(3 * Ngal);
+    if (correct) vhlo.resize(3 * Ngal);
 
     unsigned r = augment / 6; // labels the 8 reflection cases
     unsigned t = augment % 6; // labels the 6 transposition cases
 
-    for (size_t jj=0; jj<Ngal; ++jj)
+    for (size_t ii=0; ii<Ngal; ++ii)
     {
-        double x[3], v[3];
+        double x[3], v[3], vh[3];
         for (int kk=0; kk<3; ++kk)
         {
-            x[kk] = xgal_f[3*jj+kk];
-            v[kk] = vgal_f[3*jj+kk];
+            x[kk] = xgal_f[3*ii+kk];
+            v[kk] = vgal_f[3*ii+kk];
+            vh[kk] = vhlo_f[3*ii+kk];
         }
 
         reflect(r, x, v);
         transpose(t, x); transpose(t, v);
+        if (correct) transpose(t, vh);
 
         C.Transform(per_unit(x[0]), per_unit(x[1]), per_unit(x[2]),
-                    xgal[3*jj+0], xgal[3*jj+1], xgal[3*jj+2]);
-        for (int kk=0; kk<3; ++kk) xgal[3*jj+kk] *= BoxSize;
+                    xgal[3*ii+0], xgal[3*ii+1], xgal[3*ii+2]);
+        for (int kk=0; kk<3; ++kk) xgal[3*ii+kk] *= BoxSize;
 
         C.VelocityTransform(v[0], v[1], v[2],
-                            vgal[3*jj+0], vgal[3*jj+1], vgal[3*jj+2]);
+                            vgal[3*ii+0], vgal[3*ii+1], vgal[3*ii+2]);
+
+        if (correct)
+            C.VelocityTransform(vh[0], vh[1], vh[2],
+                                vhlo[3*ii+0], vhlo[3*ii+1], vhlo[3*ii+2]);
     }
 }
 
@@ -491,7 +509,9 @@ void RSD (int snap_idx, size_t Ngal, std::vector<double> &xgal, const std::vecto
 */
 
 void choose_galaxies (int snap_idx, size_t Ngal,
-                      const std::vector<double> &xgal, const std::vector<double> &vgal)
+                      const std::vector<double> &xgal,
+                      const std::vector<double> &vgal,
+                      const std::vector<double> &vhlo)
 {
     // h km/s/Mpc
     const double Hz = 100.0 * std::sqrt(Omega_m*gsl_pow_3(1.0+snap_redshifts[snap_idx])+(1.0-Omega_m));
@@ -505,26 +525,29 @@ void choose_galaxies (int snap_idx, size_t Ngal,
         
         double chi = std::hypot(los[0], los[1], los[2]);
 
-        // the radial velocity
-        double vproj = (los[0]*vgal[3*jj+0]+los[1]*vgal[3*jj+1]+los[2]*vgal[3*jj+2])
-                       / chi;
-
         if (correct)
         {
+            double vhloproj = (los[0]*vhlo[3*jj+0]+los[1]*vhlo[3*jj+1]+los[2]*vhlo[3*jj+2])
+                              / chi;
+
             // map onto the lightcone -- we assume that this is a relatively small correction
             //                           so we just do it to first order
-            double delta_z = (chi - snap_chis[snap_idx]) / (299792.458 + vproj) * Hz;
+            double delta_z = (chi - snap_chis[snap_idx]) / (299792.458 + vhloprj) * Hz;
 
             // correct the position accordingly
-            for (int kk=0; kk<3; ++kk) los[kk] -= delta_z * vgal[3*jj+kk] / Hz;
+            for (int kk=0; kk<3; ++kk) los[kk] -= delta_z * vhlo[3*jj+kk] / Hz;
 
-            // only a small correction I assume
+            // only a small correction I assume (and it is borne out by experiment!)
             chi = std::hypot(los[0], los[1], los[2]);
         }
 
         double chi_stitch; // the one used for stitching
 
         if (stitch_before_RSD) chi_stitch = chi;
+
+        // the radial velocity
+        double vproj = (los[0]*vgal[3*jj+0]+los[1]*vgal[3*jj+1]+los[2]*vgal[3*jj+2])
+                       / chi;
 
         // now add RSD (the order is important here, as RSD can be a pretty severe effect)
         for (int kk=0; kk<3; ++kk) los[kk] += rsd_factor * vproj * los[kk] / chi;

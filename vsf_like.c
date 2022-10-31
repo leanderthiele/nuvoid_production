@@ -4,6 +4,9 @@
  *   [1] N ... number of bins
  *   [2...N+2] ... the observed counts
  *   [N+3...2N+3] ... the simulated counts
+ *
+ * Prints out the log-likelihood and an error estimate
+ * in separate lines.
  */
 
 #include <stdio.h>
@@ -11,6 +14,7 @@
 #include <math.h>
 #include <assert.h>
 
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_sf_gamma.h>
 
 int main(int argc, char **argv)
@@ -26,21 +30,23 @@ int main(int argc, char **argv)
 
     // store in extended precision to minimize round-off during summation
     long double out = 0.0L;
+    long double err = 0.0L;
 
     for (unsigned ii=0; ii<N; ++ii)
     {
+        int s1, s2;
         gsl_sf_result r1, r2;
-        gsl_sf_lnchoose_e(xo[ii]+xs[ii], xo[ii], &r1);
-        gsl_sf_lnchoose_e(2U*xo[ii], xo[ii], &r2);
-
-        printf("val=%.16e err=%.16e\n", r1.val, r1.err);
-        printf("val=%.16e err=%.16e\n", r2.val, r2.err);
-        printf("diff=%.16e err=%.16e\n", fabs(r1.val-r2.val), fmax(r1.err, r2.err));
-
-        out += (xo[ii]-xs[ii]) * M_LN2 + r1.val - r2.val;
+        s1 = gsl_sf_lnchoose_e(xo[ii]+xs[ii], xo[ii], &r1);
+        s2 = gsl_sf_lnchoose_e(2U*xo[ii], xo[ii], &r2);
+        assert(!(s1 || s2));
+        out += ((int)xo[ii]-(int)xs[ii]) * M_LN2 + r1.val - r2.val;
+        err += gsl_pow_2(r1.err) + gsl_pow_2(r2.err);
     }
 
+    err = sqrtl(err);
+
     printf("%.16Le\n", out);
+    printf("%.16Le\n", err);
 
     return 0;
 }

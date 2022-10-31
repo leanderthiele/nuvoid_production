@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cmath>
+#include <cassert>
 #include <vector>
 #include <functional>
 #include <map>
@@ -107,7 +108,7 @@ std::vector<double> RA, DEC, Z;
 // due to laziness, we rely on global variables, so the order of calls
 // is important...
 
-void process_args (const char **argv);
+void process_args (int argc, const char **argv);
 
 // downsamples to the boss_z_hist, up to plus_factor
 void downsample (double plus_factor);
@@ -132,8 +133,12 @@ void read_snapshot (int snap_idx,
                     size_t &Ngal);
 
 void remap_snapshot (size_t Ngal,
-                     const std::vector<float> &xgal_f, const std::vector<float> &vgal_f,
-                     std::vector<double> &xgal, std::vector<double> &vgal, std::vector<double> &vhlo);
+                     const std::vector<float> &xgal_f,
+                     const std::vector<float> &vgal_f,
+                     const std::vector<float> &vhlo_f,
+                     std::vector<double> &xgal,
+                     std::vector<double> &vgal,
+                     std::vector<double> &vhlo);
 
 // not used anymore as a separate routine, we do it within choose_galaxies
 // void RSD (int snap_idx, size_t Ngal, std::vector<double> &xgal, const std::vector<double> &vgal);
@@ -150,7 +155,7 @@ void write_to_disk (void);
 int main (int argc, const char **argv)
 {
     std::printf("process_args\n");
-    process_args(argv);
+    process_args(argc, argv);
 
     std::printf("process_times\n");
     process_times();
@@ -224,7 +229,7 @@ int main (int argc, const char **argv)
 
 // ------ IMPLEMENTATION ------
 
-void process_args (const char **argv)
+void process_args (int argc, const char **argv)
 {
     const char **c = argv + 1;
 
@@ -264,6 +269,8 @@ void process_args (const char **argv)
 
     while (*c) snap_times.push_back(std::atof(*(c++)));
     Nsnaps = snap_times.size();
+
+    assert((c-argv)==argc);
 }
 
 double comoving_integrand (double z, void *p)
@@ -467,7 +474,7 @@ void remap_snapshot (size_t Ngal,
             vh[kk] = vhlo_f[3*ii+kk];
         }
 
-        reflect(r, x, v);
+        reflect(r, x, v, vh);
         transpose(t, x); transpose(t, v);
         if (correct) transpose(t, vh);
 
@@ -532,7 +539,7 @@ void choose_galaxies (int snap_idx, size_t Ngal,
 
             // map onto the lightcone -- we assume that this is a relatively small correction
             //                           so we just do it to first order
-            double delta_z = (chi - snap_chis[snap_idx]) / (299792.458 + vhloprj) * Hz;
+            double delta_z = (chi - snap_chis[snap_idx]) / (299792.458 + vhloproj) * Hz;
 
             // correct the position accordingly
             for (int kk=0; kk<3; ++kk) los[kk] -= delta_z * vhlo[3*jj+kk] / Hz;

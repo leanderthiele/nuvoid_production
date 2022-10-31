@@ -28,7 +28,9 @@ int main(int argc, char **argv)
     long double out = 0.0L;
 
     for (unsigned ii=0; ii<N; ++ii)
-        out += -(xo[ii]+xs[ii]) * M_LN2f64x + gsl_sf_lnchoose(xo[ii]+xs[ii], xo[ii]);
+        out += (xo[ii]-xs[ii]) * M_LN2
+               + gsl_sf_lnchoose(xo[ii]+xs[ii], xo[ii])
+               - gsl_sf_lnchoose(2U*xo[ii], xo[ii]);
 
     printf("%.16Le\n", out);
 

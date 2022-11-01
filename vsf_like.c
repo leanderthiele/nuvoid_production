@@ -46,7 +46,6 @@ int main(int argc, char **argv)
     err = sqrtl(err);
 
     printf("%.16Le\n", out);
-    printf("%.16Le\n", err);
 
     return 0;
 }

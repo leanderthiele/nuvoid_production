@@ -6,6 +6,8 @@ import subprocess
 import numpy as np # necessary before pyglx
 import galaxies.pyglx as pyglx # TODO does this work with relative paths?
 
+codebase = '/home/lthiele/nuvoid_production'
+
 # Script to be called from within HOD chains to create galaxies
 # Command line arguments:
 #   [1] working directory (e.g. /scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_0)
@@ -48,23 +50,10 @@ for a in argv_hod :
         break
 if halo_finder_str is None :
     halo_finder_str = 'rockstar'
-halo_catalogs = sorted(glob(f'{wrk_dir}/{halo_finder_str}_*'), key=lambda s: float(s.split('_')[-1]))
-times = []
 
-# the pattern in the ascii file for the time
-if halo_finder_str == 'rockstar' :
-    pattern = '\#a\s=\s'
-elif halo_finder_str == 'rfof' :
-    pattern = 'Time.*\#HUMANE\s\[\s'
-
-for ii, h in enumerate(halo_catalogs) :
-    if halo_finder_str == 'rockstar' :
-        header_file = f'{h}/out_{ii}_hosts.bf/Header/attr-v2'
-    elif halo_finder_str == 'rfof' :
-        header_file = f'{h}/Header/attr-v2'
-    a = float(subprocess.run(f'grep -m1 -oP "{pattern}+\K\d.\d*" {header_file}',
-                             shell=True, capture_output=True).stdout.strip())
-    times.append(a)
+comma_times = subprocess.run(f'bash {codebase}/get_available_times.sh {wrk_dir} {halo_finder_str}',
+                             shell=True, capture_output=True, check=True).stdout.strip()
+times = list(map(float, comma_times.split(',')))
 
 # create our output directory if it doesn't exist
 os.makedirs(f'{wrk_dir}/{hod_hash}', exist_ok=True)

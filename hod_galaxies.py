@@ -4,7 +4,7 @@ from glob import glob
 import subprocess
 
 import numpy as np # necessary before pyglx
-import galaxies.pyglx as pyglx # TODO does this work with relative paths?
+import galaxies.pyglx as pyglx
 
 codebase = '/home/lthiele/nuvoid_production'
 
@@ -52,7 +52,7 @@ if halo_finder_str is None :
     halo_finder_str = 'rockstar'
 
 comma_times = subprocess.run(f'bash {codebase}/get_available_times.sh {wrk_dir} {halo_finder_str}',
-                             shell=True, capture_output=True, check=True).stdout.strip()
+                             shell=True, capture_output=True, check=True).stdout.strip().decode()
 times = list(map(float, comma_times.split(',')))
 
 # create our output directory if it doesn't exist

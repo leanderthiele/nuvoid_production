@@ -29,14 +29,14 @@ zmin=0.42
 zmax=0.70
 Omega_m=0.30 # TODO
 
-logdir="$wrk_dir/$hod_hash/logs_$augment"
-figdir="$wrk_dir/$hod_hash/figs"
+logdir="$wrk_dir/hod/$hod_hash/logs_$augment"
+figdir="$wrk_dir/hod/$hod_hash/figs"
 mkdir -p "$logdir" "$figdir"
-vide_cfg="$wrk_dir/$hod_hash/vide_cfg_$augment.py"
+vide_cfg="$wrk_dir/hod/$hod_hash/vide_cfg_$augment.py"
 
 cp $VIDE_CFG_TEMPLATE $vide_cfg
-utils::replace $vide_cfg 'inputDataDir' "$wrk_dir/$hod_hash"
-utils::replace $vide_cfg 'workDir'      "$wrk_dir/$hod_hash"
+utils::replace $vide_cfg 'inputDataDir' "$wrk_dir/hod/$hod_hash"
+utils::replace $vide_cfg 'workDir'      "$wrk_dir/hod/$hod_hash"
 utils::replace $vide_cfg 'logDir'       "$logdir"
 utils::replace $vide_cfg 'figDir'       "$figdir"
 utils::replace $vide_cfg 'zmin'         "$zmin"

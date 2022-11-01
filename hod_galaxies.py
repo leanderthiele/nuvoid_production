@@ -56,13 +56,13 @@ comma_times = subprocess.run(f'bash {codebase}/get_available_times.sh {wrk_dir} 
 times = list(map(float, comma_times.split(',')))
 
 # create our output directory if it doesn't exist
-os.makedirs(f'{wrk_dir}/{hod_hash}', exist_ok=True)
+os.makedirs(f'{wrk_dir}/hod/{hod_hash}', exist_ok=True)
 
 # write the hod settings to file
-with open(f'{wrk_dir}/{hod_hash}/hod.info', 'w') as f :
+with open(f'{wrk_dir}/hod/{hod_hash}/hod.info', 'w') as f :
     f.write(f'hash={hod_hash}\n')
     for k, v in zip(params.keys(), argv_hod) :
         f.write(f'{k}={v}\n')
 
-pyglx.get_galaxies(wrk_dir, times, f'{wrk_dir}/{hod_hash}/galaxies',
+pyglx.get_galaxies(wrk_dir, times, f'{wrk_dir}/hod/{hod_hash}/galaxies',
                    **kwargs)

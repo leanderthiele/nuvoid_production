@@ -40,7 +40,7 @@ reflecttranslate=$((augment % 48))
 module load $LIGHTCONE_MODULES
 
 $LIGHTCONE_EXE \
-  "$wrk_dir/$hod_hash" "" \
+  "$wrk_dir/hod/$hod_hash" "" \
   $augment \
   $BoxSize $Omega_m $zmin $zmax \
   $remap $correct $reflecttranslate \

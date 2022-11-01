@@ -677,6 +677,8 @@ struct GalHelper
     unsigned long id;
     pointing ang;
 
+    GalHelper ( ) = default;
+
     GalHelper (unsigned long id_, double ra_, double dec_, double z_,
                const T_Healpix_Base<int64_t> &hp_base) :
         ra {ra_}, dec {dec_}, z{z_}, id {id_}

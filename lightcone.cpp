@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cmath>
+#include <cstring>
 #include <cassert>
 #include <vector>
 #include <functional>
@@ -398,7 +399,8 @@ void read_snapshot (int snap_idx,
                     size_t &Ngal)
 {
     char fname[512];
-    std::sprintf(fname, "%s/galaxies/galaxies_%s_%.4f.bin", inpath, inident, snap_times[snap_idx]);
+    std::sprintf(fname, "%s/galaxies/galaxies%s%s_%.4f.bin",
+                        inpath, (std::strlen(inident)) ? "_" : "", inident, snap_times[snap_idx]);
 
     auto fp = std::fopen(fname, "rb");
 
@@ -821,7 +823,8 @@ void fibcoll ()
 void write_to_disk (void)
 {
     char fname[512];
-    std::sprintf(fname, "%s/galaxies/lightcone_%s_%s.txt", inpath, inident, outident);
+    std::sprintf(fname, "%s/galaxies/lightcone%s%s_%s.txt",
+                        inpath, (std::strlen(inident)) ? "_" : "", inident, outident);
     auto fp = std::fopen(fname, "w");
     for (size_t ii=0; ii<Z.size(); ++ii)
         std::fprintf(fp, "%lu 0 0 %.10f %.10f %.8f 1.0000 0.0\n", ii, RA[ii], DEC[ii], 299792.458*Z[ii]);

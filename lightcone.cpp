@@ -73,7 +73,7 @@ const char *veto_fnames[Nveto] =
 // and downsampling is too pronounced.
 // If this is chosen too small, we'll end up with fewer galaxies than we need after
 // fiber collisions are removed.
-const double fibcoll_rate = 0.06;
+const double fibcoll_rate = 0.1;
 
 // how many interpolation stencils we use to get from chi to z
 const int N_interp = 1024;
@@ -84,7 +84,7 @@ const int N_interp = 1024;
 const char *inpath, *inident, *outident, *boss_dir;
 double BoxSize, Omega_m, zmin, zmax;
 int remap_case, Nsnaps;
-bool correct, veto, stitch_before_RSD;
+bool correct, veto, stitch_before_RSD, verbose;
 unsigned augment;
 
 // describe the available snapshots and redshift stitching
@@ -157,15 +157,14 @@ void write_to_disk (void);
 
 int main (int argc, const char **argv)
 {
-    std::printf("process_args\n");
     process_args(argc, argv);
 
-    std::printf("process_times\n");
+    if (verbose) std::printf("process_times\n");
     process_times();
 
     z_chi_interp = gsl_spline_alloc(gsl_interp_cspline, N_interp);
     z_chi_interp_acc = gsl_interp_accel_alloc();
-    std::printf("interpolate_chi_z\n");
+    if (verbose) std::printf("interpolate_chi_z\n");
     interpolate_chi_z();
 
     // initialize the transformation
@@ -175,11 +174,11 @@ int main (int argc, const char **argv)
     // initialize survey footprint and veto masks (if requested)
     ang_mask = cmangle::mangle_new();
     if (veto) for (int ii=0; ii<Nveto; ++ii) veto_masks[ii] = cmangle::mangle_new();
-    std::printf("init_masks\n");
+    if (verbose) std::printf("init_masks\n");
     init_masks();
 
     // the target redshift distribution
-    std::printf("measure_boss_nz\n");
+    if (verbose) std::printf("measure_boss_nz\n");
     measure_boss_nz();
 
     #pragma omp parallel for
@@ -189,37 +188,37 @@ int main (int argc, const char **argv)
 
         // contains the 32bit data from disk
         std::vector<float> xgal_f, vgal_f, vhlo_f;
-        std::printf("\tread_snapshot\n");
+        if (verbose) std::printf("\tread_snapshot\n");
         read_snapshot(ii, xgal_f, vgal_f, vhlo_f, Ngal);
 
         // these will contain the outputs of the remapping
         std::vector<double> xgal, vgal, vhlo;
-        std::printf("\tremap_snapshot\n");
+        if (verbose) std::printf("\tremap_snapshot\n");
         remap_snapshot(Ngal, xgal_f, vgal_f, vhlo_f, xgal, vgal, vhlo);
 
         // choose the galaxies within this redshift shell
         // This routine also implements lightcone correction
         // and RSD
-        std::printf("\tchoose_galaxies\n");
+        if (verbose) std::printf("\tchoose_galaxies\n");
         choose_galaxies(ii, Ngal, xgal, vgal, vhlo);
 
-        std::printf("Done with %d\n", ii);
+        if (verbose) std::printf("Done with %d\n", ii);
     }
 
     // first downsampling before fiber collisions are applied
-    std::printf("downsample\n");
+    if (verbose) std::printf("downsample\n");
     downsample(fibcoll_rate);
 
     // apply fiber collisions
-    std::printf("fibcoll\n");
+    if (verbose) std::printf("fibcoll\n");
     fibcoll(); 
 
     // now downsample to our final density
-    std::printf("downsample\n");
+    if (verbose) std::printf("downsample\n");
     downsample(0.0);
 
     // output
-    std::printf("write_to_disk\n");
+    if (verbose) std::printf("write_to_disk\n");
     write_to_disk();
 
     // clean up
@@ -253,6 +252,7 @@ void process_args (int argc, const char **argv)
                     "\tboss_dir\n"
                     "\tveto\n"
                     "\tstitch_before_RSD\n"
+                    "\tverbose\n"
                     "\tsnap_times[...]\n");
         throw std::runtime_error("Invalid arguments");
     }
@@ -269,6 +269,7 @@ void process_args (int argc, const char **argv)
     augment = std::atoi(*(c++));
     boss_dir = *(c++);
     veto = std::atoi(*(c++)); // whether to apply veto, removes a bit less than 7% of galaxies
+    verbose = std::atoi(*(c++));
     stitch_before_RSD = std::atoi(*(c++));
 
     while (*c) snap_times.push_back(std::atof(*(c++)));
@@ -640,10 +641,13 @@ void downsample (double plus_factor)
                             * gsl_histogram_get(target_hist, ii) / gsl_histogram_get(sim_z_hist, ii);
 
     // for debugging
-    std::printf("keep_fraction:\n");
-    for (int ii=0; ii<target_hist->n; ++ii)
-        std::printf("%.2f ", keep_fraction[ii]);
-    std::printf("\n");
+    if (verbose)
+    {
+        std::printf("keep_fraction:\n");
+        for (int ii=0; ii<target_hist->n; ++ii)
+            std::printf("%.2f ", keep_fraction[ii]);
+        std::printf("\n");
+    }
     
     std::vector<double> ra_tmp, dec_tmp, z_tmp;
 
@@ -817,9 +821,13 @@ void fibcoll ()
     for (int ii=0; ii<rngs.size(); ++ii)
         gsl_rng_free(rngs[ii]);
 
-    // for debugging
-    std::printf("fiber collision rate: %.2f percent\n",
-                100.0*(double)(all_vec.size()-Z.size())/(double)(all_vec.size()));
+    double actual_fibcoll_rate = (double)(all_vec.size()-Z.size())/(double)(all_vec.size());
+    if (verbose) std::printf("fiber collision rate: %.2f percent\n",
+                             100.0*actual_fibcoll_rate);
+
+    if (actual_fibcoll_rate > fibcoll_rate)
+        std::fprintf(stderr, "[WARNING] actual fiber collision rate is %.2f percent\n",
+                             100.0*actual_fibcoll_rate);
 }
 
 

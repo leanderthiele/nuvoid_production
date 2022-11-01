@@ -269,8 +269,8 @@ void process_args (int argc, const char **argv)
     augment = std::atoi(*(c++));
     boss_dir = *(c++);
     veto = std::atoi(*(c++)); // whether to apply veto, removes a bit less than 7% of galaxies
-    verbose = std::atoi(*(c++));
     stitch_before_RSD = std::atoi(*(c++));
+    verbose = std::atoi(*(c++));
 
     while (*c) snap_times.push_back(std::atof(*(c++)));
     Nsnaps = snap_times.size();

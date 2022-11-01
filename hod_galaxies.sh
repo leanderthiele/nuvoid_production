@@ -13,7 +13,7 @@ HOD_GALAXIES_EXE="python hod_galaxies.py"
 module load $HOD_GALAXIES_MODULES
 conda activate $HOD_GALAXIES_CONDA_ENV
 
-$HOD_GALAXIES_EXE $@
+$HOD_GALAXIES_EXE "$@"
 
 conda deactivate
 module rm $HOD_GALAXIES_MODULES

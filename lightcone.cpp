@@ -7,6 +7,8 @@
 #include <map>
 #include <utility>
 
+#include <omp.h>
+
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_spline.h>
@@ -179,6 +181,7 @@ int main (int argc, const char **argv)
     std::printf("measure_boss_nz\n");
     measure_boss_nz();
 
+    #pragma omp parallel for
     for (int ii=0; ii<Nsnaps; ++ii)
     {
         size_t Ngal;
@@ -339,10 +342,13 @@ void init_masks (void)
     cmangle::set_pixel_map(ang_mask);
 
     if (veto)
+        // this stuff is pretty expensive so do it in parallel
+        #pragma omp parallel for
         for (int ii=0; ii<Nveto; ++ii)
         {
-            std::sprintf(mask_fname, "%s/%s", boss_dir, veto_fnames[ii]);
-            cmangle::mangle_read(veto_masks[ii], mask_fname);
+            char veto_fname[512];
+            std::sprintf(veto_fname, "%s/%s", boss_dir, veto_fnames[ii]);
+            cmangle::mangle_read(veto_masks[ii], veto_fname);
             cmangle::set_pixel_map(veto_masks[ii]);
         }
 }
@@ -387,7 +393,9 @@ void measure_boss_nz (void)
                   [](double this_z){ gsl_histogram_increment(boss_z_hist, this_z); });
 }
 
-void read_snapshot (int snap_idx, std::vector<float> &xgal_f, std::vector<float> &vgal_f, std::vector<float> &vhlo_f, size_t &Ngal)
+void read_snapshot (int snap_idx,
+                    std::vector<float> &xgal_f, std::vector<float> &vgal_f, std::vector<float> &vhlo_f,
+                    size_t &Ngal)
 {
     char fname[512];
     std::sprintf(fname, "%s/galaxies/galaxies_%s_%.4f.bin", inpath, inident, snap_times[snap_idx]);
@@ -591,20 +599,24 @@ void choose_galaxies (int snap_idx, size_t Ngal,
             cmangle::point_set_from_radec(&pt, ra, dec);
             int64_t poly_id; long double weight;
             cmangle::mangle_polyid_and_weight_pix(ang_mask, &pt, &poly_id, &weight);
-            if (weight==0.0L) continue;
+            if (weight==0.0L) goto not_chosen;
 
-            bool vetoed = false;
             if (veto)
-                for (int kk=0; kk<Nveto && !vetoed; ++kk)
+                for (int kk=0; kk<Nveto; ++kk)
                 {
                     cmangle::mangle_polyid_and_weight_pix(veto_masks[kk], &pt, &poly_id, &weight);
-                    if (weight!=0.0L) vetoed = true;
+                    if (weight!=0.0L) goto not_chosen;
                 }
-            if (vetoed) continue;
 
-            RA.push_back(ra);
-            DEC.push_back(dec);
-            Z.push_back(z);
+            // this is executed in parallel, modifying global variables
+            #pragma omp critical (CHOOSE_APPEND)
+            {
+                RA.push_back(ra);
+                DEC.push_back(dec);
+                Z.push_back(z);
+            }
+
+            not_chosen : /* do nothing */;
         }
     }
 }
@@ -665,7 +677,8 @@ struct GalHelper
     unsigned long id;
     pointing ang;
 
-    GalHelper (unsigned long id_, double ra_, double dec_, double z_, T_Healpix_Base<int64_t> &hp_base) :
+    GalHelper (unsigned long id_, double ra_, double dec_, double z_,
+               const T_Healpix_Base<int64_t> &hp_base) :
         ra {ra_}, dec {dec_}, z{z_}, id {id_}
     {
         double theta = (90.0-dec) * M_PI/180.0;
@@ -696,20 +709,28 @@ void fibcoll ()
 
     // for sampling from overlapping regions according to collision rate
     // and assignment of random galaxy IDs
-    gsl_rng *rng = gsl_rng_alloc(gsl_rng_default);
+    std::vector<gsl_rng *> rngs;
+    for (int ii=0; ii<omp_get_max_threads(); ++ii)
+        rngs.push_back(gsl_rng_alloc(gsl_rng_default));
 
     // for HOPEFULLY efficient nearest neighbour search
     static const int64_t nside = 128; // can be tuned, with 128 pixarea/discarea~225
-    T_Healpix_Base hp_base (nside, RING, SET_NSIDE);
+    const T_Healpix_Base hp_base (nside, RING, SET_NSIDE);
 
     // we assign random 64bit IDs to the galaxies
     // This is better than using their index in the input arrays, since these arrays
     // have some ordering (low redshifts go first), and this would slightly bias
     // the fiber collision removal implmented later
     // The collision rate is tiny for 64bit random numbers and thus has no impact.
-    std::vector<GalHelper> all_vec;
-    for (size_t ii=0; ii<RA.size(); ++ii)
-        all_vec.emplace_back(gsl_rng_get(rng), RA[ii], DEC[ii], Z[ii], hp_base);
+    std::vector<GalHelper> all_vec { RA.size() };
+    #pragma omp parallel
+    {
+        auto rng = rngs[omp_get_thread_num()];
+        
+        #pragma omp for
+        for (size_t ii=0; ii<RA.size(); ++ii)
+            all_vec[ii] = GalHelper(gsl_rng_get(rng), RA[ii], DEC[ii], Z[ii], hp_base);
+    }
 
     // empty the output arrays
     RA.clear();
@@ -738,45 +759,56 @@ void fibcoll ()
 
     // we assume the inputs have sufficient entropy that always removing the first galaxy is fine
 
-    // allocate for efficiency
-    rangeset<int64_t> query_result;
-    std::vector<int64_t> query_vector;
-
-    for (const auto &g : all_vec)
+    #pragma omp parallel
     {
-        // one can gain performance here by playing with "fact"
-        hp_base.query_disc_inclusive(g.ang, angscale, query_result, /*fact=*/4);
-        query_result.toVector(query_vector);
+        // allocate for efficiency, I don't know how rangeset works internally
+        // so we do this the old-fashioned way (not private etc)
+        rangeset<int64_t> query_result;
+        std::vector<int64_t> query_vector;
 
-        bool collided = false;
-        for (auto hp_idx : query_vector)
+        // generator used by this thread
+        auto rng = rngs[omp_get_thread_num()];
+
+        #pragma omp for schedule (dynamic, 1024)
+        for (size_t ii=0; ii<all_vec.size(); ++ii)
         {
-            auto this_range = ranges[hp_idx];
-            for (size_t ii=this_range.first; ii<this_range.second; ++ii)
-                if (g.id > all_vec[ii].id
-                    && haversine(g.ang, all_vec[ii].ang) < hav(angscale))
-                // use the fact that haversine is monotonic to avoid inverse operation
-                // by using the greater-than check, we ensure to remove only one member
-                // of each pair
-                {
-                    collided = true;
-                    break;
-                }
-            if (collided) break;
+            const auto &g = all_vec[ii];
+
+            // one can gain performance here by playing with "fact"
+            hp_base.query_disc_inclusive(g.ang, angscale, query_result, /*fact=*/4);
+            query_result.toVector(query_vector);
+
+            for (auto hp_idx : query_vector)
+            {
+                auto this_range = ranges[hp_idx];
+                for (size_t ii=this_range.first; ii<this_range.second; ++ii)
+                    if (g.id > all_vec[ii].id
+                        && haversine(g.ang, all_vec[ii].ang) < hav(angscale))
+                    // use the fact that haversine is monotonic to avoid inverse operation
+                    // by using the greater-than check, we ensure to remove only one member
+                    // of each pair
+                        goto collided;
+            }
+
+            // TODO it could also make sense to call the rng every time we have a collision
+            //      in the above loop instead. Maybe not super important though.
+            collided :
+                if (gsl_rng_uniform(rng)<collrate) continue;
+
+            // no collision, let's keep this galaxy. We're writing into global variables so need
+            // to be careful
+            #pragma omp critical (FIBCOLL_APPEND)
+            {
+                RA.push_back(g.ra);
+                DEC.push_back(g.dec);
+                Z.push_back(g.z);
+            }
         }
-
-        // TODO it could also make sense to call the rng every time we have a collision
-        //      in the above loop instead. Maybe not super important though.
-        if (collided && gsl_rng_uniform(rng)<collrate) continue;
-
-        // no collision, let's keep this galaxy
-        RA.push_back(g.ra);
-        DEC.push_back(g.dec);
-        Z.push_back(g.z);
     }
 
     // clean up
-    gsl_rng_free(rng);
+    for (int ii=0; ii<rngs.size(); ++ii)
+        gsl_rng_free(rngs[ii]);
 
     // for debugging
     std::printf("fiber collision rate: %.2f percent\n",

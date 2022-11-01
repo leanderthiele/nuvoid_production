@@ -432,7 +432,7 @@ int mangle_polyid_and_weight_nopix(struct MangleMask *self,
     }
     return 1;
 }
-int mangle_polyid_and_weight_pix(struct MangleMask *self, 
+int mangle_polyid_and_weight_pix(const struct MangleMask *self, 
                                  struct Point *pt, 
                                  int64 *poly_id,
                                  long double *weight)

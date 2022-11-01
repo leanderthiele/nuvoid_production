@@ -617,6 +617,7 @@ void choose_galaxies (int snap_idx, size_t Ngal,
                 DEC.push_back(dec);
                 Z.push_back(z);
             }
+            continue;
 
             not_chosen : /* do nothing */;
         }
@@ -793,12 +794,14 @@ void fibcoll ()
                     // of each pair
                         goto collided;
             }
+            goto not_collided;
 
             // TODO it could also make sense to call the rng every time we have a collision
             //      in the above loop instead. Maybe not super important though.
             collided :
                 if (gsl_rng_uniform(rng)<collrate) continue;
 
+            not_collided :
             // no collision, let's keep this galaxy. We're writing into global variables so need
             // to be careful
             #pragma omp critical (FIBCOLL_APPEND)

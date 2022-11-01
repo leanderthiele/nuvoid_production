@@ -41,7 +41,13 @@ kwargs = {k: convert_argv(params[k], v) for k, v in map(lambda s: s.split('='), 
 
 # get the available snapshot times
 # (try to do it a bit more precisely that 4 digits)
-halo_finder_str = argv_hod[list(params.keys()).index('cat')]
+halo_finder_str = None
+for a in argv_hod :
+    if a.startswith('cat') :
+        halo_finder_str = a.split('=')[-1]
+        break
+if halo_finder_str is None :
+    halo_finder_str = 'rockstar'
 halo_catalogs = sorted(glob(f'{wrk_dir}/{halo_finder_str}_*'), key=lambda s: float(s.split('_')[-1]))
 times = []
 

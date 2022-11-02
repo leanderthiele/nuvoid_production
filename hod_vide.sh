@@ -4,6 +4,7 @@
 #  [1] working directory
 #  [2] hod hash
 #  [3] augmentation index
+#  [4] retry index (0...)
 
 set -e -o pipefail
 
@@ -23,6 +24,7 @@ VIDE_CFG_TEMPLATE="$codebase/hod_vide_cfg.py"
 wrk_dir="$1"
 hod_hash="$2"
 augment="$3"
+retry_index="$4"
 
 # some fixed settings
 zmin=0.42
@@ -43,6 +45,7 @@ utils::replace $vide_cfg 'zmin'         "$zmin"
 utils::replace $vide_cfg 'zmax'         "$zmax"
 utils::replace $vide_cfg 'augment'      "$augment"
 utils::replace $vide_cfg 'Omega_m'      "$Omega_m"
+utils::replace $vide_cfg 'retry_index'  "$retry_index"
 
 # prevent weird mutual interference effects between vide processes
 cd $logdir

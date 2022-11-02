@@ -47,7 +47,17 @@ done
 # generate the void catalogs
 for augment in ${augments[@]}; do
   vide_log="$wrk_dir/hod/$hod_hash/vide_$augment.log"
-  utils::run "bash $codebase/hod_vide.sh $wrk_dir $hod_hash $augment" $vide_log
+  # VIDE fails in rare cases pretty randomly, in such cases retry
+  vide_max_tries=3
+  for retry in $(seq 1 $vide_max_tries); do
+    utils::run "bash $codebase/hod_vide.sh $wrk_dir $hod_hash $augment" $vide_log $((retry-1)) \
+      && status=$? || status=$?
+    if [ $status -eq 0 ]; then break; fi
+  done
+  if [ $retry -eq $vide_max_tries ]; then
+    utils::printerr "VIDE did not succeed within $vide_max_tries tries for $wrk_dir-$hod_hash-$augment"
+    exit 1
+  fi
 done
 
 # measure the data histogram

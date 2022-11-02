@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x -e -o pipefail
+set -e -o pipefail
 
 # Wraps the various other hod* codes.
 # Command line arguments:
@@ -37,7 +37,6 @@ else
   export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 fi
 
-if [ 0 -eq 1 ]; then
 # generate galaxies at each redshift
 bash $codebase/hod_galaxies.sh $wrk_dir $hod_hash $hod_desc
 
@@ -51,7 +50,6 @@ for augment in ${augments[@]}; do
   vide_log="$wrk_dir/hod/$hod_hash/vide_$augment.log"
   utils::run "bash $codebase/hod_vide.sh $wrk_dir $hod_hash $augment" $vide_log
 done
-fi
 
 # measure the data histogram
 boss_counts="$(bash $codebase/hod_histogram.sh $boss_voids $vide_out $Rmin $Rmax $Nbins)"

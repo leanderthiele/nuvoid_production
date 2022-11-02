@@ -74,7 +74,6 @@ sort_snapshot = false -- sort snaps by ID, default is true but needs a lot of co
 write_snapshot = FASTPM_OUTPUT .. "/snap"
 write_powerspectrum = FASTPM_OUTPUT .. "/powerspectra/powerspectrum"
 
--- TODO running into SIGSEGV when RFOF is on...
 -- write_fof = FASTPM_OUTPUT .. "/fof"
 write_rfof = FASTPM_OUTPUT .. "/rfof" -- apparently an improved version of FOF tailored for FastPM
 

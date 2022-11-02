@@ -12,12 +12,11 @@ set -e -o pipefail
 
 # some fixed settings
 augments=(0 13 41 89) # arbitrary
-vide_out='untrimmed_dencut' # TODO!!!
+vide_out='untrimmed_dencut' # this is what Alice recommends
 boss_voids='/tigress/lthiele/boss_dr12/voids/sample_test'
 
-# TODO
-Rmin=20
-Rmax=80
+Rmin=30 # could be a bit on the low side
+Rmax=80 # with this choice the last few bins are basically empty in the data
 Nbins=32
 
 codebase="$HOME/nuvoid_production"

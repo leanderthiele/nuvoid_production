@@ -27,7 +27,7 @@ augment="$3"
 # some fixed settings
 zmin=0.42
 zmax=0.70
-Omega_m=0.30 # TODO
+Omega_m=0.3439 # mean of our prior, also consistent with Plk BOSS analysis
 
 logdir="$wrk_dir/hod/$hod_hash/logs_$augment"
 figdir="$wrk_dir/hod/$hod_hash/figs"

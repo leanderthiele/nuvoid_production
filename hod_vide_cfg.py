@@ -14,7 +14,7 @@ workDir = '<<<workDir>>>'
 logDir = '<<<logDir>>>'
 figDir = '<<<figDir>>>'
 
-numZobovThreads = 8
+numZobovThreads = <<<numZobovThreads>>>
 numZobovDivisions = 2
 mergingThreshold = 1e-9
 

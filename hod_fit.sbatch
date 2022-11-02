@@ -2,7 +2,7 @@
 
 #SBATCH -n 5
 #SBATCH -c 8
-#SBATCH --mem-per-cpu=4.5G
+#SBATCH --mem-per-cpu=4G
 #SBATCH -t 01:00:00
 
 module load anaconda3/2021.11

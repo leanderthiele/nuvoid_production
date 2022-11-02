@@ -14,7 +14,7 @@ source $codebase/utils.sh
 # codes used
 VIDE_MODULES="anaconda3/2021.11"
 VIDE_CONDA_ENV="galaxies"
-VIDE_EXE="python -u -m vide_pipeline"
+VIDE_EXE="python -u -m void_pipeline"
 
 # templates used
 VIDE_CFG_TEMPLATE="$codebase/hod_vide_cfg.py"
@@ -42,6 +42,7 @@ utils::replace $vide_cfg 'figDir'       "$figdir"
 utils::replace $vide_cfg 'zmin'         "$zmin"
 utils::replace $vide_cfg 'zmax'         "$zmax"
 utils::replace $vide_cfg 'augment'      "$augment"
+utils::replace $vide_cfg 'Omega_m'      "$Omega_m"
 
 # prevent weird mutual interference effects between vide processes
 cd $logdir

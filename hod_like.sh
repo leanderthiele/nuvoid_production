@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x -e -o pipefail
+set -e -o pipefail
 
 # Wraps the various other hod* codes.
 # Command line arguments:
@@ -8,7 +8,7 @@ set -x -e -o pipefail
 #   [2] the hod description, key=value pairs as requested by hod_galaxies.py
 
 # some fixed settings
-augments=(0) # arbitrary
+augments=(0 13 41 89) # arbitrary
 vide_out='untrimmed_dencut' # TODO!!!
 boss_voids='/tigress/lthiele/boss_dr12/voids/sample_test'
 

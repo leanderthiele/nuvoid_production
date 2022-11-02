@@ -11,6 +11,7 @@ wrk_dir="$1"
 hod_hash="$2"
 
 rm "$wrk_dir/hod/$hod_hash/"galaxies_*.bin
+rm "$wrk_dir/hod/$hod_hash/"lightcone_*.txt
 
 vide_log_dirs="$(ls -d "$wrk_dir/hod/$hod_hash/"logs_*)"
 vide_fig_dir="$wrk_dir/hod/$hod_hash/figs"

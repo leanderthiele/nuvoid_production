@@ -5,7 +5,8 @@ set -e -o pipefail
 # Wraps the various other hod* codes.
 # Command line arguments:
 #   [1] working directory
-#   [2] the hod description, key=value pairs as requested by hod_galaxies.py
+#   [2] the hod hash
+#   [3...] the hod description, key=value pairs as requested by hod_galaxies.py
 # Prints out the log-likelihood as the last line
 
 # some fixed settings
@@ -22,9 +23,9 @@ codebase="$HOME/nuvoid_production"
 source $codebase/utils.sh
 
 wrk_dir="$1"
-hod_desc="${@:2}"
+hod_hash="$2"
+hod_desc="${@:3}"
 
-hod_hash="$(utils::hex_hash "$hod_desc")"
 mkdir -p "$wrk_dir/hod/$hod_hash"
 
 if [ -z $SLURM_CPUS_PER_TASK ]; then
@@ -82,6 +83,3 @@ echo "loglike_tot=$loglike" > $loglike_info
 for ii in $( seq 0 $(( ${#augments[@]} - 1 )) ); do
   echo "loglike_augment${augment[$ii]}=${loglikes[$ii]}" >> "$loglike_info"
 done
-
-# output
-echo $loglike

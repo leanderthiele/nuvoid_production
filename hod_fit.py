@@ -8,6 +8,7 @@ import sys
 from sys import argv
 import subprocess
 import logging
+import hashlib
 
 import optuna
 from optuna.samplers import TPESampler
@@ -58,13 +59,14 @@ class Objective :
 
     def __call__(self, trial) :
         hod_args = self._draw_hod(trial)
-
-        # FIXME
-        cmd =f'bash {codebase}/hod_like.sh {self.wrk_dir} {hod_args} | tail -1'
-        print(cmd)
-
-        loglike = float(subprocess.run(f'bash {codebase}/hod_like.sh {self.wrk_dir} {hod_args} | tail -1',
-                                       shell=True, capture_output=True, check=True).stdout.strip().decode())
+        hod_hash = hashlib.md5(hod_args.encode('utf-8')).hexdigest()
+        subprocess.run(f'bash {codebase}/hod_like.sh {self.wrk_dir} {hod_hash} {hod_args}',
+                       shell=True, check=True)
+        with open(f'{self.wrk_dir}/hod/{hod_hash}/loglike.info', 'r') as f :
+            line = f.readline().strip()
+            line = line.split('=')
+            assert line[0] == 'loglike_tot'
+            loglike = float(line[1])
         return -loglike
 
 # driver

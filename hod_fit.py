@@ -30,6 +30,8 @@ class Objective :
         if cat == 'rockstar' :
             secondary = trial.suggest_categorical('secondary', ('none', 'conc', 'kinpot'))
             args += f' secondary={secondary}'
+        else :
+            secondary = 'none'
         log_Mmin = trial.suggest_float('log_Mmin', 12.5, 13.5)
         args += f' hod_log_Mmin={log_Mmin}'
         sigma_logM = trial.suggest_float('sigma_logM', 0.05, 0.6)

@@ -82,7 +82,7 @@ if __name__ == '__main__' :
                                 storage='mysql://optunausr:pwd@tigercpu:3310/optunadb'\
                                         '?unix_socket=/home/lthiele/mysql/mysql.sock',
                                 directions=['minimize', ],
-                                load_if_exists=False) # FIXME!!!
+                                load_if_exists=True)
 
     # create our objective callable
     objective = Objective(sim_version, sim_index)

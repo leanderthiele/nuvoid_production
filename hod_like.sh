@@ -6,9 +6,7 @@ set -e -o pipefail
 # Command line arguments:
 #   [1] working directory
 #   [2] the hod description, key=value pairs as requested by hod_galaxies.py
-# Prints out the log-likelihood as the last line,
-# but be careful, there could be other printouts (warnings...) before so
-# that needs to be dealt with!
+# Prints out the log-likelihood as the last line
 
 # some fixed settings
 augments=(0 13 41 89) # arbitrary

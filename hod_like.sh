@@ -69,10 +69,10 @@ for augment in ${augments[@]}; do
   sim_counts="$(bash $codebase/hod_histogram.sh $wrk_dir/hod/$hod_hash/sample_$augment $vide_out $Rmin $Rmax $Nbins)"
   loglikes+=($($codebase/vsf_like $Nbins $(echo $boss_counts | tr ',' ' ') $(echo $sim_counts | tr ',' ' ')))
 done
-module rm gsl/2.6
 
 # combine to compute the total log-likelihood
 loglike=$($codebase/vsf_combine_like ${#augments[@]} ${loglikes[@]})
+module rm gsl/2.6
 
 # clean up
 bash $codebase/hod_cleanup.sh $wrk_dir $hod_hash

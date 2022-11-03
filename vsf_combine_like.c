@@ -9,9 +9,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <float.h>
 #include <assert.h>
+
+#include <gsl/gsl_statistics_long_double.h>
 
 int main(int argc, char **argv)
 {
@@ -23,16 +26,19 @@ int main(int argc, char **argv)
 
     assert((c-argv)==argc);
 
-    // take out the smallest value to avoid bad things from happening when exponentiating
-    long double min = LDBL_MAX;
-    for (int ii=0; ii<N; ++ii)
-        if (min>loglikes[ii]) min = loglikes[ii];
+    // take out the median value to avoid bad things from happening when exponentiating
+    // we do this with a separate buffer to keep the ordering
+    // (not necessary at the moment but it's ok)
+    long double buffer[N];
+    memcpy(buffer, loglikes, N*sizeof(long double));
+    long double median = gsl_stats_long_double_median(buffer, 1, N);
 
     long double out = 0.0L;
     for (int ii=0; ii<N; ++ii)
-        out += expl(loglikes[ii]-min);
+        out += expl(loglikes[ii]-median);
 
-    out = min + logl(out);
+    // take out dependence on N in the above sum
+    out = median + logl(out/N);
 
     printf("%.16Le\n", out);
 

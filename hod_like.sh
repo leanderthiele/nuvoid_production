@@ -50,7 +50,7 @@ for augment in ${augments[@]}; do
   # VIDE fails in rare cases pretty randomly, in such cases retry
   vide_max_tries=3
   for retry in $(seq 1 $vide_max_tries); do
-    utils::run "bash $codebase/hod_vide.sh $wrk_dir $hod_hash $augment" $vide_log $((retry-1)) \
+    utils::run "bash $codebase/hod_vide.sh $wrk_dir $hod_hash $augment $((retry-1))" $vide_log \
       && status=$? || status=$?
     if [ $status -eq 0 ]; then break; fi
   done

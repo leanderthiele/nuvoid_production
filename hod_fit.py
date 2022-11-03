@@ -51,13 +51,18 @@ class Objective :
         args += f' have_vbias={have_vbias}'
         if have_vbias == 'True' :
             transf_eta_cen = trial.suggest_float('transf_eta_cen', 0.0, 10.0)
-            args += ' hod_transf_eta_cen={transf_eta_cen}'
+            args += f' hod_transf_eta_cen={transf_eta_cen}'
             transf_eta_sat = trial.suggest_float('transf_eta_sat', -1, 1)
-            args += ' hod_transf_eta_sat={transf_eta_sat}'
+            args += f' hod_transf_eta_sat={transf_eta_sat}'
         return args
 
     def __call__(self, trial) :
         hod_args = self._draw_hod(trial)
+
+        # FIXME
+        cmd =f'bash {codebase}/hod_like.sh {self.wrk_dir} {hod_args} | tail -1'
+        print(cmd)
+
         loglike = float(subprocess.run(f'bash {codebase}/hod_like.sh {self.wrk_dir} {hod_args} | tail -1',
                                        shell=True, capture_output=True, check=True).stdout.strip().decode())
         return -loglike
@@ -77,7 +82,7 @@ if __name__ == '__main__' :
                                 storage='mysql://optunausr:pwd@tigercpu:3310/optunadb'\
                                         '?unix_socket=/home/lthiele/mysql/mysql.sock',
                                 directions=['minimize', ],
-                                load_if_exists=True)
+                                load_if_exists=False) # FIXME!!!
 
     # create our objective callable
     objective = Objective(sim_version, sim_index)

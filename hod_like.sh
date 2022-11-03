@@ -76,5 +76,12 @@ loglike=$($codebase/vsf_combine_like ${#augments[@]} ${loglikes[@]})
 # clean up
 bash $codebase/hod_cleanup.sh $wrk_dir $hod_hash
 
+# for reference, write the log-likelihoods into the hod directory
+loglike_info="$wrk_dir/hod/$hod_hash/loglike.info"
+echo "loglike_tot=$loglike" > $loglike_info
+for ii in $( seq 0 $(( ${#augments[@]} - 1 )) ); do
+  echo "loglike_augment${augment[$ii]}=${loglikes[$ii]}" >> "$loglike_info"
+done
+
 # output
 echo $loglike

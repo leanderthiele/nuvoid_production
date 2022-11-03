@@ -17,10 +17,10 @@ codebase = '/home/lthiele/nuvoid_production'
 class Objective :
 
     def __init__(self, sim_version, sim_index) :
-    """ Constructor
-    sim_version ... 'cosmo_varied' or 'fiducial'
-    sim_index ... index of the simulation, integer
-    """
+        """ Constructor
+        sim_version ... 'cosmo_varied' or 'fiducial'
+        sim_index ... index of the simulation, integer
+        """
         self.wrk_dir = f'/scratch/gpfs/lthiele/nuvoid_production/{sim_version}_{sim_index}'
 
     def _draw_hod(self, trial) :
@@ -70,7 +70,7 @@ if __name__ == '__main__' :
     optuna.logging.get_logger('optuna').addHandler(logging.StreamHandler(sys.stdout))
 
     # set up our study
-    study = optuna.create_study(sampler=TPESampler(n_startup_trials=20),
+    study = optuna.create_study(sampler=TPESampler(n_startup_trials=80),
                                 study_name=f'test_{sim_version}_{sim_index}',
                                 storage='mysql://optunausr:pwd@tigercpu:3310/optunadb'\
                                         '?unix_socket=/home/lthiele/mysql/mysql.sock',

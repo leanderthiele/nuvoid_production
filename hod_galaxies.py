@@ -28,7 +28,7 @@ params = {
           'hod_abias': float,
           'have_vbias': bool,
           'hod_transf_eta_cen': float,
-          'hod_transf_eta_set': float
+          'hod_transf_eta_sat': float
          }
 
 def convert_argv(t, s) :

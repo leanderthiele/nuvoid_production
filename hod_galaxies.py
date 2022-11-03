@@ -61,8 +61,8 @@ os.makedirs(f'{wrk_dir}/hod/{hod_hash}', exist_ok=True)
 # write the hod settings to file
 with open(f'{wrk_dir}/hod/{hod_hash}/hod.info', 'w') as f :
     f.write(f'hash={hod_hash}\n')
-    for k, v in zip(params.keys(), argv_hod) :
-        f.write(f'{k}={v}\n')
+    for a in argv_hod :
+        f.write(f'{a}\n')
 
 pyglx.get_galaxies(wrk_dir, times, f'{wrk_dir}/hod/{hod_hash}/galaxies',
                    **kwargs)

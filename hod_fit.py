@@ -60,6 +60,7 @@ class Objective :
     def __call__(self, trial) :
         hod_args = self._draw_hod(trial)
         hod_hash = hashlib.md5(hod_args.encode('utf-8')).hexdigest()
+        trial.set_user_attr('hod_hash', hod_hash) # useful to have this back-reference
         subprocess.run(f'bash {codebase}/hod_like.sh {self.wrk_dir} {hod_hash} {hod_args}',
                        shell=True, check=True)
         with open(f'{self.wrk_dir}/hod/{hod_hash}/loglike.info', 'r') as f :

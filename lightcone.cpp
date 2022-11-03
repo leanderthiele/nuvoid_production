@@ -50,6 +50,10 @@ int remaps[][9] =
 const double alpha = 97.0 * M_PI / 180.0; // rotation around y-axis
 const double beta = 6.0; // rotation around z-axis, in degrees
 
+// before initial downsampling, we increase the fiber collision rate by this
+// to make sure that after fiber collisions we still have enough galaxies in each redshift bin
+const double fibcoll_rate_correction = 0.05;
+
 // in units of L1, L2, L3
 const double origin[] = { 0.5, -0.058, 0.0 };
 
@@ -67,13 +71,6 @@ const char *veto_fnames[Nveto] =
       "allsky_bright_star_mask_pix.ply",
       "badfield_mask_unphot_seeing_extinction_pixs8_dr12.ply",
     };
-
-// used for the initial z downsampling, needs to be adjusted
-// If this is chosen too large, the nonlinear interplay between fiber collisions
-// and downsampling is too pronounced.
-// If this is chosen too small, we'll end up with fewer galaxies than we need after
-// fiber collisions are removed.
-const double fibcoll_rate = 0.1;
 
 // how many interpolation stencils we use to get from chi to z
 const int N_interp = 1024;
@@ -117,7 +114,10 @@ void process_args (int argc, const char **argv);
 void downsample (double plus_factor);
 
 // modifies RA, DEC, Z
-void fibcoll (void);
+// if only_measure=false,
+// returns the fiber collision rate
+template<bool only_measure>
+double fibcoll (void);
 
 // sets times, redshifts, redshift_bounds, chi_bounds
 void process_times (void);
@@ -204,14 +204,19 @@ int main (int argc, const char **argv)
 
         if (verbose) std::printf("Done with %d\n", ii);
     }
+    
+    // get an idea of the fiber collision rate in our sample,
+    // so the subsequent downsampling is to the correct level.
+    // This is justified as all this stuff is not super expensive.
+    double fibcoll_rate = fibcoll</*only_measure=*/true>();
 
     // first downsampling before fiber collisions are applied
     if (verbose) std::printf("downsample\n");
-    downsample(fibcoll_rate);
+    downsample(fibcoll_rate+fibcoll_rate_correction);
 
     // apply fiber collisions
     if (verbose) std::printf("fibcoll\n");
-    fibcoll(); 
+    fibcoll</*only_measure=*/false>(); 
 
     // now downsample to our final density
     if (verbose) std::printf("downsample\n");
@@ -636,9 +641,17 @@ void downsample (double plus_factor)
         gsl_histogram_increment(sim_z_hist, z);
     double keep_fraction[target_hist->n];
     for (int ii=0; ii<target_hist->n; ++ii)
+    {
         // note the GSL bin counts are doubles already
         keep_fraction[ii] = (1.0+plus_factor)
                             * gsl_histogram_get(target_hist, ii) / gsl_histogram_get(sim_z_hist, ii);
+
+        // give warning if something goes wrong
+        if (keep_fraction[ii] > 1.0 && plus_factor==0.0)
+            std::fprintf(stderr, "[WARNING] at z=%.4f, do not have enough galaxies, keep_fraction=%.4f\n",
+                                 0.5*(target_hist->range[ii]+target_hist->range[ii+1]),
+                                 keep_fraction[ii]);
+    }
 
     // for debugging
     if (verbose)
@@ -709,7 +722,8 @@ inline long double haversine (const pointing &a1, const pointing &a2)
     return hav(t1-t2) + hav(p1-p2) * ( - hav(t1-t2) + hav(t1+t2) );
 }
 
-void fibcoll ()
+template<bool only_measure>
+double fibcoll ()
 {
     // both figures from Chang
     // we are dealing with pretty small angle differences so better do things in long double
@@ -741,10 +755,13 @@ void fibcoll ()
             all_vec[ii] = GalHelper(gsl_rng_get(rng), RA[ii], DEC[ii], Z[ii], hp_base);
     }
 
-    // empty the output arrays
-    RA.clear();
-    DEC.clear();
-    Z.clear();
+    if constexpr (!only_measure)
+    {
+        // empty the output arrays
+        RA.clear();
+        DEC.clear();
+        Z.clear();
+    }
 
     // sort these for efficient access with increasing healpix index
     std::sort(all_vec.begin(), all_vec.end(),
@@ -768,7 +785,9 @@ void fibcoll ()
 
     // we assume the inputs have sufficient entropy that always removing the first galaxy is fine
 
-    #pragma omp parallel
+    size_t Nkept = 0;
+
+    #pragma omp parallel reduction(+:Nkept)
     {
         // allocate for efficiency, I don't know how rangeset works internally
         // so we do this the old-fashioned way (not private etc)
@@ -806,28 +825,29 @@ void fibcoll ()
             if (gsl_rng_uniform(rng)<collrate) continue;
 
             not_collided :
-            // no collision, let's keep this galaxy. We're writing into global variables so need
-            // to be careful
-            #pragma omp critical (FIBCOLL_APPEND)
-            {
-                RA.push_back(g.ra);
-                DEC.push_back(g.dec);
-                Z.push_back(g.z);
-            }
+            ++Nkept;
+            if constexpr (!only_measure)
+                // no collision, let's keep this galaxy. We're writing into global variables so need
+                // to be careful
+                #pragma omp critical (FIBCOLL_APPEND)
+                {
+                    RA.push_back(g.ra);
+                    DEC.push_back(g.dec);
+                    Z.push_back(g.z);
+                }
         }
     }
 
     // clean up
     for (int ii=0; ii<rngs.size(); ++ii)
         gsl_rng_free(rngs[ii]);
+    
+    if constexpr (!only_measure)
+        assert(Nkept == RA.size());
 
-    double actual_fibcoll_rate = (double)(all_vec.size()-Z.size())/(double)(all_vec.size());
-    if (verbose) std::printf("fiber collision rate: %.2f percent\n",
-                             100.0*actual_fibcoll_rate);
+    double fibcoll_rate = (double)(all_vec.size()-Nkept)/(double)(all_vec.size());
 
-    if (actual_fibcoll_rate > fibcoll_rate)
-        std::fprintf(stderr, "[WARNING] actual fiber collision rate is %.2f percent\n",
-                             100.0*actual_fibcoll_rate);
+    return fibcoll_rate;
 }
 
 

@@ -81,5 +81,5 @@ bash $codebase/hod_cleanup.sh $wrk_dir $hod_hash
 loglike_info="$wrk_dir/hod/$hod_hash/loglike.info"
 echo "loglike_tot=$loglike" > $loglike_info
 for ii in $( seq 0 $(( ${#augments[@]} - 1 )) ); do
-  echo "loglike_augment${augment[$ii]}=${loglikes[$ii]}" >> "$loglike_info"
+  echo "loglike_augment${augments[$ii]}=${loglikes[$ii]}" >> "$loglike_info"
 done

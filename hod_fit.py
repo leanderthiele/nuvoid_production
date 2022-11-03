@@ -46,7 +46,7 @@ class Objective :
             abias = trial.suggest_float('abias', -1, 1)
             args += f' hod_abias={abias}'
         have_vbias = trial.suggest_categorical('have_vbias', ('True', 'False'))
-        args += f' have_vbias={have_vbias'
+        args += f' have_vbias={have_vbias}'
         if have_vbias == 'True' :
             transf_eta_cen = trial.suggest_float('transf_eta_cen', 0.0, 10.0)
             args += ' hod_transf_eta_cen={transf_eta_cen}'

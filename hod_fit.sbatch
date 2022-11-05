@@ -1,14 +1,16 @@
 #!/bin/bash
 
-#SBATCH -n 20
+#SBATCH -n 40
 #SBATCH -c 4
 #SBATCH --mem-per-cpu=4G
-#SBATCH -t 02:00:00
+#SBATCH -t 05:00:00
+
+#SBATCH --array=1-6
 
 module load anaconda3/2021.11
 conda activate galaxies
 
 sim_version='cosmo_varied'
-sim_index='30'
+sim_index='19'
 
 srun -n $SLURM_NTASKS python -u hod_fit.py $sim_version $sim_index

@@ -81,7 +81,7 @@ if __name__ == '__main__' :
 
     # set up our study
     study = optuna.create_study(sampler=TPESampler(n_startup_trials=80),
-                                study_name=f'test_{sim_version}_{sim_index}',
+                                study_name=f'hod_fit_{sim_version}_{sim_index}',
                                 storage='mysql://optunausr:pwd@tigercpu:3310/optunadb'\
                                         '?unix_socket=/home/lthiele/mysql/mysql.sock',
                                 directions=['minimize', ],

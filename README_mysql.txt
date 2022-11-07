@@ -43,3 +43,32 @@ This results in appreciable load on the head node SQL process.
 When I increase the objective evaluation time to 20 sec, we still
 have a lot of head node SQL processes but they are idle -- as expected.
 Hopefully sysadmins won't hate us for this...
+
+---- CLEANING OPTUNA DB ----
+This is sometimes necessary to delete trials which are spuriously
+recorded as 'RUNNING'. The tricky thing is that there are a bunch
+of tables with a foreign key constraint on the trial_id column into
+the trials table, with the default referential action set up such that
+one can't delete stuff. In order to clean, do the following:
+
+[pseudocode!]
+
+$ mysql -u root
+mysql> use optunadb
+
+! The following may not be required again as I changed our global
+optunadb already, so perhaps it's just for reference.
+for table_name in [heartbeats,
+                   intermediate_values,
+                   params,
+                   system_attributes,
+                   user_attributes,
+                   values] do
+        mysql> alter table trial_${table_name} drop foreign key trial_${table_name}_ibfk_1;
+        mysql> alter table trial_${table_name} add constraint trial_${table_name}_ibfk_1 foreign key (trial_id) references trials (trial_id) on delete cascade;
+done
+
+! Make sure no optuna processes are actually running, otherwise this
+will likely break some stuff...
+for bad_state in [RUNNING, FAIL] do
+        mysql> delete from trials where state='${bad_state}'

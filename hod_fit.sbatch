@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #SBATCH -n 40
-#SBATCH -c 4
+#SBATCH -c 8
 #SBATCH --mem-per-cpu=4G
 #SBATCH -t 05:00:00
 
-#SBATCH --array=1-6
+#SBATCH --array=7-9
 
 module load anaconda3/2021.11
 conda activate galaxies

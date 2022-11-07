@@ -11,7 +11,7 @@
 set -e -o pipefail
 
 # how many fastpm jobs we allow to run simultaneously
-MAX_SIMULTANEOUS=2
+MAX_SIMULTANEOUS=1
 
 start_idx=$1
 end_idx=$2

@@ -9,6 +9,8 @@ from sys import argv
 import subprocess
 import logging
 import hashlib
+import random
+from time import sleep
 
 import optuna
 from optuna.samplers import TPESampler
@@ -75,6 +77,9 @@ if __name__ == '__main__' :
     
     sim_version = argv[1]
     sim_index = int(argv[2])
+
+    # FIXME maybe this works to avoid overloading the database
+    sleep(random.uniform(0, 10))
 
     # set up optuna logging
     optuna.logging.get_logger('optuna').addHandler(logging.StreamHandler(sys.stdout))

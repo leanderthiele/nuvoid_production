@@ -28,6 +28,11 @@ hod_desc="${@:3}"
 
 mkdir -p "$wrk_dir/hod/$hod_hash"
 
+# generate galaxies at each redshift
+# This is a small hack to hopefully avoid OOM
+export OMP_NUM_THREADS=1
+bash $codebase/hod_galaxies.sh $wrk_dir $hod_hash $hod_desc
+
 if [ -z $SLURM_CPUS_PER_TASK ]; then
   # head node
   export OMP_NUM_THREADS=4
@@ -35,8 +40,6 @@ else
   export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 fi
 
-# generate galaxies at each redshift
-bash $codebase/hod_galaxies.sh $wrk_dir $hod_hash $hod_desc
 
 # generate the lightcones
 for augment in ${augments[@]}; do

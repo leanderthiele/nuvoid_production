@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e -o pipefail
+
 # Small script to prepare the simulation pipeline
 # Command line arguments:
 #   [1] index (for the cosmology)

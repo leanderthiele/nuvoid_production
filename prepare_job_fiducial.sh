@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e -o pipefail
+
 # Small script to prepare the simulation pipeline
 # Command line arguments:
 #   [1] index (for the cosmology)
@@ -25,14 +27,10 @@ ROCKSTAR_TEMPLATE=$codebase/jobstep_rockstar.sbatch
 PARENTS_TEMPLATE=$codebase/jobstep_parents.sbatch
 SUBMIT_TEMPLATE=$codebase/submit.sh
 
-# draw our cosmology
-cosmo="$($COSMO_DRAW_EXE $idx)"
-read Omega_b Omega_m h0 A_s n_s M_nu <<< "$(echo "$cosmo" | tr ',' ' ')"
-
 # write the cosmology file
 cosmo_sh=$JOB_DIR/cosmo_fiducial_$idx.sh
 cp $COSMO_TEMPLATE $cosmo_sh
-utils::replace $cosmo_sh 'idx'     "$idx"
+utils::replace $cosmo_sh 'idx' "$idx"
 
 # write the fastpm file
 fastpm_sbatch=$JOB_DIR/jobstep_fastpm_$idx.sbatch

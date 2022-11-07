@@ -33,19 +33,19 @@ cp $COSMO_TEMPLATE $cosmo_sh
 utils::replace $cosmo_sh 'idx' "$idx"
 
 # write the fastpm file
-fastpm_sbatch=$JOB_DIR/jobstep_fastpm_$idx.sbatch
+fastpm_sbatch=$JOB_DIR/jobstep_fastpm_fiducial_$idx.sbatch
 cp $FASTPM_TEMPLATE $fastpm_sbatch
 utils::replace $fastpm_sbatch 'cosmo'   "$cosmo_sh"
 utils::replace $fastpm_sbatch 'output'  "${OUT_ROOT}_fastpm.out"
 
 # write the rockstar file
-rockstar_sbatch=$JOB_DIR/jobstep_rockstar_$idx.sbatch
+rockstar_sbatch=$JOB_DIR/jobstep_rockstar_fiducial_$idx.sbatch
 cp $ROCKSTAR_TEMPLATE $rockstar_sbatch
 utils::replace $rockstar_sbatch 'cosmo'  "$cosmo_sh"
 utils::replace $rockstar_sbatch 'output' "${OUT_ROOT}_rockstar.out"
 
 # write the parents file
-parents_sbatch=$JOB_DIR/jobstep_parents_$idx.sbatch
+parents_sbatch=$JOB_DIR/jobstep_parents_fiducial_$idx.sbatch
 cp $PARENTS_TEMPLATE $parents_sbatch
 utils::replace $parents_sbatch 'cosmo'  "$cosmo_sh"
 utils::replace $parents_sbatch 'output' "${OUT_ROOT}_parents.out"

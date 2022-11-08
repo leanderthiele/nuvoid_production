@@ -14,8 +14,8 @@ import optuna
 sim_version = argv[1]
 sim_index = int(argv[2])
 
-diagnostics = ['edf', 'optimization_history',
-               'parallel_coordinate', 'param_importances', 'slice', ]
+diagnostics = ['slice', 'edf', 'optimization_history',
+               'parallel_coordinate', 'param_importances', ]
 for d in diagnostics :
     exec(f'from optuna.visualization import plot_{d}')
 
@@ -56,13 +56,14 @@ ax_vsf = ax[0]
 ax_diff = ax[1]
 ax_vsf.scatter(c_dat, h_dat, label='CMASS')
 ax_vsf.scatter(c_dat, h_sim, label=f'simulation (mean {len(sim_samples)} augments)')
+ax_vsf.set_yscale('log')
 ax_vsf.set_ylabel('counts')
 ax_vsf.set_title('VSF for best-fit HOD')
-ax_vsf.legend(loc='upper right')
-ax_vsf.text(0.05, 0.05, f'"$\chi^2$"={best_trial.values[0]}',
-            transform=ax_vsf.transAxes, va='bottom', ha='left')
+ax_vsf.legend(loc='lower left')
+ax_vsf.text(0.95, 0.95, f'$-\log\mathcal{{L}}$={best_trial.values[0]:.2f}',
+            transform=ax_vsf.transAxes, va='top', ha='right')
 ax_diff.scatter(c_dat, (h_sim-h_dat)/np.sqrt(h_sim))
-ax_diff.set_ylabel('$\Delta/\sqrt{{\sf CMASS}}$')
+ax_diff.set_ylabel('$\Delta/\sqrt{{\sf sim}}$')
 ax_diff.set_xlabel('R [Mpc/h]')
 ax_diff.axhline(0, color='black', linestyle='dashed')
 fig.savefig(f'{sim_version}_{sim_index}_bestfitvsf.pdf', bbox_inches='tight')

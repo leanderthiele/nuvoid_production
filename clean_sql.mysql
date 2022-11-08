@@ -1,0 +1,3 @@
+use optunadb;
+delete from trials where state='RUNNING';
+delete from trials where state='FAIL';

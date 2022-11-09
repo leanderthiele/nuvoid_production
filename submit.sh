@@ -43,4 +43,4 @@ parents_jobid=$(get_jobid "$result")
 
 # this is the indicator that the next fastpm job can start
 # since disk space is free again
-echo $rockstar_jobid $fastpm_jobid
+echo "$rockstar_jobid $fastpm_jobid"

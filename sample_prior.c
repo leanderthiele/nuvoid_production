@@ -208,7 +208,7 @@ void compute_U01_sample (uint64_t N)
 {
     assert(N>0); // otherwise the Pinv call below will produce NaN
     for (int ii=0; ii<d; ++ii)
-        U01_sample[ii] = (long double)((SEED + N * alpha[ii]))/((long double)(UINT64_MAX)+1.0L);
+        U01_sample[ii] = (long double)(SEED + N * alpha[ii])/((long double)(UINT64_MAX)+1.0L);
 }
 
 void compute_N01_sample (void)

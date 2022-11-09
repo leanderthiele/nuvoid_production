@@ -69,19 +69,22 @@ class Objective :
         trial.set_user_attr('hod_hash', hod_hash) # useful to have this back-reference
         result = subprocess.run(f'bash {codebase}/hod_like.sh {self.wrk_dir} {hod_hash} {hod_args}',
                                 shell=True, check=False)
+
         if result.returncode == 0 :
+            # terminated successfully
             with open(f'{self.wrk_dir}/hod/{hod_hash}/loglike.info', 'r') as f :
                 line = f.readline().strip()
                 line = line.split('=')
                 assert line[0] == 'loglike_tot'
                 loglike = float(line[1])
             return -loglike
-        elif result.returncode == 42 :
+
+        if result.returncode == 42 :
             # this is our magic returncode for random VIDE failures, we understand that this happens
             # in some rare cases ...
             raise VIDEFailure
-        else :
-            result.check_returncode()
+
+        result.check_returncode()
 
 # driver
 if __name__ == '__main__' :

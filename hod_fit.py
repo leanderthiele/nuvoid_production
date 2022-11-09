@@ -17,6 +17,10 @@ from optuna.samplers import TPESampler
 
 codebase = '/home/lthiele/nuvoid_production'
 
+# small custom exception for VIDE failures
+class VIDEFailure(RuntimeError) :
+    pass
+
 class Objective :
 
     def __init__(self, sim_version, sim_index) :
@@ -63,14 +67,21 @@ class Objective :
         hod_args = self._draw_hod(trial)
         hod_hash = hashlib.md5(hod_args.encode('utf-8')).hexdigest()
         trial.set_user_attr('hod_hash', hod_hash) # useful to have this back-reference
-        subprocess.run(f'bash {codebase}/hod_like.sh {self.wrk_dir} {hod_hash} {hod_args}',
-                       shell=True, check=True)
-        with open(f'{self.wrk_dir}/hod/{hod_hash}/loglike.info', 'r') as f :
-            line = f.readline().strip()
-            line = line.split('=')
-            assert line[0] == 'loglike_tot'
-            loglike = float(line[1])
-        return -loglike
+        result = subprocess.run(f'bash {codebase}/hod_like.sh {self.wrk_dir} {hod_hash} {hod_args}',
+                                shell=True, check=False)
+        if result.returncode == 0 :
+            with open(f'{self.wrk_dir}/hod/{hod_hash}/loglike.info', 'r') as f :
+                line = f.readline().strip()
+                line = line.split('=')
+                assert line[0] == 'loglike_tot'
+                loglike = float(line[1])
+            return -loglike
+        elif result.returncode == 42 :
+            # this is our magic returncode for random VIDE failures, we understand that this happens
+            # in some rare cases ...
+            raise VIDEFailure
+        else :
+            result.check_returncode()
 
 # driver
 if __name__ == '__main__' :
@@ -96,4 +107,4 @@ if __name__ == '__main__' :
     objective = Objective(sim_version, sim_index)
 
     # run optuna
-    study.optimize(objective)
+    study.optimize(objective, catch=(VIDEFailure, ))

@@ -59,11 +59,20 @@ for augment in ${augments[@]}; do
       vide_failed=0
       break
     fi
+
+    # ok, VIDE failed. We need to make sure it did so in the expected way
+    # (not out of disk space or something)
+    if [ "$(tail -1 $vide_log)" != '  Extracting voids with ZOBOV... FAILED!' ]; then
+      utils::printerr "VIDE failed in an unexpted way for $wrk_dir-$hod_hash-$augment"
+      exit 43
+    fi
   done
+
   if [ $vide_failed -eq 1 ]; then
     utils::printerr "VIDE did not succeed within $vide_max_tries tries for $wrk_dir-$hod_hash-$augment"
-    exit 1
+    exit 42
   fi
+
 done
 
 # measure the data histogram

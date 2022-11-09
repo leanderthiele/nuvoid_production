@@ -7,6 +7,7 @@
 set -e -o pipefail
 
 fastpm_dependency=$1
+fastpm_dependency_ok=$2
 
 # the sbatch scripts, to be populated
 jobstep_fastpm=<<<jobstep_fastpm>>>
@@ -27,6 +28,9 @@ if [ -z $fastpm_dependency ]; then
   dependency_str=""
 else
   dependency_str="--dependency=after:${fastpm_dependency}_4+30"
+  if [ ! -z $fastpm_dependency_ok ]; then
+    dependency_str="$dependency_str,afterok:$fastpm_dependency_ok"
+  fi
 fi
 result="$(sbatch $dependency_str $jobstep_fastpm)"
 fastpm_jobid=$(get_jobid "$result")
@@ -39,4 +43,4 @@ parents_jobid=$(get_jobid "$result")
 
 # this is the indicator that the next fastpm job can start
 # since disk space is free again
-echo $rockstar_jobid
+echo $rockstar_jobid $fastpm_jobid

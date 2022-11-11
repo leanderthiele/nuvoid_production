@@ -18,5 +18,5 @@ Redges = np.linspace(Rmin, Rmax, num=Nbins+1)
 zedges = np.array(zedges)
 
 R, z = np.loadtxt(f, usecols=(4,5,), unpack=True)
-h, _, _ = np.histogram(z, R, bins=(zedges, Redges))
+h, _, _ = np.histogram2d(z, R, bins=(zedges, Redges))
 print(','.join(map(str, h.flatten().astype(int))))

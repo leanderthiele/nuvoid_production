@@ -26,7 +26,7 @@ study = optuna.load_study(study_name=f'hod_fit_{sim_version}_{sim_index}',
 CUTOFF = 20
 
 for state in optuna.trial.TrialState :
-    print(f'{len(list(filter(lambda t: t.state==state, study.trials)))} {str(state).split(".")[-1]} trials')
+    print(f'{len(study.get_trials(states=(state,), deepcopy=False))} {str(state).split(".")[-1]} trials')
 best_trial = study.best_trial
 print(f'best trial:\n'\
       f'\tobjective = {best_trial.values[0]},\n'\

@@ -21,6 +21,14 @@ codebase = '/home/lthiele/nuvoid_production'
 class VIDEFailure(RuntimeError) :
     pass
 
+# custom exception for SIGSEGV
+class SegfaultFailure(RuntimeError) :
+    pass
+
+# custom exception for OOM
+class OOMFailure(RuntimeError) :
+    pass
+
 class Objective :
 
     def __init__(self, sim_version, sim_index) :
@@ -93,6 +101,14 @@ class Objective :
             # this is our magic returncode for random VIDE failures, we understand that this happens
             # in some rare cases ...
             raise VIDEFailure
+
+        if result.returncode == 137 :
+            # out of memory, this should happen very rarely and is usually sign of bad input parameters
+            raise OOMFailure
+
+        if result.returncode == 139 :
+            # segmentation fault, not sure why this sometimes happens
+            raise SegfaultFailure
 
         result.check_returncode()
 

@@ -17,6 +17,7 @@ boss_voids='/tigress/lthiele/boss_dr12/voids/sample_test'
 Rmin=30 # could be a bit on the low side
 Rmax=80 # with this choice the last few bins are basically empty in the data
 Nbins=32
+zedges= # could add stuff here to filter by redshift too
 
 codebase="$HOME/nuvoid_production"
 
@@ -75,15 +76,25 @@ for augment in ${augments[@]}; do
 
 done
 
+# overall number of histogram bins, taking into account possible redshift splits
+if [ -z $zedges ]; then
+  total_bins=$Nbins
+else
+  commas="${zedges//[^,]}"
+  Ncommas="${#commas}"
+  Nzbins=$(( Ncommas + 2 ))
+  total_bins=$(( Nbins * Nzbins ))
+fi
+
 # measure the data histogram
-boss_counts="$(bash $codebase/hod_histogram.sh $boss_voids $vide_out $Rmin $Rmax $Nbins)"
+boss_counts="$(bash $codebase/hod_histogram.sh $boss_voids $vide_out $Rmin $Rmax $Nbins $zedges)"
 
 # measure the simulation histograms and compute their individual log-likelihoods
 module load gsl/2.6
 loglikes=()
 for augment in ${augments[@]}; do
-  sim_counts="$(bash $codebase/hod_histogram.sh $wrk_dir/hod/$hod_hash/sample_$augment $vide_out $Rmin $Rmax $Nbins)"
-  loglikes+=($($codebase/vsf_like $Nbins $(echo $boss_counts | tr ',' ' ') $(echo $sim_counts | tr ',' ' ')))
+  sim_counts="$(bash $codebase/hod_histogram.sh $wrk_dir/hod/$hod_hash/sample_$augment $vide_out $Rmin $Rmax $Nbins $zedges)"
+  loglikes+=($($codebase/vsf_like $total_bins $(echo $boss_counts | tr ',' ' ') $(echo $sim_counts | tr ',' ' ')))
 done
 
 # combine to compute the total log-likelihood

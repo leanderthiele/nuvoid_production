@@ -6,9 +6,17 @@ f = argv[1]
 Rmin = float(argv[2])
 Rmax = float(argv[3])
 Nbins = int(argv[4])
+try :
+    zedges = sorted(map(float, argv[5].split(',')))
+except IndexError :
+    zedges = []
+# for convenience
+zedges.insert(0, 0.0)
+zedges.append(100.0)
 
-col_idx = 4 # corresponding to radius in the vide output
+Redges = np.linspace(Rmin, Rmax, num=Nbins+1)
+zedges = np.array(zedges)
 
-R = np.loadtxt(f, usecols=col_idx)
-h, _ = np.histogram(R, bins=Nbins, range=(Rmin, Rmax))
-print(','.join(map(str, h)))
+R, z = np.loadtxt(f, usecols=(4,5,), unpack=True)
+h, _, _ = np.histogram(z, R, bins=(zedges, Redges))
+print(','.join(map(str, h.flatten().astype(int))))

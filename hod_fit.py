@@ -132,14 +132,17 @@ if __name__ == '__main__' :
     sim_version = argv[1]
     sim_index = int(argv[2])
 
-    # FIXME maybe this works to avoid overloading the database
+    # avoid many simultaneous calls to database on startup
     sleep(random.uniform(0, 10))
 
     # set up optuna logging
     optuna.logging.get_logger('optuna').addHandler(logging.StreamHandler(sys.stdout))
 
     # set up our study
-    study = optuna.create_study(sampler=TPESampler(n_startup_trials=80, constant_liar=True),
+    # options to TPESampler added over time from docs
+    study = optuna.create_study(sampler=TPESampler(n_startup_trials=80,
+                                                   constant_liar=True,
+                                                   multivariate=True),
                                 study_name=f'hod_fit_v2_{sim_version}_{sim_index}',
                                 storage='mysql://optunausr:pwd@tigercpu:3310/optunadb'\
                                         '?unix_socket=/home/lthiele/mysql/mysql.sock',

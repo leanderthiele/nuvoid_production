@@ -32,35 +32,45 @@ class Objective :
 
     def _draw_hod(self, trial) :
         args = ''
-        cat = trial.suggest_categorical('cat', ('rockstar', 'rfof'))
-        args += f' cat={cat}'
-        if cat == 'rockstar' :
-            secondary = trial.suggest_categorical('secondary', ('none', 'conc', 'kinpot'))
-            args += f' secondary={secondary}'
-        else :
-            secondary = 'none'
-        log_Mmin = trial.suggest_float('log_Mmin', 12.5, 13.5)
+
+        # clear evidence that Rockstar works better
+        args += ' cat=rockstar'
+
+        # can't hurt to include assembly bias, seems like T/U works better
+        args += ' secondary=kinpot'
+        transfP1 = trial.suggest_float('transfP1', -3, 3)
+        args += f' hod_transfP1={transfP1}'
+        abias = trial.suggest_float('abias', -1, 1)
+        args += f' hod_abias={abias}'
+
+        # some of these I have adjusted to narrower ranges after first trial runs
+        log_Mmin = trial.suggest_float('log_Mmin', 12.6, 13.2)
         args += f' hod_log_Mmin={log_Mmin}'
-        sigma_logM = trial.suggest_float('sigma_logM', 0.05, 0.6)
+        sigma_logM = trial.suggest_float('sigma_logM', 0.15, 0.5)
         args += f' hod_sigma_logM={sigma_logM}'
         log_M0 = trial.suggest_float('log_M0', 12.5, 15.0)
         args += f' hod_log_M0={log_M0}'
         log_M1 = trial.suggest_float('log_M1', 12.5, 15.0)
         args += f' hod_log_M1={log_M1}'
-        alpha = trial.suggest_float('alpha', 0.2, 1.5)
+        alpha = trial.suggest_float('alpha', 0.3, 0.8)
         args += f' hod_alpha={alpha}'
-        if secondary != 'none' :
-            transfP1 = trial.suggest_float('transfP1', -3, 3)
-            args += f' hod_transfP1={transfP1}'
-            abias = trial.suggest_float('abias', -1, 1)
-            args += f' hod_abias={abias}'
-        have_vbias = trial.suggest_categorical('have_vbias', ('True', 'False'))
-        args += f' have_vbias={have_vbias}'
-        if have_vbias == 'True' :
-            transf_eta_cen = trial.suggest_float('transf_eta_cen', 0.0, 10.0)
-            args += f' hod_transf_eta_cen={transf_eta_cen}'
-            transf_eta_sat = trial.suggest_float('transf_eta_sat', -1, 1)
-            args += f' hod_transf_eta_sat={transf_eta_sat}'
+
+        # can't hurt to include velocity bias
+        args += ' have_vbias=True'
+        transf_eta_cen = trial.suggest_float('transf_eta_cen', 0.0, 10.0)
+        args += f' hod_transf_eta_cen={transf_eta_cen}'
+        transf_eta_sat = trial.suggest_float('transf_eta_sat', -1, 1)
+        args += f' hod_transf_eta_sat={transf_eta_sat}'
+
+        # redshift dependence
+        # Range in scale factor around pivot is around 0.05,
+        # mu times this number should give a reasonable variation
+        args += ' have_zdep=True'
+        mu_Mmin = trial.suggest_float('mu_Mmin', -10.0, 10.0)
+        args += f' hod_mu_Mmin={mu_Mmin}'
+        mu_M1 = trial.suggest_float('mu_M1', -40.0, 40.0)
+        args += f' hod_mu_M1={mu_M1}'
+
         return args
 
     def __call__(self, trial) :
@@ -100,7 +110,7 @@ if __name__ == '__main__' :
 
     # set up our study
     study = optuna.create_study(sampler=TPESampler(n_startup_trials=80),
-                                study_name=f'hod_fit_{sim_version}_{sim_index}',
+                                study_name=f'hod_fit_v2_{sim_version}_{sim_index}',
                                 storage='mysql://optunausr:pwd@tigercpu:3310/optunadb'\
                                         '?unix_socket=/home/lthiele/mysql/mysql.sock',
                                 directions=['minimize', ],

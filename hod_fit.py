@@ -109,7 +109,7 @@ if __name__ == '__main__' :
     optuna.logging.get_logger('optuna').addHandler(logging.StreamHandler(sys.stdout))
 
     # set up our study
-    study = optuna.create_study(sampler=TPESampler(n_startup_trials=80),
+    study = optuna.create_study(sampler=TPESampler(n_startup_trials=80, constant_liar=True),
                                 study_name=f'hod_fit_v2_{sim_version}_{sim_index}',
                                 storage='mysql://optunausr:pwd@tigercpu:3310/optunadb'\
                                         '?unix_socket=/home/lthiele/mysql/mysql.sock',

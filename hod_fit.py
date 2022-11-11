@@ -136,4 +136,4 @@ if __name__ == '__main__' :
     objective = Objective(sim_version, sim_index)
 
     # run optuna
-    study.optimize(objective, catch=(VIDEFailure, ))
+    study.optimize(objective, catch=(VIDEFailure, OOMFailure, SegfaultFailure,))

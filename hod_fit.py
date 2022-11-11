@@ -104,6 +104,9 @@ class Objective :
             self.failures = [] # reset
             return -loglike
 
+        # maybe useful to document
+        trial.set_user_attr('returncode', result.returncode)
+
         self.failures.append((hod_hash, result.returncode))
         if len(self.failures) > 2 : # we can tolerate 2 random failures in a row, but not more
             raise RepeatedFailure(self.failures)

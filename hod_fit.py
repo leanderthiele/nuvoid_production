@@ -29,6 +29,11 @@ class SegfaultFailure(RuntimeError) :
 class OOMFailure(RuntimeError) :
     pass
 
+# invoked when there are repeated failures
+# (indicating that something more fundamental is going wrong)
+class RepeatedFailure(RuntimeError) :
+    pass
+
 class Objective :
 
     def __init__(self, sim_version, sim_index) :
@@ -37,6 +42,7 @@ class Objective :
         sim_index ... index of the simulation, integer
         """
         self.wrk_dir = f'/scratch/gpfs/lthiele/nuvoid_production/{sim_version}_{sim_index}'
+        self.failures = []
 
     def _draw_hod(self, trial) :
         args = ''
@@ -95,7 +101,12 @@ class Objective :
                 line = line.split('=')
                 assert line[0] == 'loglike_tot'
                 loglike = float(line[1])
+            self.failures = [] # reset
             return -loglike
+
+        self.failures.append((hod_hash, result.returncode))
+        if len(self.failures) > 2 : # we can tolerate 2 random failures in a row, but not more
+            raise RepeatedFailure(self.failures)
 
         if result.returncode == 42 :
             # this is our magic returncode for random VIDE failures, we understand that this happens

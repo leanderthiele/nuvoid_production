@@ -2,6 +2,7 @@
 Command line arguments:
     [1] sim version
     [2] sim index
+    [3] (optional) additional version string
 """
 
 from sys import argv
@@ -13,13 +14,17 @@ import optuna
 
 sim_version = argv[1]
 sim_index = int(argv[2])
+try :
+    vstr = '_' + argv[3]
+except IndexError :
+    vstr = ''
 
 diagnostics = ['slice', 'edf', 'optimization_history',
                'parallel_coordinate', 'param_importances', ]
 for d in diagnostics :
     exec(f'from optuna.visualization import plot_{d}')
 
-study = optuna.load_study(study_name=f'hod_fit_{sim_version}_{sim_index}',
+study = optuna.load_study(study_name=f'hod_fit{vstr}_{sim_version}_{sim_index}',
                           storage='mysql://optunausr:pwd@tigercpu:3310/optunadb'\
                                   '?unix_socket=/home/lthiele/mysql/mysql.sock')
 
@@ -66,11 +71,11 @@ ax_diff.scatter(c_dat, (h_sim-h_dat)/np.sqrt(h_sim))
 ax_diff.set_ylabel('$\Delta/\sqrt{{\sf sim}}$')
 ax_diff.set_xlabel('R [Mpc/h]')
 ax_diff.axhline(0, color='black', linestyle='dashed')
-fig.savefig(f'{sim_version}_{sim_index}_bestfitvsf.pdf', bbox_inches='tight')
+fig.savefig(f'hod_fit{vstr}_{sim_version}_{sim_index}_bestfitvsf.pdf', bbox_inches='tight')
 
 
 for d in diagnostics :
-    fname = f'{sim_version}_{sim_index}_{d}.pdf'
+    fname = f'hod_fit{vstr}_{sim_version}_{sim_index}_{d}.pdf'
     print(fname)
     if d in ['optimization_history', 'slice', ] :
         obj = lambda t: t.values[0] if t.values[0]<CUTOFF else CUTOFF

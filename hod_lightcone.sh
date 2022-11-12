@@ -39,6 +39,10 @@ reflecttranslate=$((augment % 48))
 # run the code
 module load $LIGHTCONE_MODULES
 
+# for some reason we have extremely rare segfaults that are not reproducible,
+# so for diagnostic purposes enable core dump
+ulimit -c unlimited
+
 $LIGHTCONE_EXE \
   "$wrk_dir/hod/$hod_hash" "" \
   $augment \
@@ -47,5 +51,8 @@ $LIGHTCONE_EXE \
   $boss_dir $veto $stitch_before_RSD \
   $verbose \
   $(echo $comma_snap_times | tr ',' ' ')
+
+# and reset to avoid side effects
+ulimit -c 0
 
 module rm $LIGHTCONE_MODULES

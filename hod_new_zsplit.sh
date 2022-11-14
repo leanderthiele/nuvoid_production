@@ -9,6 +9,8 @@ set -e -o pipefail
 vide_out='untrimmed_dencut' # this is what Alice recommends
 boss_voids='/tigress/lthiele/boss_dr12/voids/sample_test'
 
+Rmin=30
+Rmax=80
 Nbins=32
 zedges=0.53
 

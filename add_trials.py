@@ -31,11 +31,11 @@ new_study = optuna.create_study(sampler=TPESampler(n_startup_trials=0,
                                 directions=['minimize', ],
                                 load_if_exists=True)
 
-for old_trial in old_study.get_trials(states=(optuna.trial.TrialState.COMPLETE,), deepcopy=False) :
+for ii, old_trial in enumerate(old_study.get_trials(states=(optuna.trial.TrialState.COMPLETE,), deepcopy=False)) :
     hod_hash = old_trial.user_attrs['hod_hash']
 
     result = subprocess.run(f'bash {codebase}/hod_new_zsplit.sh {study_dir}/{hod_hash}',
-                            shell=True, check=True)
+                            shell=True, check=True, capture_output=True)
 
     objective = -float(result.stdout.strip())
 
@@ -43,3 +43,5 @@ for old_trial in old_study.get_trials(states=(optuna.trial.TrialState.COMPLETE,)
                                           value=objective, user_attrs=old_trial.user_attrs)
 
     new_study.add_trial(new_trial)
+
+    print(f'{ii+1} done')

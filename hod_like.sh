@@ -17,7 +17,7 @@ boss_voids='/tigress/lthiele/boss_dr12/voids/sample_test'
 Rmin=30 # could be a bit on the low side
 Rmax=80 # with this choice the last few bins are basically empty in the data
 Nbins=32
-zedges= # could add stuff here to filter by redshift too
+zedges=0.53 # could add stuff here to filter by redshift too
 
 codebase="$HOME/nuvoid_production"
 

@@ -5,7 +5,7 @@
 #SBATCH --mem-per-cpu=4G
 #SBATCH -t 05:00:00
 
-#SBATCH --array=13-18
+#SBATCH --array=1-6
 
 module load anaconda3/2021.11
 conda activate galaxies

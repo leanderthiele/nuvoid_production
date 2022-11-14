@@ -80,7 +80,7 @@ class Objective :
         # Range in scale factor around pivot is around 0.05,
         # mu times this number should give a reasonable variation
         args += ' have_zdep=True'
-        mu_Mmin = trial.suggest_float('mu_Mmin', -10.0, 10.0)
+        mu_Mmin = trial.suggest_float('mu_Mmin', -20.0, 20.0)
         args += f' hod_mu_Mmin={mu_Mmin}'
         mu_M1 = trial.suggest_float('mu_M1', -40.0, 40.0)
         args += f' hod_mu_M1={mu_M1}'
@@ -143,7 +143,7 @@ if __name__ == '__main__' :
     study = optuna.create_study(sampler=TPESampler(n_startup_trials=80,
                                                    constant_liar=True,
                                                    multivariate=True),
-                                study_name=f'hod_fit_v2_{sim_version}_{sim_index}',
+                                study_name=f'hod_fit_v3_{sim_version}_{sim_index}',
                                 storage='mysql://optunausr:pwd@tigercpu:3310/optunadb'\
                                         '?unix_socket=/home/lthiele/mysql/mysql.sock',
                                 directions=['minimize', ],

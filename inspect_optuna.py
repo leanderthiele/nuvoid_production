@@ -82,5 +82,9 @@ for d in diagnostics :
         obj = lambda t: t.values[0] if t.values[0]<CUTOFF else CUTOFF
     else :
         obj = None
-    exec(f'fig = plot_{d}(study, target=obj)')
+    if d in ['contour', ] :
+        params = ['log_Mmin', 'abias', 'mu_Mmin', 'sigma_logM', 'transfP1', ]
+    else :
+        params = None
+    exec(f'fig = plot_{d}(study, target=obj, params=params)')
     fig.write_image(fname)

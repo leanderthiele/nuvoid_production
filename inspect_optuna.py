@@ -19,7 +19,7 @@ try :
 except IndexError :
     vstr = ''
 
-diagnostics = ['slice', 'edf', 'optimization_history',
+diagnostics = ['contour', 'slice', 'edf', 'optimization_history',
                'parallel_coordinate', 'param_importances', ]
 for d in diagnostics :
     exec(f'from optuna.visualization import plot_{d}')

@@ -47,6 +47,9 @@ for augment in ${augments[@]}; do
   bash $codebase/hod_lightcone.sh $wrk_dir $hod_hash $augment 'rockstar'
 done
 
+# clean up (first pass)
+bash $codebase/hod_cleanup.sh $wrk_dir $hod_hash 0
+
 # generate the void catalogs
 for augment in ${augments[@]}; do
   vide_log="$wrk_dir/hod/$hod_hash/vide_$augment.log"
@@ -101,8 +104,8 @@ done
 loglike=$($codebase/vsf_combine_like ${#augments[@]} ${loglikes[@]})
 module rm gsl/2.6
 
-# clean up
-bash $codebase/hod_cleanup.sh $wrk_dir $hod_hash
+# clean up (second pass)
+bash $codebase/hod_cleanup.sh $wrk_dir $hod_hash 1
 
 # for reference, write the log-likelihoods into the hod directory
 loglike_info="$wrk_dir/hod/$hod_hash/loglike.info"

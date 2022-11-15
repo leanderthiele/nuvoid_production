@@ -78,8 +78,8 @@ int main (int argc, char **argv)
 
     d = gauss_d + uniform_d;
 
-    read_mu_cov();
-    read_uniform();
+    if (gauss_d) read_mu_cov();
+    if (uniform_d) read_uniform();
     prepare();
 
     #ifndef TEST
@@ -199,7 +199,7 @@ void compute_alpha (void)
 
 void prepare (void)
 {
-    compute_chol();
+    if (gauss_d) compute_chol();
     compute_alpha();
 }
 
@@ -222,10 +222,11 @@ void compute_NmC_sample (void)
     // overwrites the vector Y, which is the offset
     for (int ii=0; ii<gauss_d; ++ii) NmC_sample[ii] = mu[ii];
 
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, gauss_d, gauss_d,
-                /*alpha=*/1.0, chol, /*lda=*/gauss_d,
-                /*X=*/N01_sample, /*incX=*/1,
-                /*beta=*/1.0, /*Y=*/NmC_sample, /*incY=*/1);
+    if (gauss_d)
+        cblas_dgemv(CblasRowMajor, CblasNoTrans, gauss_d, gauss_d,
+                    /*alpha=*/1.0, chol, /*lda=*/gauss_d,
+                    /*X=*/N01_sample, /*incX=*/1,
+                    /*beta=*/1.0, /*Y=*/NmC_sample, /*incY=*/1);
 
     // add the uniform samples
     for (int ii=0; ii<uniform_d; ++ii)

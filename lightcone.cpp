@@ -808,7 +808,11 @@ double fibcoll ()
 
             for (auto hp_idx : query_vector)
             {
-                auto this_range = ranges[hp_idx];
+                const auto this_range_ptr = ranges.find(hp_idx);
+                if (this_range_ptr == ranges.end())
+                    // not found
+                    continue;
+                const auto this_range = this_range_ptr->second;
                 for (size_t ii=this_range.first; ii<this_range.second; ++ii)
                     if (g.id > all_vec[ii].id
                         && haversine(g.ang, all_vec[ii].ang) < hav(angscale))

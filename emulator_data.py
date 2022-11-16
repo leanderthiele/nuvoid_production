@@ -32,7 +32,7 @@ def get_cosmo(cosmo_idx, cache={}) :
     return cache[cosmo_idx]
 
 
-def get_hod(cosmo_idx, hod_hash)
+def get_hod(cosmo_idx, hod_hash) :
     hod_file = f'{database}/cosmo_varied_{cosmo_idx}/emulator/{hod_hash}/hod.info'
     keys = ['hod_transfP1', 'hod_abias', 'hod_log_Mmin', 'hod_sigma_logM',
             'hod_log_M0', 'hod_log_M1', 'hod_alpha', 'hod_transf_eta_cen',
@@ -42,7 +42,7 @@ def get_hod(cosmo_idx, hod_hash)
 
 def split_path(path) :
 
-    m1 = re.search('(?<=cosmo_varied)[0-9]*', path)
+    m1 = re.search('(?<=cosmo_varied_)[0-9]*', path)
     assert m1 is not None
     cosmo_idx = int(m1[0])
 
@@ -63,8 +63,10 @@ def get_hist(void_file, cache={}) :
         zedges.append(100.0)
         cache['zbins'] = np.array(zedges)
     R, z = np.loadtxt(void_file, usecols=(4,5,), unpack=True)
-    h, _, _ = np.histogram2d(z, R, bins=(zedges, Redges, ))
-    return ' '.join(map(str, h.flatten().astype(int)))
+    h, _, _ = np.histogram2d(z, R, bins=(cache['zbins'], cache['Rbins'], ))
+    out = ' '.join(map(str, h.flatten().astype(int)))
+    print(out)
+    return out
 
 
 def get_loglike(void_file, cache={}) :
@@ -79,13 +81,16 @@ def get_loglike(void_file, cache={}) :
 
 
 # do a glob for all available void catalogs
+print('globbing...')
 void_files = glob(f'{database}/cosmo_varied_*/emulator/*/sample_*/{vide_out}_centers_central_*.out')
+print(f'Found {len(void_files)} void catalogs.')
 
 param_names = None
 params = []
 values = []
 
 for f in void_files :
+    print(f)
     cosmo_idx, hod_hash = split_path(f)
     cosmo = get_cosmo(cosmo_idx)
     hod = get_hod(cosmo_idx, hod_hash)

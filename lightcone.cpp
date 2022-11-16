@@ -740,7 +740,7 @@ double fibcoll ()
     for (int ii=0; ii<omp_get_max_threads(); ++ii)
     {
         rngs.push_back(gsl_rng_alloc(gsl_rng_default));
-        gsl_rng_set(rngs[ii], seed+(unsigned long)ii);
+        gsl_rng_set(rngs.back(), seed+(unsigned long)ii);
     }
 
     // for HOPEFULLY efficient nearest neighbour search

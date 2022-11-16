@@ -1,13 +1,13 @@
 #!/bin/bash
 
-set -e -o pipefail
+set -e -x -o pipefail
 
 codebase=$HOME/nuvoid_production
 
 source $codebase/utils.sh
 
 # get the available cosmologies
-cosmo_avail=($(bash $codebase/emulator_available_cosmos.sh | head -1 | tr ',' ' '))
+cosmo_avail=($(bash $codebase/emulator_available_cosmos.sh | tr ',' ' '))
 Ncosmo=${#cosmo_avail[@]}
 
 function cantor_pairing {

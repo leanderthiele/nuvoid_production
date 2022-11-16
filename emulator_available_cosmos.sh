@@ -7,7 +7,7 @@ set -e -o pipefail
 # then the unavailable ones as second line
 
 avail=()
-unavail=(-1)
+unavail=()
 
 root="/scratch/gpfs/lthiele/nuvoid_production"
 
@@ -29,4 +29,3 @@ for d in $root/cosmo_varied_*; do
 done
 
 echo "$(echo -n "$(echo "${avail[@]}" | tr ' ' '\n' | sort -h)" | tr '\n' ',')"
-echo "$(echo -n "$(echo "${unavail[@]}" | tr ' ' '\n' | sort -h)" | tr '\n' ',')"

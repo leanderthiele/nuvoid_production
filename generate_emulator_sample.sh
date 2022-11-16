@@ -63,7 +63,7 @@ bash $codebase/emulator_lightcone.sh $wrk_dir $hod_hash $augment_idx 'rockstar'
 
 bash $codebase/emulator_cleanup.sh $wrk_dir $hod_hash 0
 
-vide_log="$wrk_dir/emulator/$hod_hash/vide_$augment.log"
+vide_log="$wrk_dir/emulator/$hod_hash/vide_${augment_idx}.log"
 utils::run "bash $codebase/emulator_vide.sh $wrk_dir $hod_hash $augment_idx 0" $vide_log \
   && status=$? || status=$?
 

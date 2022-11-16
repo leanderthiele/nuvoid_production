@@ -38,7 +38,7 @@ for ii in $( seq 0 $(( ${#HOD_KEYS[@]} - 1 )) ); do
 done
 
 # compute the HOD hash
-hod_hash="$(utils::hex_hash $hod_desc)"
+hod_hash="$(utils::hex_hash "$hod_desc")"
 
 echo "Trial [$cosmo_idx, $hod_idx] working on $hod_hash"
 

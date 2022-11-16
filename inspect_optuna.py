@@ -19,7 +19,7 @@ try :
 except IndexError :
     vstr = ''
 
-diagnostics = ['contour', 'slice', 'edf', 'optimization_history',
+diagnostics = ['slice', 'edf', 'optimization_history',
                'parallel_coordinate', 'param_importances', ]
 for d in diagnostics :
     exec(f'from optuna.visualization import plot_{d}')
@@ -86,5 +86,5 @@ for d in diagnostics :
         params = ['log_Mmin', 'abias', 'mu_Mmin', 'sigma_logM', 'transfP1', ]
     else :
         params = None
-    exec(f'fig = plot_{d}(study, target=obj, params=params)')
+    exec(f'fig = plot_{d}(study, target=obj{"" if not params else ", params=params"})')
     fig.write_image(fname)

@@ -27,7 +27,8 @@ consecutive_fails=0
 for ii in $( seq 0 10000 ); do
   run_idx=$(cantor_pairing $proc_idx $ii)
   cosmo_idx=${cosmo_avail[$(( run_idx % Ncosmo ))]}
-  hod_idx=$(( run_idx / Ncosmo ))
+  # we do not divide by Ncosmo here, otherwise we'll get a grid partially
+  hod_idx=$run_idx
 
   # we do not consider failure a reason to abort
   bash $codebase/generate_emulator_sample.sh $cosmo_idx $hod_idx \

@@ -28,7 +28,7 @@ cosmo_idx="$1"
 hod_idx="$2"
 
 module load gsl/2.6
-hod_values=($($codebase/sample_prior $hod_idx 0 "" ${#HOD_KEYS[@]} $codebase/hod_prior.dat) | tr ',' ' ')
+hod_values=($($codebase/sample_prior $hod_idx 0 "" ${#HOD_KEYS[@]} $codebase/hod_prior.dat | tr ',' ' '))
 module rm gsl/2.6
 
 # construct the HOD description command line

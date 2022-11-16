@@ -10,17 +10,29 @@ codebase=$HOME/nuvoid_production
 
 source $codebase/utils.sh
 
-HOD_KEYS=() # TODO
+HOD_KEYS=(
+          'hod_transfP1'
+          'hod_abias'
+          'hod_log_Mmin'
+          'hod_sigma_logM'
+          'hod_log_M0'
+          'hod_log_M1'
+          'hod_alpha'
+          'hod_transf_eta_cen'
+          'hod_transf_eta_sat'
+          'hod_mu_Mmin'
+          'hod_mu_M1'
+         )
 
 cosmo_idx="$1"
 hod_idx="$2"
 
 module load gsl/2.6
-hod_values=($($codebase/sample_prior $hod_idx 0 "" ${#HOD_KEYS[@]} hod_prior.dat) | tr ',' ' ')
+hod_values=($($codebase/sample_prior $hod_idx 0 "" ${#HOD_KEYS[@]} $codebase/hod_prior.dat) | tr ',' ' ')
 module rm gsl/2.6
 
 # construct the HOD description command line
-hod_desc=""
+hod_desc='cat=rockstar secondary=kinpot have_vbias=True have_zdep=True'
 for ii in $( seq 0 $(( ${#HOD_KEYS[@]} - 1 )) ); do
   hod_desc="$hod_desc ${HOD_KEYS[$ii]}=${hod_values[$ii]}"
 done

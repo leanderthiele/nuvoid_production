@@ -75,6 +75,9 @@ const char *veto_fnames[Nveto] =
 // how many interpolation stencils we use to get from chi to z
 const int N_interp = 1024;
 
+// get reproducible results (useful for debugging)
+const unsigned long seed = 42;
+
 // ---- GLOBAL VARIABLES -----
 
 // these are the input variables, populated from command line
@@ -665,6 +668,7 @@ void downsample (double plus_factor)
     std::vector<double> ra_tmp, dec_tmp, z_tmp;
 
     gsl_rng *rng = gsl_rng_alloc(gsl_rng_default);
+    gsl_rng_set(rng, seed);
 
     for (size_t ii=0; ii<RA.size(); ++ii)
     {
@@ -734,7 +738,10 @@ double fibcoll ()
     // and assignment of random galaxy IDs
     std::vector<gsl_rng *> rngs;
     for (int ii=0; ii<omp_get_max_threads(); ++ii)
+    {
         rngs.push_back(gsl_rng_alloc(gsl_rng_default));
+        gsl_rng_set(rngs[ii], seed+(unsigned long)ii);
+    }
 
     // for HOPEFULLY efficient nearest neighbour search
     static const int64_t nside = 128; // can be tuned, with 128 pixarea/discarea~225

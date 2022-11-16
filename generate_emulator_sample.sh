@@ -5,7 +5,6 @@ set -e -o pipefail
 # Command line arguments:
 #   [1] cosmo varied index
 #   [2] index in the HOD QRNG sequence
-#   [3] augmentation index
 
 codebase=$HOME/nuvoid_production
 
@@ -15,7 +14,6 @@ HOD_KEYS=() # TODO
 
 cosmo_idx="$1"
 hod_idx="$2"
-augment_idx="$3"
 
 module load gsl/2.6
 hod_values=($($codebase/sample_prior $hod_idx 0 "" ${#HOD_KEYS[@]} hod_prior.dat) | tr ',' ' ')
@@ -29,6 +27,10 @@ done
 
 # compute the HOD hash
 hod_hash="$(utils::hex_hash $hod_desc)"
+
+# compute the augmentatation index (which is pretty much random)
+dec_hash="$(utils::dec_hash "${cosmo_varied_idx}${hod_desc}" 32)"
+augment_idx=$((dec_hash % 96))
 
 wrk_dir="/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_${cosmo_idx}"
 hod_dir="${wrk_dir}/emulator/${hod_hash}"

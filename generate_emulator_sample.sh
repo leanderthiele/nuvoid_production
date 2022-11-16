@@ -43,7 +43,7 @@ hod_hash="$(utils::hex_hash $hod_desc)"
 echo "Trial [$cosmo_idx, $hod_idx] working on $hod_hash"
 
 # compute the augmentatation index (which is pretty much random)
-dec_hash="$(utils::dec_hash "${cosmo_varied_idx}${hod_desc}" 32)"
+dec_hash="$(utils::dec_hash "${cosmo_idx}${hod_desc}" 32)"
 augment_idx=$((dec_hash % 96))
 
 wrk_dir="/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_${cosmo_idx}"

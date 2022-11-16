@@ -32,7 +32,7 @@ for ii in $( seq 0 10000 ); do
 
   # we do not consider failure a reason to abort
   bash $codebase/generate_emulator_sample.sh $cosmo_idx $hod_idx \
-    status=$? || status=$?
+    && status=$? || status=$?
 
   if [ $status -ne 0 ]; then
     consecutive_fails=$((consecutive_fails+1))

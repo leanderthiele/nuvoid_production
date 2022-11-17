@@ -4,6 +4,8 @@ import re
 
 import numpy as np
 
+from tqdm import tqdm
+
 vide_out = 'untrimmed_dencut'
 
 codebase = '/home/lthiele/nuvoid_production'
@@ -65,7 +67,6 @@ def get_hist(void_file, cache={}) :
     R, z = np.loadtxt(void_file, usecols=(4,5,), unpack=True)
     h, _, _ = np.histogram2d(z, R, bins=(cache['zbins'], cache['Rbins'], ))
     out = ' '.join(map(str, h.flatten().astype(int)))
-    print(out)
     return out
 
 
@@ -89,8 +90,7 @@ param_names = None
 params = []
 values = []
 
-for f in void_files :
-    print(f)
+for f in tqdm(void_files) :
     cosmo_idx, hod_hash = split_path(f)
     cosmo = get_cosmo(cosmo_idx)
     hod = get_hod(cosmo_idx, hod_hash)

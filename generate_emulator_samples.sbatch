@@ -5,7 +5,7 @@
 #SBATCH --mem-per-cpu=4G
 #SBATCH -t 05:00:00
 
-#SBATCH --array=1-6
+#SBATCH --array=7-12
 
 # NOTE it is very important that the array indices are kept unique!!!
 

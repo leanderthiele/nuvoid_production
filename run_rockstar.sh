@@ -92,6 +92,9 @@ utils::run "$srun_cmd $ROCKSTAR_EXE -c $auto_cfg" "$LOGS/rockstar_workers_${time
 # clean up
 module rm "$ROCKSTAR_MODULES"
 
+# now set a marker that we are actually done
+echo "$(date)" > "$rockstar_finished_file"
+
 # if we have finished successfully, we should delete the snapshot
 if [ -f "$rockstar_dir/out_${snap_idx}.list" ]; then
   rm -f $snap_link &
@@ -100,6 +103,3 @@ if [ -f "$rockstar_dir/out_${snap_idx}.list" ]; then
   rm -rf $rockstar_dir/profiling &
   wait
 fi
-
-# now set a marker that we are actually done
-echo "$(date)" > "$rockstar_finished_file"

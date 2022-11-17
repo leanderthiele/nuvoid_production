@@ -50,10 +50,10 @@ module load "$ROCKSTAR_MODULES"
 utils::run "$ROCKSTAR_FINDPARENTS_EXE $wparents_base $outfile" "$LOGS/rockstar_parents_$time.log"
 module rm "$ROCKSTAR_MODULES"
 
+# we are done
+echo "$(date)" > "$parents_finished_file"
+
 # if we got here and have successfully generated the output, we can delete the intermediate file
 if [ -d "${wparents_base}_hosts.bf" ]; then
   rm $outfile
 fi
-
-# we are done
-echo "$(date)" > "$parents_finished_file"

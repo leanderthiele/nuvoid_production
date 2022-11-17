@@ -13,4 +13,4 @@ set -e -o pipefail
 codebase="$HOME/nuvoid_production"
 source $codebase/submit_batch.sh
 
-submit_batch 'fiducial' 1 "$@"
+submit_batch 'varied' 1 "$@"

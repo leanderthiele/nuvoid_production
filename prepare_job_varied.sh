@@ -13,4 +13,4 @@ source $codebase/prepare_job.sh
 # the index
 idx="$1"
 
-prepare_job 'fiducial' "$idx"
+prepare_job 'varied' "$idx"

@@ -23,15 +23,20 @@ time=${TIMES_ARR[$snap_idx]}
 snap_dir="$ROOT/snap_$time"
 rockstar_dir="$ROOT/rockstar_$time"
 snap_link="${rockstar_dir}/snap_${snap_idx}"
+rockstar_finished_file="${rockstar_dir}/FINISHED_ROCKSTAR"
 
 # only run if output does not exist
-if [ -f "$rockstar_dir/out_${snap_idx}.list" ]; then
-  echo "Not running Rockstar as .list output already exists"
-  exit 0
-fi
-
-if [ -d "$rockstar_dir/out_${snap_idx}_hosts.bf" ]; then
-  echo "Not running Rockstar as .bf output already exists"
+# if [ -f "$rockstar_dir/out_${snap_idx}.list" ]; then
+#  echo "Not running Rockstar as .list output already exists"
+#  exit 0
+# fi
+#
+# if [ -d "$rockstar_dir/out_${snap_idx}_hosts.bf" ]; then
+#   echo "Not running Rockstar as .bf output already exists"
+#   exit 0
+# fi
+if [ -f "$rockstar_finished_file" ]; then
+  echo "Not running Rockstar as $rockstar_finished_file already exists"
   exit 0
 fi
 
@@ -95,3 +100,6 @@ if [ -f "$rockstar_dir/out_${snap_idx}.list" ]; then
   rm -rf $rockstar_dir/profiling &
   wait
 fi
+
+# now set a marker that we are actually done
+echo "$(date)" > "$rockstar_finished_file"

@@ -22,17 +22,28 @@ rockstar_dir="$ROOT/rockstar_$time"
 
 outfile="${rockstar_dir}/out_${snap_idx}.list"
 wparents_base="${rockstar_dir}/out_${snap_idx}"
+rockstar_finished_file="${rockstar_dir}/FINISHED_ROCKSTAR"
+parents_finished_file="${rockstar_dir}/FINISHED_PARENTS"
 
 # do nothing if already computed
-if [ -d "${wparents_base}_hosts.bf" ]; then
-  echo "Not running parents as output already exists"
+# if [ -d "${wparents_base}_hosts.bf" ]; then
+#   echo "Not running parents as output already exists"
+#   exit 0
+# fi
+
+# do nothing if no input available
+# if [ ! -f $outfile ]; then
+#   echo "Not running parents as input does not exist"
+#   exit 0
+# fi
+if [ -f "$parents_finished_file" ]; then
+  echo "Not running parents as $parents_finished_file already exists"
   exit 0
 fi
 
-# do nothing if no input available
-if [ ! -f $outfile ]; then
-  echo "Not running parents as input does not exist"
-  exit 0
+if [ ! -f "$rockstar_finished_file" ]; then
+  utils::printerr "Rockstar not done, $rockstar_finished_file does not exist!"
+  exit 1
 fi
 
 module load "$ROCKSTAR_MODULES"
@@ -43,3 +54,6 @@ module rm "$ROCKSTAR_MODULES"
 if [ -d "${wparents_base}_hosts.bf" ]; then
   rm $outfile
 fi
+
+# we are done
+echo "$(date)" > "$parents_finished_file"

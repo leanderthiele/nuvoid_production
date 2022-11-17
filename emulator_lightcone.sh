@@ -43,6 +43,10 @@ module load $LIGHTCONE_MODULES
 # so for diagnostic purposes enable core dump
 ulimit -c unlimited
 
+# also make sure we don't waste our precious /home quota with core files
+# if they do get generated
+cd '/scratch/gpfs/lthiele/nuvoid_production/lightcone_core_files'
+
 $LIGHTCONE_EXE \
   "$wrk_dir/emulator/$hod_hash" "" \
   $augment \

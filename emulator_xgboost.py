@@ -45,3 +45,9 @@ bst = xgb.train(xgb_params, dtrain, NUM_ROUND, evallist,
                 verbose_eval=True)
 
 bst.save_model('test.model')
+
+validation_predict = bst.predict(dvalidation)
+np.savez('test_valid.npz',
+         param_names=param_names,
+         params=params[~validation_select],
+         values=validation_predict)

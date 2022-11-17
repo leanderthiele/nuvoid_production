@@ -8,7 +8,7 @@ import numpy as np
 import xgboost as xgb
 
 VALIDATION_FRAC = 0.2
-NUM_ROUND = 100
+NUM_ROUND = 10
 
 data_file = argv[1]
 
@@ -38,10 +38,12 @@ validation_values = values[validation_select]
 
 # to increase size of training set and learn what we are actually interested in,
 # we concentrate on the *difference* in log-likelihoods
-train_param_diffs = (train_params[:, None, :] - train_params[None, :, :]).reshape(-1, train_params.shape[1])
+train_param_diffs = (train_params[:, None, :] - train_params[None, :, :])\
+                               .reshape(-1, train_params.shape[1])
 train_values = (train_values[:, None] - train_values[None, :]).flatten()
-validation_param_diffs = (train_params[:, None, :] - train_params[None, :, :]).reshape(-1, train_params.shape[1])
-validation_values = (train_values[:, None] - train_values[None, :]).flatten()
+validation_param_diffs = (validation_params[:, None, :] - validation_params[None, :, :])\
+                              .reshape(-1, validation_params.shape[1])
+validation_values = (validation_values[:, None] - validation_values[None, :]).flatten()
 
 train_params = np.concatenate((np.repeat(train_params, train_params.shape[0], axis=0),
                                train_param_diffs), axis=-1)

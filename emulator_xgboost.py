@@ -24,18 +24,38 @@ N = len(values)
 assert N == params.shape[0]
 assert len(param_names) == params.shape[1]
 
-rng = np.random.default_rng()
+rng = np.random.default_rng(42)
 validation_select = rng.choice([True, False], size=N, p=[VALIDATION_FRAC, 1.0-VALIDATION_FRAC])
 
-dtrain = xgb.DMatrix(params[~validation_select], label=values[~validation_select])
-dvalidation = xgb.DMatrix(params[validation_select], label=values[validation_select])
+# TODO maybe this helps
+min_clip = np.max(values) - 100
+values[values < min_clip] = min_clip
+
+train_params = params[~validation_select]
+train_values = values[~validation_select]
+validation_params = params[validation_select]
+validation_values = values[validation_select]
+
+# TODO maybe this helps
+# train_params += rng.normal(loc=0, scale=0.001*np.std(train_params, axis=0),
+#                            size=train_params.shape)
+
+dtrain = xgb.DMatrix(train_params, label=train_values)
+dvalidation = xgb.DMatrix(validation_params, label=validation_values)
 
 xgb.set_config(verbosity=2)
 
 xgb_params = {
-              'max_depth': 2,
-              'eta': 0.1,
+              'max_depth': 6,
+              'eta': 0.3,
+              'min_child_weight': 10,
+              'gamma': 0.5,
+              'subsample': 0.7,
+              'alpha': 100,
+              'lambda': 100,
               'objective': 'reg:squarederror',
+#              'huber_slope': 1,
+              'eval_metric': 'rmse',
               'nthread': 4,
              }
 
@@ -49,5 +69,6 @@ bst.save_model('test.model')
 validation_predict = bst.predict(dvalidation)
 np.savez('test_valid.npz',
          param_names=param_names,
-         params=params[~validation_select],
-         values=validation_predict)
+         params=validation_params,
+         values=validation_predict,
+         truths=validation_values)

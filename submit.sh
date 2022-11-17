@@ -12,6 +12,7 @@ fastpm_dependency_ok=$2
 # the sbatch scripts, to be populated
 jobstep_fastpm=<<<jobstep_fastpm>>>
 jobstep_rockstar=<<<jobstep_rockstar>>>
+jobstep_rockstar_leftovers=<<<jobstep_rockstar_leftovers>>>
 jobstep_parents=<<<jobstep_parents>>>
 
 function get_jobid {
@@ -38,9 +39,12 @@ fastpm_jobid=$(get_jobid "$result")
 result="$(sbatch --dependency=after:$fastpm_jobid+60 $jobstep_rockstar)"
 rockstar_jobid=$(get_jobid "$result")
 
-result="$(sbatch --dependency=afterok:$rockstar_jobid $jobstep_parents)"
+result="$(sbatch --dependency=afternotok:$rockstar_jobid $jobstep_rockstar_leftovers)"
+rockstar_leftovers_jobid=$(get_jobid "$result")
+
+result="$(sbatch --dependency=afterok:$rockstar_jobid?afterok:$rockstar_leftovers_jobid $jobstep_parents)"
 parents_jobid=$(get_jobid "$result")
 
 # this is the indicator that the next fastpm job can start
-# since disk space is free again
+# since disk space is (hopefully) free again
 echo "$rockstar_jobid $fastpm_jobid"

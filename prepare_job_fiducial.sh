@@ -24,6 +24,7 @@ OUT_ROOT=$JOB_DIR/slurm_$idx
 COSMO_TEMPLATE=$codebase/cosmo_fiducial.sh
 FASTPM_TEMPLATE=$codebase/jobstep_fastpm.sbatch
 ROCKSTAR_TEMPLATE=$codebase/jobstep_rockstar.sbatch
+ROCKSTAR_LEFTOVERS_TEMPLATE=$codebase/jobstep_rockstar_leftovers.sbatch
 PARENTS_TEMPLATE=$codebase/jobstep_parents.sbatch
 SUBMIT_TEMPLATE=$codebase/submit.sh
 
@@ -44,6 +45,12 @@ cp $ROCKSTAR_TEMPLATE $rockstar_sbatch
 utils::replace $rockstar_sbatch 'cosmo'  "$cosmo_sh"
 utils::replace $rockstar_sbatch 'output' "${OUT_ROOT}_rockstar.out"
 
+# write the rockstar leftovers file
+rockstar_leftovers_sbatch=$JOB_DIR/jobstep_rockstar_leftovers_fiducial_$idx.sbatch
+cp $ROCKSTAR_LEFTOVERS_TEMPLATE $rockstar_leftovers_sbatch
+utils::replace $rockstar_leftovers_sbatch 'cosmo'  "$cosmo_sh"
+utils::replace $rockstar_leftovers_sbatch 'output' "${OUT_ROOT}_rockstar.out"
+
 # write the parents file
 parents_sbatch=$JOB_DIR/jobstep_parents_fiducial_$idx.sbatch
 cp $PARENTS_TEMPLATE $parents_sbatch
@@ -53,6 +60,7 @@ utils::replace $parents_sbatch 'output' "${OUT_ROOT}_parents.out"
 # write the submit file
 submit_sh=$JOB_DIR/submit_$idx.sh
 cp $SUBMIT_TEMPLATE $submit_sh
-utils::replace $submit_sh 'jobstep_fastpm'   "$fastpm_sbatch"
-utils::replace $submit_sh 'jobstep_rockstar' "$rockstar_sbatch"
-utils::replace $submit_sh 'jobstep_parents'  "$parents_sbatch"
+utils::replace $submit_sh 'jobstep_fastpm'             "$fastpm_sbatch"
+utils::replace $submit_sh 'jobstep_rockstar'           "$rockstar_sbatch"
+utils::replace $submit_sh 'jobstep_rockstar_leftovers' "$rockstar_leftovers_sbatch"
+utils::replace $submit_sh 'jobstep_parents'            "$parents_sbatch"

@@ -39,7 +39,7 @@ fastpm_jobid=$(get_jobid "$result")
 result="$(sbatch --dependency=after:$fastpm_jobid+60 $jobstep_rockstar)"
 rockstar_jobid=$(get_jobid "$result")
 
-result="$(sbatch --dependency=afternotok:$rockstar_jobid $jobstep_rockstar_leftovers)"
+result="$(sbatch --dependency=afterok:$fastpm_jobid,afternotok:$rockstar_jobid $jobstep_rockstar_leftovers)"
 rockstar_leftovers_jobid=$(get_jobid "$result")
 
 result="$(sbatch --dependency=afterok:$rockstar_jobid?afterok:$rockstar_leftovers_jobid $jobstep_parents)"

@@ -36,6 +36,18 @@ train_values = values[~validation_select]
 validation_params = params[validation_select]
 validation_values = values[validation_select]
 
+# to increase size of training set and learn what we are actually interested in,
+# we concentrate on the *difference* in log-likelihoods
+train_param_diffs = (train_params[:, None, :] - train_params[None, :, :]).reshape(-1, train_params.shape[1])
+train_values = (train_values[:, None] - train_values[None, :]).flatten()
+validation_param_diffs = (train_params[:, None, :] - train_params[None, :, :]).reshape(-1, train_params.shape[1])
+validation_values = (train_values[:, None] - train_values[None, :]).flatten()
+
+train_params = np.concatenate((np.repeat(train_params, train_params.shape[0], axis=0),
+                               train_param_diffs), axis=-1)
+validation_params = np.concatenate((np.repeat(validation_params, validation_params.shape[0], axis=0),
+                                   validation_param_diffs), axis=-1)
+
 # TODO maybe this helps
 # train_params += rng.normal(loc=0, scale=0.001*np.std(train_params, axis=0),
 #                            size=train_params.shape)

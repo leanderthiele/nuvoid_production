@@ -5,7 +5,7 @@
 #SBATCH --mem-per-cpu=4G
 #SBATCH -t 05:00:00
 
-#SBATCH --array=18-30
+#SBATCH --array=31-50
 
 #SBATCH --signal=ALRM@30
 

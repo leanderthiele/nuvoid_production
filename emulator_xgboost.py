@@ -8,7 +8,7 @@ import numpy as np
 import xgboost as xgb
 
 VALIDATION_FRAC = 0.2
-NUM_ROUND = 10
+NUM_ROUND = 100
 
 data_file = argv[1]
 
@@ -28,8 +28,9 @@ rng = np.random.default_rng(42)
 validation_select = rng.choice([True, False], size=N, p=[VALIDATION_FRAC, 1.0-VALIDATION_FRAC])
 
 # TODO maybe this helps
-min_clip = np.max(values) - 100
-values[values < min_clip] = min_clip
+if False :
+    min_clip = np.max(values) - 100
+    values[values < min_clip] = min_clip
 
 train_params = params[~validation_select]
 train_values = values[~validation_select]
@@ -38,17 +39,18 @@ validation_values = values[validation_select]
 
 # to increase size of training set and learn what we are actually interested in,
 # we concentrate on the *difference* in log-likelihoods
-train_param_diffs = (train_params[:, None, :] - train_params[None, :, :])\
-                               .reshape(-1, train_params.shape[1])
-train_values = (train_values[:, None] - train_values[None, :]).flatten()
-validation_param_diffs = (validation_params[:, None, :] - validation_params[None, :, :])\
-                              .reshape(-1, validation_params.shape[1])
-validation_values = (validation_values[:, None] - validation_values[None, :]).flatten()
+if False :
+    train_param_diffs = (train_params[:, None, :] - train_params[None, :, :])\
+                                   .reshape(-1, train_params.shape[1])
+    train_values = (train_values[:, None] - train_values[None, :]).flatten()
+    validation_param_diffs = (validation_params[:, None, :] - validation_params[None, :, :])\
+                                  .reshape(-1, validation_params.shape[1])
+    validation_values = (validation_values[:, None] - validation_values[None, :]).flatten()
 
-train_params = np.concatenate((np.repeat(train_params, train_params.shape[0], axis=0),
-                               train_param_diffs), axis=-1)
-validation_params = np.concatenate((np.repeat(validation_params, validation_params.shape[0], axis=0),
-                                   validation_param_diffs), axis=-1)
+    train_params = np.concatenate((np.repeat(train_params, train_params.shape[0], axis=0),
+                                   train_param_diffs), axis=-1)
+    validation_params = np.concatenate((np.repeat(validation_params, validation_params.shape[0], axis=0),
+                                       validation_param_diffs), axis=-1)
 
 # TODO maybe this helps
 # train_params += rng.normal(loc=0, scale=0.001*np.std(train_params, axis=0),
@@ -64,7 +66,7 @@ xgb_params = {
               'eta': 0.3,
               'min_child_weight': 10,
               'gamma': 0.5,
-              'subsample': 0.7,
+              'subsample': 0.5,
               'alpha': 100,
               'lambda': 100,
               'objective': 'reg:squarederror',

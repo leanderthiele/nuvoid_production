@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e -x -o pipefail
+set -e -o pipefail
 
 codebase=$HOME/nuvoid_production
 

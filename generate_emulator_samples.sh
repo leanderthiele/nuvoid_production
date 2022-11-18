@@ -26,7 +26,11 @@ consecutive_fails=0
 
 for ii in $( seq 0 10000 ); do
   run_idx=$(cantor_pairing $proc_idx $ii)
-  cosmo_idx=${cosmo_avail[$(( run_idx % Ncosmo ))]}
+
+  RANDOM=$run_idx
+  # using run_idx % Ncosmo worked really poorly in covering all cosmologies
+  # equally!
+  cosmo_idx=${cosmo_avail[$(( RANDOM % Ncosmo ))]}
   # we do not divide by Ncosmo here, otherwise we'll get a grid partially
   hod_idx=$run_idx
 

@@ -18,8 +18,14 @@ with np.load(data_file) as f :
     params = f['params']
     values = f['values'] # the log-likelihood
 
-# FIXME
-# values = np.exp(values-np.max(values))
+if True :
+    select = values > -100
+    params = params[select]
+    values = values[select]
+
+if False : # this doesn't really work
+    values -= np.max(values)
+    values = np.exp(values)
 
 N = len(values)
 assert N == params.shape[0]
@@ -38,19 +44,26 @@ train_values = values[~validation_select]
 validation_params = params[validation_select]
 validation_values = values[validation_select]
 
-if False :
-    train_params += rng.normal(0.0, 0.1*np.std(train_params, axis=0), train_params.shape)
-
 scaler = StandardScaler()
 scaler.fit(train_params)
 train_params = scaler.transform(train_params)
 validation_params = scaler.transform(validation_params)
 
-regr = MLPRegressor(hidden_layer_sizes=[64,]*4, activation='relu',
-                    solver='adam', alpha=1e-4, batch_size=64,
+if False :
+    train_params += rng.normal(0.0, 0.1*np.std(train_params, axis=0), train_params.shape)
+
+EPOCHS = 20
+regr = MLPRegressor(hidden_layer_sizes=[256,]*16, activation='relu',
+                    solver='adam', alpha=1e-1, batch_size=64,
                     learning_rate='constant', learning_rate_init=1e-3,
-                    max_iter=10,
-                    verbose=True).fit(train_params, train_values)
+                    max_iter=EPOCHS,
+                    verbose=True)
+
+for ii in range(EPOCHS) :
+    
+    regr = regr.partial_fit(train_params, train_values)
+    print(f'{regr.score(train_params, train_values)} \t {regr.score(validation_params, validation_values)}')
+
 
 ypred = regr.predict(validation_params)
 

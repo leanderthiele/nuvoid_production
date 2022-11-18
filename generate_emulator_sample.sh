@@ -50,6 +50,13 @@ wrk_dir="/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_${cosmo_idx}"
 hod_dir="${wrk_dir}/emulator/${hod_hash}"
 mkdir -p $hod_dir
 
+# USR1 is the conventional signal we have established when the job nears the time limit
+function die {
+  utils::printerr "Received alarm, removing $hod_dir"
+  rm -r $hod_dir
+}
+trap die ALRM
+
 export OMP_NUM_THREADS=1 # I think we need to do this to avoid OOM
 bash $codebase/emulator_galaxies.sh $wrk_dir $hod_hash $hod_desc
 

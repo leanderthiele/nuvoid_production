@@ -7,6 +7,8 @@
 
 #SBATCH --array=13-20
 
+#SBATCH --signal=ALRM@30
+
 # NOTE it is very important that the array indices are kept unique!!!
 
 srun -n $SLURM_NTASKS bash generate_emulator_samples.sh

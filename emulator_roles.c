@@ -57,7 +57,7 @@ int get_cosmo_idx (const char *path)
     char buffer[8];
     int ii=0;
     for (const char *c = p+strlen(pattern); *c && *c>='0' && *c<='9'; ++c, ++ii)
-        buffer[ii++] = *c;
+        buffer[ii] = *c;
     buffer[ii] = 0;
     return atoi(buffer);
 }
@@ -87,6 +87,11 @@ void assign_cosmo_indices (int N, int *out)
     }
 
     qsort(cosmo_infos, Ncosmo, sizeof(struct CosmoInfo), compare_cosmo);
+
+    #ifdef PRINT
+    for (int ii=0; ii<Ncosmo; ++ii)
+        printf("%s\tcosmo_idx=%d\tsamples=%d\n", cosmo_infos[ii].path, cosmo_infos[ii].cosmo_idx, cosmo_infos[ii].Nsamples);
+    #endif
 
     for (int ii=0; ii<N; ++ii)
         out[ii] = cosmo_infos[ii].cosmo_idx;

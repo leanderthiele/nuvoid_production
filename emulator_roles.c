@@ -101,11 +101,6 @@ int main(int argc, char **argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
-    // just a small consistency check
-    int rank1 = atoi(getenv("OMPI_COMM_WORLD_RANK"));
-    int world_size1 = atoi(getenv("OMPI_COMM_WORLD_SIZE"));
-    assert((rank1==rank) && (world_size1==world_size));
-
     // the node-local rank (the node-local main will do the copying)
     const int rank_on_node = atoi(getenv("SLURM_LOCALID"));
     

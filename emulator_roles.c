@@ -31,7 +31,10 @@ int compare_node_id (const void *a_, const void *b_)
     const struct ProcInfo *a = (struct ProcInfo *)a_;
     const struct ProcInfo *b = (struct ProcInfo *)b_;
 
-    return a->node_id - b->node_id;
+    // be careful here, node_id is unsigned!
+    return (a->node_id > b->node_id) ? 1
+           : (a->node_id < b->node_id) ? -1
+           : 0;
 }
 
 int compare_rank (const void *a_, const void *b_)

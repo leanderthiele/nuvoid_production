@@ -13,6 +13,7 @@ src_dir="/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_${cosmo_idx}"
 tmp_dir="/tmp/cosmo_varied_${cosmo_idx}"
 finish_marker="${tmp_dir}/FINISHED_COPY"
 
+# the copying takes about 15 minutes
 if [ $do_copying -eq 1 ]; then
   echo "$SLURM_TOPOLOGY_ADDR: Started copying $src_dir into $tmp_dir at $(date) ..."
   mkdir -p "$tmp_dir"
@@ -36,7 +37,7 @@ function cantor_pairing {
 }
 
 # unique process id
-proc_idx=$(cantor_pairing $SLURM_ARRAY_TASK_ID $SLURM_PROCID)
+proc_idx=$(cantor_pairing $SLURM_ARRAY_TASK_ID $OMPI_COMM_WORLD_RANK)
 
 # loop until time is up
 consecutive_fails=0

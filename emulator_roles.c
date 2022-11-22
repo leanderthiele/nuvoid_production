@@ -1,5 +1,8 @@
 /* Figure out which cosmology to work on and who copies
  * the data to /tmp.
+ * Compile with:
+ *
+ * mpicc -ggdb -O3 -Wall -Wextra -o emulator_roles emulator_roles.c
  */
 
 #include <stdio.h>
@@ -112,6 +115,7 @@ uint64_t get_nodeid (void)
     // the part after "tiger-" is maximum 8 bytes long (iXXcXnXX)
     // so it fits into a 64bit integer
     // In principle we could compress this better but there's no need
+    // (but yeah, this is an implementation detail if there ever was one)
     static const char pattern[] = "tiger-";
     assert(strstr(slurm_topology_addr, pattern) == slurm_topology_addr);
 

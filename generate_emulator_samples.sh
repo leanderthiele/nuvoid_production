@@ -6,9 +6,18 @@ codebase=$HOME/nuvoid_production
 
 source $codebase/utils.sh
 
-# get the available cosmologies
-cosmo_avail=($(bash $codebase/emulator_available_cosmos.sh | tr ',' ' '))
-Ncosmo=${#cosmo_avail[@]}
+# figure out the cosmology and whether we need to copy
+read cosmo_idx do_copying <<< "$($codebase/emulator_roles)"
+
+finish_marker="/tmp/cosmo_varied_${cosmo_idx}/FINISHED_COPY"
+
+if [ $do_copying -eq 1 ]; then
+  cp -r "/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_${cosmo_idx}" /tmp
+  echo "$(date)" > $finish_marker
+fi
+
+# this may take some time, so increase timeout
+utils::wait_for_file $finish_marker $((10 * 60))
 
 function cantor_pairing {
   k1="$1"
@@ -25,14 +34,7 @@ proc_idx=$(cantor_pairing $SLURM_ARRAY_TASK_ID $SLURM_PROCID)
 consecutive_fails=0
 
 for ii in $( seq 0 10000 ); do
-  run_idx=$(cantor_pairing $proc_idx $ii)
-
-  RANDOM=$run_idx
-  # using run_idx % Ncosmo worked really poorly in covering all cosmologies
-  # equally!
-  cosmo_idx=${cosmo_avail[$(( RANDOM % Ncosmo ))]}
-  # we do not divide by Ncosmo here, otherwise we'll get a grid partially
-  hod_idx=$run_idx
+  hod_idx=$(cantor_pairing $proc_idx $ii)
 
   # we do not consider failure a reason to abort
   bash $codebase/generate_emulator_sample.sh $cosmo_idx $hod_idx \

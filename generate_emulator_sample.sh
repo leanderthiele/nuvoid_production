@@ -46,17 +46,9 @@ echo "Trial [$cosmo_idx, $hod_idx] working on $hod_hash"
 dec_hash="$(utils::dec_hash "${cosmo_idx}${hod_desc}" 32)"
 augment_idx=$((dec_hash % 96))
 
-wrk_dir="/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_${cosmo_idx}"
+wrk_dir="/tmp/cosmo_varied_${cosmo_idx}"
 hod_dir="${wrk_dir}/emulator/${hod_hash}"
 mkdir -p $hod_dir
-
-# ALRM is the conventional signal we have established when the job nears the time limit
-# FIXME but it doesn't seem to work!!!
-function die {
-  utils::printerr "Received alarm, removing $hod_dir"
-  rm -r $hod_dir
-}
-trap die ALRM
 
 export OMP_NUM_THREADS=1 # I think we need to do this to avoid OOM
 bash $codebase/emulator_galaxies.sh $wrk_dir $hod_hash $hod_desc
@@ -78,7 +70,13 @@ utils::run "bash $codebase/emulator_vide.sh $wrk_dir $hod_hash $augment_idx 0" $
 if [ $status -ne 0 ]; then
   # occasional VIDE failure, we do not care, but should clean up afterwards
   rm -r "$wrk_dir/emulator/$hod_hash"
+  exit 1
 fi
 
 # VIDE was successful, clean spurious stuff
 bash $codebase/emulator_cleanup.sh $wrk_dir $hod_hash 1
+
+# if successful, copy into permanent storage
+target_dir="/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_${cosmo_idx}/emulator"
+mkdir -p $target_dir
+cp -r "$wrk_dir/emulator/$hod_hash" "$target_dir"

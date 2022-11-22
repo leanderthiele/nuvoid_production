@@ -11,4 +11,6 @@
 
 # NOTE it is very important that the array indices are kept unique!!!
 
-srun -n $SLURM_NTASKS bash generate_emulator_samples.sh
+module load openmpi/gcc/3.1.5/64
+
+mpirun -n $SLURM_NTASKS bash generate_emulator_samples.sh

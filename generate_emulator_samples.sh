@@ -16,7 +16,7 @@ finish_marker="${tmp_dir}/FINISHED_COPY"
 if [ $do_copying -eq 1 ]; then
   echo "$SLURM_TOPOLOGY_ADDR: Started copying $src_dir into $tmp_dir at $(date) ..."
   mkdir -p "$tmp_dir"
-  cp -r "${src_dir}/rockstar_*" "$tmp_dir"
+  cp -r "${src_dir}/"rockstar_* "$tmp_dir"
   cp "${src_dir}/cosmo.info" "$tmp_dir"
   # convenient for box size
   cp "${src_dir}/fastpm_script.lua" "$tmp_dir"

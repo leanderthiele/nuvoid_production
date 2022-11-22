@@ -14,16 +14,18 @@ tmp_dir="/tmp/cosmo_varied_${cosmo_idx}"
 finish_marker="${tmp_dir}/FINISHED_COPY"
 
 if [ $do_copying -eq 1 ]; then
+  echo "$SLURM_TOPOLOGY_ADDR: Started copying $src_dir into $tmp_dir at $(date) ..."
   mkdir -p "$tmp_dir"
   cp -r "${src_dir}/rockstar_*" "$tmp_dir"
   cp "${src_dir}/cosmo.info" "$tmp_dir"
   # convenient for box size
   cp "${src_dir}/fastpm_script.lua" "$tmp_dir"
   echo "$(date)" > $finish_marker
+  echo "$SLURM_TOPOLOGY_ADDR: ... Finished copying $src_dir into $tmp_dir at $(date)"
 fi
 
 # this may take some time, so increase timeout
-utils::wait_for_file $finish_marker $((10 * 60))
+utils::wait_for_file $finish_marker $((30 * 60))
 
 function cantor_pairing {
   k1="$1"

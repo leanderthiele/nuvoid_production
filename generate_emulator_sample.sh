@@ -79,4 +79,4 @@ bash $codebase/emulator_cleanup.sh $wrk_dir $hod_hash 1
 # if successful, copy into permanent storage
 target_dir="/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_${cosmo_idx}/emulator"
 mkdir -p $target_dir
-cp -r "$wrk_dir/emulator/$hod_hash" "$target_dir"
+mv "$wrk_dir/emulator/$hod_hash" "$target_dir"

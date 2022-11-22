@@ -13,7 +13,8 @@
 struct ProcInfo
 {
     // inputs
-    int rank, rank_on_node, node_id;
+    int rank, rank_on_node;
+    uint64_t node_id;
 
     // computed
     int cosmo_idx, do_copying;
@@ -99,6 +100,26 @@ void assign_cosmo_indices (int N, int *out)
     free(cosmo_infos);
 }
 
+uint64_t get_nodeid (void)
+{
+    // this is something like tiger-i26c2n2
+    const char *slurm_topology_addr = getenv("SLURM_TOPOLOGY_ADDR");
+
+    // the part after "tiger-" is maximum 8 bytes long (iXXcXnXX)
+    // so it fits into a 64bit integer
+    // In principle we could compress this better but there's no need
+    static const char pattern[] = "tiger-";
+    assert(strstr(slurm_topology_addr, pattern) == slurm_topology_addr);
+
+    const char *interesting = slurm_topology_addr + strlen(pattern);
+    assert(strlen(interesting) <= sizeof(uint64_t));
+
+    uint64_t out = 0;
+    memcpy(&out, interesting, strlen(interesting));
+
+    return out;
+}
+
 int main(int argc, char **argv)
 {
     int rank, world_size;
@@ -112,22 +133,22 @@ int main(int argc, char **argv)
     const int rank_on_node = atoi(getenv("SLURM_LOCALID"));
     
     // figure out which node we are on (this is relative to this job!)
-    const int node_id = atoi(getenv("SLURM_NODEID"));
-    printf("%s\n", getenv("SLURM_TOPOLOGY_ADDR")); // something like tiger-i26c2n2
-    printf("%d\n", node_id);
+    const uint64_t node_id = get_nodeid();
+    printf("%s %lu\n", getenv("SLURM_TOPOLOGY_ADDR"), node_id); // something like tiger-i26c2n2
 
     // gather info at root
-    int *rank_arr=0, *rank_on_node_arr=0, *node_id_arr=0;
+    int *rank_arr=0, *rank_on_node_arr=0;
+    uint64_t *node_id_arr=0;
     if (!rank)
     {
         rank_arr = (int *)malloc(world_size * sizeof(int));
         rank_on_node_arr = (int *)malloc(world_size * sizeof(int));
-        node_id_arr = (int *)malloc(world_size * sizeof(int));
+        node_id_arr = (uint64_t *)malloc(world_size * sizeof(uint64_t));
     }
 
     MPI_Gather(&rank, 1, MPI_INT, rank_arr, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Gather(&rank_on_node, 1, MPI_INT, rank_on_node_arr, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Gather(&node_id, 1, MPI_INT, node_id_arr, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gather(&node_id, 1, MPI_UINT64_T, node_id_arr, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
 
     int *cosmo_idx_arr=0, *do_copying_arr=0, *rank2_arr=0;
 
@@ -146,7 +167,7 @@ int main(int argc, char **argv)
         qsort(proc_infos, world_size, sizeof(struct ProcInfo), compare_node_id);
 
         // assign copying
-        int current_node_id = -1;
+        uint64_t current_node_id = 0;
         int num_nodes = 0;
         for (int ii=0; ii<world_size; ++ii)
             if (current_node_id != proc_infos[ii].node_id)
@@ -165,7 +186,7 @@ int main(int argc, char **argv)
         int cosmo_indices[num_nodes];
         assign_cosmo_indices(num_nodes, cosmo_indices);
 
-        current_node_id = -1;
+        current_node_id = 0;
         int counter = -1;
         for (int ii=0; ii<world_size; ++ii)
         {
@@ -203,7 +224,7 @@ int main(int argc, char **argv)
     MPI_Finalize();
 
     #ifdef PRINT
-    printf("node=%d\trank_on_node=%d\tcosmo_idx=%d\tdo_copying=%d\n",
+    printf("node=%lu\trank_on_node=%d\tcosmo_idx=%d\tdo_copying=%d\n",
            node_id, rank_on_node, cosmo_idx, do_copying);
     #else
     printf("%d %d\n", cosmo_idx, do_copying);

@@ -95,6 +95,8 @@ void assign_cosmo_indices (int N, int *out)
 
     for (int ii=0; ii<N; ++ii)
         out[ii] = cosmo_infos[ii].cosmo_idx;
+
+    free(cosmo_infos);
 }
 
 int main(int argc, char **argv)
@@ -111,6 +113,8 @@ int main(int argc, char **argv)
     
     // figure out which node we are on (this is relative to this job!)
     const int node_id = atoi(getenv("SLURM_NODEID"));
+    printf("%s\n", getenv("SLURM_TOPOLOGY_ADDR")); // something like tiger-i26c2n2
+    printf("%d\n", node_id);
 
     // gather info at root
     int *rank_arr=0, *rank_on_node_arr=0, *node_id_arr=0;
@@ -185,6 +189,8 @@ int main(int argc, char **argv)
             do_copying_arr[ii] = proc_infos[ii].do_copying;
             rank2_arr[ii] = proc_infos[ii].rank;
         }
+
+        free(proc_infos);
     }
 
     int cosmo_idx, do_copying, rank2;
@@ -196,5 +202,16 @@ int main(int argc, char **argv)
 
     MPI_Finalize();
 
+    #ifdef PRINT
+    printf("node=%d\trank_on_node=%d\tcosmo_idx=%d\tdo_copying=%d\n",
+           node_id, rank_on_node, cosmo_idx, do_copying);
+    #else
     printf("%d %d\n", cosmo_idx, do_copying);
+    #endif
+
+    if (!rank)
+    {
+        free(rank_arr); free(rank_on_node_arr); free(node_id_arr);
+        free(cosmo_idx_arr); free(do_copying_arr); free(rank2_arr);
+    }
 }

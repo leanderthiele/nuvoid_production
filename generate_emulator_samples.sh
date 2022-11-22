@@ -9,10 +9,16 @@ source $codebase/utils.sh
 # figure out the cosmology and whether we need to copy
 read cosmo_idx do_copying <<< "$($codebase/emulator_roles)"
 
-finish_marker="/tmp/cosmo_varied_${cosmo_idx}/FINISHED_COPY"
+src_dir="/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_${cosmo_idx}"
+tmp_dir="/tmp/cosmo_varied_${cosmo_idx}"
+finish_marker="${tmp_dir}/FINISHED_COPY"
 
 if [ $do_copying -eq 1 ]; then
-  cp -r "/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_${cosmo_idx}" /tmp
+  mkdir -p "$tmp_dir"
+  cp -r "${src_dir}/rockstar_*" "$tmp_dir"
+  cp "${src_dir}/cosmo.info" "$tmp_dir"
+  # convenient for box size
+  cp "${src_dir}/fastpm_script.lua" "$tmp_dir"
   echo "$(date)" > $finish_marker
 fi
 

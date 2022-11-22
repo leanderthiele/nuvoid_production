@@ -63,13 +63,13 @@ bash $codebase/emulator_lightcone.sh $wrk_dir $hod_hash $augment_idx 'rockstar'
 
 bash $codebase/emulator_cleanup.sh $wrk_dir $hod_hash 0
 
-vide_log="$wrk_dir/emulator/$hod_hash/vide_${augment_idx}.log"
+vide_log="$hod_dir/vide_${augment_idx}.log"
 utils::run "bash $codebase/emulator_vide.sh $wrk_dir $hod_hash $augment_idx 0" $vide_log \
   && status=$? || status=$?
 
 if [ $status -ne 0 ]; then
   # occasional VIDE failure, we do not care, but should clean up afterwards
-  rm -r "$wrk_dir/emulator/$hod_hash"
+  rm -r "$hod_dir"
   exit 1
 fi
 
@@ -79,4 +79,4 @@ bash $codebase/emulator_cleanup.sh $wrk_dir $hod_hash 1
 # if successful, copy into permanent storage
 target_dir="/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_${cosmo_idx}/emulator"
 mkdir -p $target_dir
-mv "$wrk_dir/emulator/$hod_hash" "$target_dir"
+mv "$hod_dir" "$target_dir"

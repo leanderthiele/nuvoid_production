@@ -72,13 +72,13 @@ int get_cosmo_idx (const char *path)
 
 // from valid_outputs.c
 void check_cosmos (const char *pattern,
-                   int *Nvalid, const char **valid_paths, 
-                   int *Ninvalid, const char **invalid_paths);
+                   int *Nvalid, char **valid_paths, 
+                   int *Ninvalid, char **invalid_paths);
 
 void assign_cosmo_indices (int N, int *out)
 {
     int Ncosmo;
-    const char *valid_paths[1024]; // should be large enough
+    char *valid_paths[1024]; // should be large enough
     check_cosmos("cosmo_varied_*[0-9]", &Ncosmo, valid_paths, NULL, NULL);
 
     char buffer[1024];
@@ -108,6 +108,8 @@ void assign_cosmo_indices (int N, int *out)
 
     free(cosmo_infos);
     globfree(&glob_result1);
+    for (int ii=0; ii<Ncosmo; ++ii)
+        free(valid_paths[ii]);
 }
 
 uint64_t get_nodeid (void)

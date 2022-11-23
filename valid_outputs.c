@@ -55,7 +55,7 @@ void check_cosmos (const char *pattern,
         // all checks passed, valid run
         if (Nvalid && valid_paths)
         {
-            valid_paths[*Nvalid] = malloc(1+strlen(glob_result.gl_pathv[ii]));
+            valid_paths[*Nvalid] = (char *)malloc(1+strlen(glob_result.gl_pathv[ii]));
             sprintf(valid_paths[(*Nvalid)++], "%s", glob_result.gl_pathv[ii]);
         }
         continue;
@@ -63,7 +63,7 @@ void check_cosmos (const char *pattern,
         invalid:
         if (Ninvalid && invalid_paths)
         {
-            invalid_paths[*Ninvalid] = malloc(1+strlen(glob_result.gl_pathv[ii]));
+            invalid_paths[*Ninvalid] = (char *)malloc(1+strlen(glob_result.gl_pathv[ii]));
             sprintf(invalid_paths[(*Ninvalid)++], "%s", glob_result.gl_pathv[ii]);
         }
         continue;

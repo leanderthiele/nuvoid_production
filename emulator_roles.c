@@ -157,7 +157,7 @@ int main(int argc, char **argv)
     #endif
 
     // gather info at root
-    struct ProcInfo proc_info { .rank = rank, .node_id = node_id };
+    struct ProcInfo proc_info = { .rank = rank, .node_id = node_id };
 
     struct ProcInfo *proc_infos = 0;
     if (!rank)
@@ -169,10 +169,10 @@ int main(int argc, char **argv)
         const int nitems = 4;
         MPI_Datatype types[] = { MPI_INT, MPI_INT64_T, MPI_INT, MPI_INT };
         int blocklengths[]   = { 1, 1, 1, 1 };
-        MPI_Aint offsets[]   = { offsetof(ProcInfo, rank),
-                                 offsetof(ProcInfo, node_id),
-                                 offsetof(ProcInfo, cosmo_idx),
-                                 offsetof(ProcInfo, do_copying) };
+        MPI_Aint offsets[]   = { offsetof(struct ProcInfo, rank),
+                                 offsetof(struct ProcInfo, node_id),
+                                 offsetof(struct ProcInfo, cosmo_idx),
+                                 offsetof(struct ProcInfo, do_copying) };
         MPI_Type_create_struct(nitems, blocklengths, offsets, types, &MPI_ProcInfo);
         MPI_Type_commit(&MPI_ProcInfo);
     }
@@ -228,6 +228,9 @@ int main(int argc, char **argv)
     // information has been computed, give back to the processes
     MPI_Scatter(proc_infos, 1, MPI_ProcInfo, &proc_info, 1, MPI_ProcInfo, 0, MPI_COMM_WORLD);
 
+    if (!rank)
+        free(proc_infos);
+
     assert(rank == proc_info.rank);
     assert(node_id == proc_info.node_id);
 
@@ -235,11 +238,8 @@ int main(int argc, char **argv)
 
     #ifdef PRINT
     printf("node=%lu\tcosmo_idx=%d\tdo_copying=%d\n",
-           node_id, cosmo_idx, do_copying);
+           proc_info.node_id, proc_info.cosmo_idx, proc_info.do_copying);
     #else
     printf("%d %d\n", proc_info.cosmo_idx, proc_info.do_copying);
     #endif
-
-    if (!rank)
-        free(proc_infos);
 }

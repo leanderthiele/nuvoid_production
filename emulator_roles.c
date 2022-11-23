@@ -31,6 +31,19 @@ struct ProcInfo
     int cosmo_idx, do_copying;
 };
 
+void create_mpi_procinfo (MPI_Datatype *out)
+{
+    const int nitems = 4;
+    MPI_Datatype types[] = { MPI_INT, MPI_INT64_T, MPI_INT, MPI_INT };
+    int blocklengths[]   = { 1, 1, 1, 1 };
+    MPI_Aint offsets[]   = { offsetof(struct ProcInfo, rank),
+                             offsetof(struct ProcInfo, node_id),
+                             offsetof(struct ProcInfo, cosmo_idx),
+                             offsetof(struct ProcInfo, do_copying) };
+    MPI_Type_create_struct(nitems, blocklengths, offsets, types, out);
+    MPI_Type_commit(out);
+}
+
 struct CosmoInfo
 {
     const char *path;
@@ -165,17 +178,7 @@ int main(int argc, char **argv)
 
     // define custom MPI type for ProcInfo struct, need to split node_id in two
     MPI_Datatype MPI_ProcInfo;
-    {
-        const int nitems = 4;
-        MPI_Datatype types[] = { MPI_INT, MPI_INT64_T, MPI_INT, MPI_INT };
-        int blocklengths[]   = { 1, 1, 1, 1 };
-        MPI_Aint offsets[]   = { offsetof(struct ProcInfo, rank),
-                                 offsetof(struct ProcInfo, node_id),
-                                 offsetof(struct ProcInfo, cosmo_idx),
-                                 offsetof(struct ProcInfo, do_copying) };
-        MPI_Type_create_struct(nitems, blocklengths, offsets, types, &MPI_ProcInfo);
-        MPI_Type_commit(&MPI_ProcInfo);
-    }
+    create_mpi_procinfo(&MPI_ProcInfo);
 
     MPI_Gather(&proc_info, 1, MPI_ProcInfo, proc_infos, 1, MPI_ProcInfo, 0, MPI_COMM_WORLD);
 

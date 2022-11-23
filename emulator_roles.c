@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <glob.h>
+#include <sys/stat.h>
 
 #include <mpi.h>
 
@@ -77,6 +78,7 @@ void assign_cosmo_indices (int N, int *out)
 
     char buffer[1024];
     glob_t glob_result, glob_result1, glob_result2, glob_result3;
+    struct stat st;
 
     // find the available cosmologies
     sprintf(buffer, "%s/cosmo_varied_*[0-9]", root);
@@ -102,6 +104,12 @@ void assign_cosmo_indices (int N, int *out)
             // this is the last file being written
             sprintf(buffer, "%s/Header/attr-v2", glob_result3.gl_pathv[0]);
             if (access(buffer, F_OK)) goto invalid;
+
+            // this can also be an issue for some reason
+            sprintf(buffer, "%s/Pos/000000", glob_result3.gl_pathv[0]);
+            if (access(buffer, F_OK)) goto invalid;
+            stat(buffer, &st);
+            if (st.st_size < 1000*6*4) goto invalid;
         }
 
         // all checks passed, valid run

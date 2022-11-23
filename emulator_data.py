@@ -68,7 +68,7 @@ def get_hist(void_file, cache={}) :
         R, z = np.loadtxt(void_file, usecols=(4,5,), unpack=True)
     except ValueError :
         print(f'Error for: {void_file}')
-        continue
+        return None
     h, _, _ = np.histogram2d(z, R, bins=(cache['zbins'], cache['Rbins'], ))
     out = ' '.join(map(str, h.flatten().astype(int)))
     return out
@@ -78,8 +78,11 @@ def get_loglike(void_file, cache={}) :
     if not cache :
         cache['cmass_hist'] = get_hist(f'/tigress/lthiele/boss_dr12/voids/sample_test/'\
                                        f'{vide_out}_centers_central_test.out')
+        assert cache['cmass_hist'] is not None
         cache['total_bins'] = NBINS * ( len(ZEDGES) + 1 )
     sim_hist = get_hist(void_file)
+    if sim_hist is None :
+        return None
     result = subprocess.run(f'{codebase}/vsf_like {cache["total_bins"]} {cache["cmass_hist"]} {sim_hist}',
                             shell=True, capture_output=True, check=True)
     return float(result.stdout)
@@ -103,8 +106,11 @@ for f in tqdm(void_files) :
         param_names = param_names_
     else :
         assert param_names == param_names_
+    L = get_loglike(f)
+    if L is None :
+        continue
     params.append(list(cosmo.values()) + list(hod.values()))
-    values.append(get_loglike(f))
+    values.append(L)
 
 np.savez(f'emulator_data_RMIN{RMIN}_RMAX{RMAX}_NBINS{NBINS}_ZEDGES{"-".join(map(str, ZEDGES))}_{vide_out}.npz',
          param_names=param_names,

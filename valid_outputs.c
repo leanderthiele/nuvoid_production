@@ -10,8 +10,8 @@
 #include <sys/stat.h>
 
 void check_cosmos (const char *pattern,
-                   int *Nvalid, const char **valid_paths, 
-                   int *Ninvalid, const char **invalid_paths)
+                   int *Nvalid, char **valid_paths, 
+                   int *Ninvalid, char **invalid_paths)
 {
     if (Nvalid) *Nvalid = 0;
     if (Ninvalid) *Ninvalid = 0;
@@ -54,12 +54,18 @@ void check_cosmos (const char *pattern,
 
         // all checks passed, valid run
         if (Nvalid && valid_paths)
-            valid_paths[(*Nvalid)++] = glob_result.gl_pathv[ii];
+        {
+            valid_paths[*Nvalid] = malloc(1+strlen(glob_result.gl_pathv[ii]));
+            sprintf(valid_paths[(*Nvalid)++], "%s", glob_result.gl_pathv[ii]);
+        }
         continue;
 
         invalid:
         if (Ninvalid && invalid_paths)
-            invalid_paths[(*Ninvalid)++] = glob_result.gl_pathv[ii];
+        {
+            invalid_paths[*Ninvalid] = malloc(1+strlen(glob_result.gl_pathv[ii]));
+            sprintf(invalid_paths[(*Ninvalid)++], "%s", glob_result.gl_pathv[ii]);
+        }
         continue;
     }
     
@@ -71,7 +77,7 @@ int main (int argc, char **argv)
 {
     const char *pattern = argv[1];
     int Nvalid, Ninvalid;
-    const char *valid_paths[1024], *invalid_paths[1024];
+    char *valid_paths[1024], *invalid_paths[1024];
     check_cosmos(pattern, &Nvalid, valid_paths, &Ninvalid, invalid_paths);
     printf("VALID:\n");
     for (int ii=0; ii<Nvalid; ++ii)
@@ -79,5 +85,10 @@ int main (int argc, char **argv)
     printf("INVALID:\n");
     for (int ii=0; ii<Ninvalid; ++ii)
         printf("%s\n", invalid_paths[ii]);
+
+    for (int ii=0; ii<Nvalid; ++ii)
+        free(valid_paths[ii]);
+    for (int ii=0; ii<Ninvalid; ++ii)
+        free(invalid_paths[ii]);
 }
 #endif

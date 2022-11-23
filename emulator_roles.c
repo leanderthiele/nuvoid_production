@@ -9,10 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <unistd.h>
 #include <assert.h>
 #include <glob.h>
-#include <sys/stat.h>
 
 #include <mpi.h>
 
@@ -72,56 +70,19 @@ int get_cosmo_idx (const char *path)
     return atoi(buffer);
 }
 
+// from valid_outputs.c
+void check_cosmos (const char *pattern,
+                   int *Nvalid, const char **valid_paths, 
+                   int *Ninvalid, const char **invalid_paths);
+
 void assign_cosmo_indices (int N, int *out)
 {
-    static const char root[] = "/scratch/gpfs/lthiele/nuvoid_production";
+    int Ncosmo;
+    const char *valid_paths[1024]; // should be large enough
+    check_cosmos("cosmo_varied_*[0-9]", &Ncosmo, valid_paths, NULL, NULL);
 
     char buffer[1024];
-    glob_t glob_result, glob_result1, glob_result2, glob_result3;
-    struct stat st;
-
-    // find the available cosmologies
-    sprintf(buffer, "%s/cosmo_varied_*[0-9]", root);
-    glob(buffer, GLOB_TILDE_CHECK | GLOB_ONLYDIR | GLOB_NOSORT, NULL, &glob_result);
-
-    // figure out which ones are valid / done
-    const char *valid_paths[glob_result.gl_pathc];
-    int Ncosmo = 0;
-    for (int ii=0; ii<glob_result.gl_pathc; ++ii)
-    {
-        sprintf(buffer, "%s/rockstar_0.*[0-9]", glob_result.gl_pathv[ii]);
-        glob(buffer, GLOB_TILDE_CHECK | GLOB_ONLYDIR | GLOB_NOSORT, NULL, &glob_result2);
-
-        // hardcoded expected number of snapshots here!
-        if (glob_result2.gl_pathc != 20) goto invalid;
-
-        for (int jj=0; jj<glob_result2.gl_pathc; ++jj)
-        {
-            sprintf(buffer, "%s/out_*[0-9]_hosts.bf", glob_result2.gl_pathv[jj]);
-            glob(buffer, GLOB_TILDE_CHECK | GLOB_ONLYDIR | GLOB_NOSORT, NULL, &glob_result3);
-            if (glob_result3.gl_pathc != 1) goto invalid;
-
-            // this is the last file being written
-            sprintf(buffer, "%s/Header/attr-v2", glob_result3.gl_pathv[0]);
-            if (access(buffer, F_OK)) goto invalid;
-
-            // this can also be an issue for some reason
-            sprintf(buffer, "%s/Pos/000000", glob_result3.gl_pathv[0]);
-            if (access(buffer, F_OK)) goto invalid;
-            stat(buffer, &st);
-            if (st.st_size < 1000*6*4) goto invalid;
-        }
-
-        // all checks passed, valid run
-        valid_paths[Ncosmo++] = glob_result.gl_pathv[ii];
-        continue;
-
-        invalid:
-        #ifdef PRINT
-        printf("Invalid run %s\n", glob_result.gl_pathv[ii]);
-        #endif
-        continue;
-    }
+    glob_t glob_result1;
 
     assert(Ncosmo >= N);
     struct CosmoInfo *cosmo_infos = (struct CosmoInfo *)malloc(Ncosmo * sizeof(struct CosmoInfo));
@@ -146,7 +107,7 @@ void assign_cosmo_indices (int N, int *out)
         out[ii] = cosmo_infos[ii].cosmo_idx;
 
     free(cosmo_infos);
-    globfree(&glob_result); globfree(&glob_result1); globfree(&glob_result2); globfree(&glob_result3);
+    globfree(&glob_result1);
 }
 
 uint64_t get_nodeid (void)

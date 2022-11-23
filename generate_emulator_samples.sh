@@ -26,7 +26,7 @@ if [ $do_copying -eq 1 ]; then
 fi
 
 # this may take some time, so increase timeout
-utils::wait_for_file $finish_marker $((30 * 60))
+utils::wait_for_file $finish_marker $((60 * 60))
 
 function cantor_pairing {
   k1="$1"

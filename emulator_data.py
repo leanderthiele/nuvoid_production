@@ -64,7 +64,11 @@ def get_hist(void_file, cache={}) :
         zedges.insert(0, 0.0)
         zedges.append(100.0)
         cache['zbins'] = np.array(zedges)
-    R, z = np.loadtxt(void_file, usecols=(4,5,), unpack=True)
+    try :
+        R, z = np.loadtxt(void_file, usecols=(4,5,), unpack=True)
+    except ValueError :
+        print(f'Error for: {void_file}')
+        continue
     h, _, _ = np.histogram2d(z, R, bins=(cache['zbins'], cache['Rbins'], ))
     out = ' '.join(map(str, h.flatten().astype(int)))
     return out

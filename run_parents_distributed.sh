@@ -14,7 +14,7 @@ world_size=$SLURM_NTASKS
 
 todo=()
 for snap_idx in $( seq 0 $((NUM_SNAPS-1)) ); do
-  if [ ! -d "$ROOT/rockstar_${TIMES_ARR[$snap_idx]}/out_${snap_idx}_hosts.bf" ]; then
+  if [ ! -f "$ROOT/rockstar_${TIMES_ARR[$snap_idx]}/FINISHED_PARENTS" ]; then
     todo+=($snap_idx)
   fi
 done

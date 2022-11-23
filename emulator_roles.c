@@ -18,6 +18,9 @@
 #define ENV_HOSTNAME "SLURM_TOPOLOGY_ADDR"
 #define ENV_NUMNODES "SLURM_JOB_NUM_NODES"
 
+// which rank is the root
+#define ROOT_RANK 0
+
 // 8 bytes should be enough
 typedef int64_t node_id_t;
 
@@ -31,7 +34,7 @@ struct ProcInfo
     int cosmo_idx, do_copying;
 };
 
-void create_mpi_procinfo (MPI_Datatype *out)
+MPI_Datatype create_mpi_procinfo (void)
 {
     const int nitems = 4;
     MPI_Datatype types[] = { MPI_INT, MPI_INT64_T, MPI_INT, MPI_INT };
@@ -40,8 +43,11 @@ void create_mpi_procinfo (MPI_Datatype *out)
                              offsetof(struct ProcInfo, node_id),
                              offsetof(struct ProcInfo, cosmo_idx),
                              offsetof(struct ProcInfo, do_copying) };
-    MPI_Type_create_struct(nitems, blocklengths, offsets, types, out);
-    MPI_Type_commit(out);
+
+    MPI_Datatype out;
+    MPI_Type_create_struct(nitems, blocklengths, offsets, types, &out);
+
+    return out;
 }
 
 struct CosmoInfo
@@ -172,17 +178,17 @@ int main(int argc, char **argv)
     // gather info at root
     struct ProcInfo proc_info = { .rank = rank, .node_id = node_id };
 
-    struct ProcInfo *proc_infos = 0;
-    if (!rank)
+    struct ProcInfo *proc_infos = NULL;
+    if (rank == ROOT_RANK)
         proc_infos = (struct ProcInfo *)malloc(world_size * sizeof(struct ProcInfo));
 
     // define custom MPI type for ProcInfo struct, need to split node_id in two
-    MPI_Datatype MPI_ProcInfo;
-    create_mpi_procinfo(&MPI_ProcInfo);
+    MPI_Datatype MPI_ProcInfo = create_mpi_procinfo();
+    MPI_Type_commit(&MPI_ProcInfo);
 
-    MPI_Gather(&proc_info, 1, MPI_ProcInfo, proc_infos, 1, MPI_ProcInfo, 0, MPI_COMM_WORLD);
+    MPI_Gather(&proc_info, 1, MPI_ProcInfo, proc_infos, 1, MPI_ProcInfo, ROOT_RANK, MPI_COMM_WORLD);
 
-    if (!rank) // now figure stuff out
+    if (rank == ROOT_RANK) // now figure stuff out
     {
         // sanity check
         for (int ii=0; ii<world_size; ++ii) assert(proc_infos[ii].rank == ii);
@@ -229,9 +235,11 @@ int main(int argc, char **argv)
     }
 
     // information has been computed, give back to the processes
-    MPI_Scatter(proc_infos, 1, MPI_ProcInfo, &proc_info, 1, MPI_ProcInfo, 0, MPI_COMM_WORLD);
+    MPI_Scatter(proc_infos, 1, MPI_ProcInfo, &proc_info, 1, MPI_ProcInfo, ROOT_RANK, MPI_COMM_WORLD);
 
-    if (!rank)
+    MPI_Type_free(&MPI_ProcInfo);
+
+    if (rank == ROOT_RANK)
         free(proc_infos);
 
     assert(rank == proc_info.rank);

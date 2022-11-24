@@ -14,7 +14,7 @@ tmp_dir="/tmp/cosmo_varied_${cosmo_idx}"
 finish_marker="${tmp_dir}/FINISHED_COPY"
 
 # the copying takes about 15 minutes
-if [ $do_copying -eq 1 ]; then
+function copy_data {
   echo "$SLURM_TOPOLOGY_ADDR: Started copying $src_dir into $tmp_dir at $(date) ..."
   mkdir -p "$tmp_dir"
   cp -r "${src_dir}/"rockstar_* "$tmp_dir"
@@ -23,10 +23,14 @@ if [ $do_copying -eq 1 ]; then
   cp "${src_dir}/fastpm_script.lua" "$tmp_dir"
   echo "$(date)" > $finish_marker
   echo "$SLURM_TOPOLOGY_ADDR: ... Finished copying $src_dir into $tmp_dir at $(date)"
-fi
+  return 0
+}
 
-# this may take some time, so increase timeout
-utils::wait_for_file $finish_marker $((60 * 60))
+if [ $do_copying -eq 1 ]; then
+  # copying is pretty low on the CPU so we can use the node-local root process for 
+  # useful work too
+  copy_data &
+fi
 
 function cantor_pairing {
   k1="$1"

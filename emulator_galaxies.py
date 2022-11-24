@@ -10,11 +10,12 @@ codebase = '/home/lthiele/nuvoid_production'
 
 # Script to be called from within HOD chains to create galaxies
 # Command line arguments:
-#   [1] working directory (e.g. /scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_0)
-#   [2] hod hash (a hex string)
+#   [1] data directory (e.g. /scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_0)
+#   [2] work directory (i.e. something that'll be followed by emulator)
+#   [3] hod hash (a hex string)
 #   [3...] key=value pairs with keys from the below params dict
 
-wrk_dir, hod_hash, argv_hod = argv[1], argv[2], argv[3:]
+data_dir, wrk_dir, hod_hash, argv_hod = argv[1], argv[2], argv[3], argv[4:]
 
 params = {
           'cat': pyglx.CatalogType,
@@ -54,7 +55,7 @@ for a in argv_hod :
 if halo_finder_str is None :
     halo_finder_str = 'rockstar'
 
-comma_times = subprocess.run(f'bash {codebase}/get_available_times.sh {wrk_dir} {halo_finder_str}',
+comma_times = subprocess.run(f'bash {codebase}/get_available_times.sh {data_dir} {halo_finder_str}',
                              shell=True, capture_output=True, check=True).stdout.strip().decode()
 times = list(map(float, comma_times.split(',')))
 
@@ -67,5 +68,5 @@ with open(f'{wrk_dir}/emulator/{hod_hash}/hod.info', 'w') as f :
     for a in argv_hod :
         f.write(f'{a}\n')
 
-pyglx.get_galaxies(wrk_dir, times, f'{wrk_dir}/emulator/{hod_hash}/galaxies',
+pyglx.get_galaxies(data_dir, times, f'{wrk_dir}/emulator/{hod_hash}/galaxies',
                    **kwargs)

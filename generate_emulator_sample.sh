@@ -47,13 +47,21 @@ dec_hash="$(utils::dec_hash "${cosmo_idx}${hod_desc}" 32)"
 augment_idx=$((dec_hash % 96))
 
 # we start working while copying is still happening
+tmp_dir="/tmp/cosmo_varied_${cosmo_idx}"
+copy_finish_marker="${tmp_dir}/FINISHED_COPY"
+
+if [ -f "$copy_finish_marker" ]; then
+  data_dir="/tmp/cosmo_varied_${cosmo_idx}"
+else
+  data_dir="/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_${cosmo_idx}"
+fi
 
 wrk_dir="/tmp/cosmo_varied_${cosmo_idx}"
-hod_dir="/tmp/cosmo_varied_${cosmo_idx}/emulator/${hod_hash}"
+hod_dir="$wrk_dir/emulator/${hod_hash}"
 mkdir -p $hod_dir
 
 export OMP_NUM_THREADS=1 # I think we need to do this to avoid OOM
-bash $codebase/emulator_galaxies.sh $wrk_dir $hod_hash $hod_desc
+bash $codebase/emulator_galaxies.sh $data_dir $wrk_dir $hod_hash $hod_desc
 
 if [ -z $SLURM_CPUS_PER_TASK ]; then
   export OMP_NUM_THREADS=4
@@ -61,7 +69,9 @@ else
   export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 fi
 
-bash $codebase/emulator_lightcone.sh $wrk_dir $hod_hash $augment_idx 'rockstar'
+bash $codebase/emulator_lightcone.sh $data_dir $wrk_dir $hod_hash $augment_idx 'rockstar'
+
+# now we have the lightcone file and shouldn't need to use the data_dir anymore
 
 bash $codebase/emulator_cleanup.sh $wrk_dir $hod_hash 0
 

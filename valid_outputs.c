@@ -24,13 +24,13 @@ void check_cosmos (const char *pattern,
 
     // find the available cosmologies
     sprintf(buffer, "%s/%s", root, pattern);
-    glob(buffer, GLOB_TILDE_CHECK | GLOB_ONLYDIR | GLOB_NOSORT, NULL, &glob_result);
+    glob(buffer, GLOB_ONLYDIR | GLOB_NOSORT, NULL, &glob_result);
 
     // figure out which ones are valid / done
     for (int ii=0; ii<glob_result.gl_pathc; ++ii)
     {
         sprintf(buffer, "%s/rockstar_0.*[0-9]", glob_result.gl_pathv[ii]);
-        glob(buffer, GLOB_TILDE_CHECK | GLOB_ONLYDIR | GLOB_NOSORT, NULL, &glob_result2);
+        glob(buffer, GLOB_ONLYDIR | GLOB_NOSORT, NULL, &glob_result2);
 
         // hardcoded expected number of snapshots here!
         if (glob_result2.gl_pathc != 20) goto invalid;
@@ -38,7 +38,7 @@ void check_cosmos (const char *pattern,
         for (int jj=0; jj<glob_result2.gl_pathc; ++jj)
         {
             sprintf(buffer, "%s/out_*[0-9]_hosts.bf", glob_result2.gl_pathv[jj]);
-            glob(buffer, GLOB_TILDE_CHECK | GLOB_ONLYDIR | GLOB_NOSORT, NULL, &glob_result3);
+            glob(buffer, GLOB_ONLYDIR | GLOB_NOSORT, NULL, &glob_result3);
             if (glob_result3.gl_pathc != 1) goto invalid;
 
             // this is the last file being written

@@ -46,8 +46,10 @@ echo "Trial [$cosmo_idx, $hod_idx] working on $hod_hash"
 dec_hash="$(utils::dec_hash "${cosmo_idx}${hod_desc}" 32)"
 augment_idx=$((dec_hash % 96))
 
+# we start working while copying is still happening
+
 wrk_dir="/tmp/cosmo_varied_${cosmo_idx}"
-hod_dir="${wrk_dir}/emulator/${hod_hash}"
+hod_dir="/tmp/cosmo_varied_${cosmo_idx}/emulator/${hod_hash}"
 mkdir -p $hod_dir
 
 export OMP_NUM_THREADS=1 # I think we need to do this to avoid OOM

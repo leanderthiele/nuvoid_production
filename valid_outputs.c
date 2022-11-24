@@ -24,7 +24,7 @@ void check_cosmos (const char *pattern,
 
     // find the available cosmologies
     sprintf(buffer, "%s/%s", root, pattern);
-    glob(buffer, GLOB_ONLYDIR | GLOB_NOSORT, NULL, &glob_result);
+    glob(buffer, GLOB_ONLYDIR, NULL, &glob_result);
 
     // figure out which ones are valid / done
     for (int ii=0; ii<glob_result.gl_pathc; ++ii)

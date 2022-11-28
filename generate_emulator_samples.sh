@@ -29,7 +29,7 @@ function copy_data {
 if [ $do_copying -eq 1 ]; then
   # copying is pretty low on the CPU so we can use the node-local root process for 
   # useful work too
-  copy_data &
+  copy_data
 fi
 
 function cantor_pairing {

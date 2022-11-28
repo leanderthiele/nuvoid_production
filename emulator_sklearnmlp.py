@@ -1,5 +1,7 @@
 # Command line arguments:
 #   [1] file containing the training data
+#   [2] optional -- fraction of data to use,
+#                   can be used to check convergence
 
 from sys import argv
 
@@ -12,11 +14,22 @@ VALIDATION_FRAC = 0.2
 NUM_ROUND = 100
 
 data_file = argv[1]
+try :
+    use_frac = float(argv[2])
+except IndexError :
+    use_frac = None
+
+rng = np.random.default_rng(42)
 
 with np.load(data_file) as f :
     param_names = list(f['param_names'])
     params = f['params']
     values = f['values'] # the log-likelihood
+
+if use_frac is not None :
+    select = rng.choice([True, False], size=len(values), p=[use_frac, 1.0-use_frac])
+    params = params[select]
+    values = values[select]
 
 if True :
     select = values > -100
@@ -31,7 +44,6 @@ N = len(values)
 assert N == params.shape[0]
 assert len(param_names) == params.shape[1]
 
-rng = np.random.default_rng(42)
 validation_select = rng.choice([True, False], size=N, p=[VALIDATION_FRAC, 1.0-VALIDATION_FRAC])
 
 # TODO maybe this helps

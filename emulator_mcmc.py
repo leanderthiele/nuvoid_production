@@ -6,7 +6,7 @@ from scipy.special import gammaln, xlogy
 import torch
 import torch.nn as nn
 
-import optuna
+import emcee
 
 # the cmass data
 target_hist = np.array([58,62,51,54,47,44,41,42,42,25,30,19,18,27,14,9,9,5,7,4,6,1,2,2,1,0,0,1,2,0,0,0,57,56,67,48,45,53,41,45,49,37,39,50,49,36,28,17,17,33,15,13,14,7,5,12,6,6,2,4,0,1,2,0])
@@ -34,7 +34,7 @@ class MLP(nn.Sequential) :
                            for ii in range(Nlayers+1)])
 
 model = MLP(params.shape[1], hists.shape[1])
-model.load_state_dict(torch.load('vsf_mlp.pt', map_location='cpu')
+model.load_state_dict(torch.load('vsf_mlp.pt', map_location='cpu'))
 
 def logprior(theta) :
     if np.all((theta_min<=theta)*(theta<=theta_max)) :
@@ -42,7 +42,7 @@ def logprior(theta) :
     return -np.inf
 
 def loglike(theta) :
-    mu = model(theta) + 1e-8
+    mu = model(torch.from_numpy(theta).to(dtype=torch.float32)).detach().cpu().numpy() + 1e-8
     return np.sum(xlogy(target_hist, mu) - mu - gammaln(1.0+target_hist))
 
 def logprob(theta) :

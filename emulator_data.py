@@ -27,10 +27,13 @@ def get_setting_from_info(fname, name) :
 
 
 def get_cosmo(cosmo_idx, cache={}) :
-    keys = ['Omega_m', 'Omega_b', 'h', 'n_s', 'A_s', 'M_nu', ]
+    keys = ['omegabh', 'omegach2', 'theta', 'logA', 'ns', 'Mnu']
     if cosmo_idx not in cache :
-        cosmo_file = f'{database}/cosmo_varied_{cosmo_idx}/cosmo.info'
-        cache[cosmo_idx] = {k: get_setting_from_info(cosmo_file, k) for k in keys}
+        result = subprocess.run(f'{codebase}/sample_prior {cosmo_idx} '\
+                                f'5 {codebase}/mu_cov_plikHM_TTTEEE_lowl_lowE.dat '\
+                                f'1 {codebase}/mnu_prior.dat',
+                                shell=True, capture_output=True, check=True)
+        cache[cosmo_idx] = dict(zip(keys, map(float, result.stdout.split(','))))
     return cache[cosmo_idx]
 
 

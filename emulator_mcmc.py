@@ -18,17 +18,22 @@ with np.load('/tigress/lthiele/emulator_data_RMIN30.0_RMAX80.0_NBINS32_ZEDGES0.5
     hists  = f['hists']
     values = f['values']
 
-# uniform priors for the HOD parameters
-NCOSMO = 6
+# uniform priors for the HOD parameters + mnu
+NCOSMO = 5
 hod_theta_min = np.min(params[:, NCOSMO:], axis=0)
 hod_theta_max = np.max(params[:, NCOSMO:], axis=0)
 delta = hod_theta_max - hod_theta_min
-eps = 0.02
+eps = 0.01
 hod_theta_min += eps * delta
 hod_theta_max -= eps * delta
 
+# the Gaussian prior on 5-parameter LCDM
+mu_cov_fname = '/tigress/lthiele/mu_cov_plikHM_TTTEEE_lowl_lowE.dat'
+mu_LCDM = np.loadtxt(mu_cov_fname, max_rows=1)
+cov_LCDM = np.loadtxt(mu_cov_fname, skiprows=3)
+
 # more complicated prior for the cosmology
-del_tess = Delaunay(params[:, :NCOSMO])
+# del_tess = Delaunay(params[:, :NCOSMO])
 
 class MLPLayer(nn.Sequential) :
     def __init__(self, Nin, Nout, activation=nn.LeakyReLU) :
@@ -48,11 +53,17 @@ model = MLP(params.shape[1], hists.shape[1])
 model.load_state_dict(torch.load('vsf_mlp.pt', map_location='cpu'))
 
 def logprior(theta) :
+    
+    # hod+mnu part
     if not np.all((hod_theta_min<=theta[NCOSMO:])*(theta[NCOSMO:]<=hod_theta_max)) :
         return -np.inf
-    if del_tess.find_simplex(theta[:NCOSMO]).item() == -1 :
-        return -np.inf
-    return 0.0
+#    if del_tess.find_simplex(theta[:NCOSMO]).item() == -1 :
+#        return -np.inf
+    
+    # LCDM part
+    d = theta - mu_LCDM
+    lp_lcdm = -0.5 * np.einsum('i,ij,j->', d, cov_LCDM, d)
+    return lp_lcdm
 
 def loglike(theta) :
     mu = model(torch.from_numpy(theta).to(dtype=torch.float32)).detach().cpu().numpy() + 1e-8

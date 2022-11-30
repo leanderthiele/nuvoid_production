@@ -10,6 +10,11 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
+if torch.cuda.is_available() :
+    device = 'gpu'
+else :
+    device = 'cpu'
+
 VALIDATION_FRAC = 0.2
 
 data_file = argv[1]
@@ -30,10 +35,10 @@ train_hists = hists[~validation_select]
 validation_params = params[validation_select]
 validation_hists = hists[validation_select]
 
-train_params = torch.from_numpy(train_params.astype(np.float32))
-train_hists = torch.from_numpy(train_hists.astype(np.float32))
-validation_params = torch.from_numpy(validation_params.astype(np.float32))
-validation_hists = torch.from_numpy(validation_hists.astype(np.float32))
+train_params = torch.from_numpy(train_params.astype(np.float32)).to(device=device)
+train_hists = torch.from_numpy(train_hists.astype(np.float32)).to(device=device)
+validation_params = torch.from_numpy(validation_params.astype(np.float32)).to(device=device)
+validation_hists = torch.from_numpy(validation_hists.astype(np.float32)).to(device=device)
 
 class MLPLayer(nn.Sequential) :
     def __init__(self, Nin, Nout, activation=nn.LeakyReLU) :
@@ -69,7 +74,7 @@ validation_set = TensorDataset(validation_params, validation_hists)
 train_loader = DataLoader(train_set)
 validation_loader = DataLoader(validation_set)
 
-model = MLP(train_params.shape[1], train_hists.shape[1])
+model = MLP(train_params.shape[1], train_hists.shape[1]).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 loss = Loss()
 

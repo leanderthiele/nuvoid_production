@@ -18,6 +18,10 @@ with np.load('/tigress/lthiele/emulator_data_RMIN30.0_RMAX80.0_NBINS32_ZEDGES0.5
 
 theta_min = np.min(params, axis=0)
 theta_max = np.max(params, axis=0)
+delta = theta_max - theta_min
+eps = 0.05
+theta_min += eps * delta
+theta_max -= eps * delta
 
 class MLPLayer(nn.Sequential) :
     def __init__(self, Nin, Nout, activation=nn.LeakyReLU) :
@@ -61,7 +65,7 @@ if __name__ == '__main__' :
 
     rng = np.random.default_rng(42)
     theta_init = rng.uniform(theta_min, theta_max, size=(NWALKERS, NDIM))
-    sampler.run_mcmc(theta_init, 10000, progress=True)
+    sampler.run_mcmc(theta_init, 100000, progress=True)
 
     chain = sampler.get_chain()
     np.save('vsf_mcmc_chain.npy', chain)

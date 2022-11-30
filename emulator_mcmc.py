@@ -22,8 +22,8 @@ with np.load('/tigress/lthiele/emulator_data_RMIN30.0_RMAX80.0_NBINS32_ZEDGES0.5
 NCOSMO = 6
 hod_theta_min = np.min(params[:, NCOSMO:], axis=0)
 hod_theta_max = np.max(params[:, NCOSMO:], axis=0)
-hod_delta = theta_max - theta_min
-eps = 0.05
+delta = hod_theta_max - hod_theta_min
+eps = 0.02
 hod_theta_min += eps * delta
 hod_theta_max -= eps * delta
 
@@ -48,7 +48,7 @@ model = MLP(params.shape[1], hists.shape[1])
 model.load_state_dict(torch.load('vsf_mlp.pt', map_location='cpu'))
 
 def logprior(theta) :
-    if not np.all((hod_theta_min<=theta[NCOSMO:])*(theta[NCOSMO:]<=hodtheta_max)) :
+    if not np.all((hod_theta_min<=theta[NCOSMO:])*(theta[NCOSMO:]<=hod_theta_max)) :
         return -np.inf
     if del_tess.find_simplex(theta[:NCOSMO]).item() == -1 :
         return -np.inf
@@ -80,7 +80,8 @@ if __name__ == '__main__' :
     chain = sampler.get_chain()
     np.save('vsf_mcmc_chain.npy', chain)
 
-    autocorr_times = sampler.get_autocorr_time()
     acceptance_rates = sampler.acceptance_fraction
+    print(f'acceptance={acceptance_rates}')
 
-    print(f'autocorr={autocorr_times}\n, acceptance={acceptance_rates}')
+    autocorr_times = sampler.get_autocorr_time()
+    print(f'autocorr={autocorr_times}')

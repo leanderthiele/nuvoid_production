@@ -61,4 +61,12 @@ if __name__ == '__main__' :
 
     rng = np.random.default_rng(42)
     theta_init = rng.uniform(theta_min, theta_max, size=(NWALKERS, NDIM))
-    sampler.run_mcmc(theta_init, 1000, progress=True)
+    sampler.run_mcmc(theta_init, 10000, progress=True)
+
+    chain = sampler.get_chain()
+    np.save('vsf_mcmc_chain.npy', chain)
+
+    autocorr_times = sampler.get_autocorr_time()
+    acceptance_rates = sampler.acceptance_fraction
+
+    print(f'autocorr={autocorr_times}\n, acceptance={acceptance_rates}')

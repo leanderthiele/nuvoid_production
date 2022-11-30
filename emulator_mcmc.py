@@ -29,6 +29,9 @@ hod_theta_max -= eps * delta
 
 # the Gaussian prior on 5-parameter LCDM
 # FIXME this is wrong! We need to transform to CMB parameterization first!!!
+#       probably best to do this from the sample drawing code,
+#       need to do this during emulator data set construction,
+#       and retrain the emulator...
 mu_cov_fname = '/tigress/lthiele/mu_cov_plikHM_TTTEEE_lowl_lowE.dat'
 mu_LCDM = np.loadtxt(mu_cov_fname, max_rows=1)
 cov_LCDM = np.loadtxt(mu_cov_fname, skiprows=3)

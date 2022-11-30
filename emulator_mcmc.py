@@ -61,7 +61,7 @@ def logprior(theta) :
 #        return -np.inf
     
     # LCDM part
-    d = theta - mu_LCDM
+    d = theta[:NCOSMO] - mu_LCDM
     lp_lcdm = -0.5 * np.einsum('i,ij,j->', d, cov_LCDM, d)
     return lp_lcdm
 

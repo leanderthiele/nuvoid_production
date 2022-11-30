@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import numpy as np
 from scipy.special import gammaln, xlogy
+from scipy.spatial import Delaunay
 
 import torch
 import torch.nn as nn
@@ -15,13 +16,19 @@ with np.load('/tigress/lthiele/emulator_data_RMIN30.0_RMAX80.0_NBINS32_ZEDGES0.5
     param_names = list(f['param_names'])
     params = f['params']
     hists  = f['hists']
+    values = f['values']
 
-theta_min = np.min(params, axis=0)
-theta_max = np.max(params, axis=0)
-delta = theta_max - theta_min
+# uniform priors for the HOD parameters
+NCOSMO = 6
+hod_theta_min = np.min(params[:, NCOSMO:], axis=0)
+hod_theta_max = np.max(params[:, NCOSMO:], axis=0)
+hod_delta = theta_max - theta_min
 eps = 0.05
-theta_min += eps * delta
-theta_max -= eps * delta
+hod_theta_min += eps * delta
+hod_theta_max -= eps * delta
+
+# more complicated prior for the cosmology
+del_tess = Delaunay(params[:, :NCOSMO])
 
 class MLPLayer(nn.Sequential) :
     def __init__(self, Nin, Nout, activation=nn.LeakyReLU) :
@@ -41,9 +48,11 @@ model = MLP(params.shape[1], hists.shape[1])
 model.load_state_dict(torch.load('vsf_mlp.pt', map_location='cpu'))
 
 def logprior(theta) :
-    if np.all((theta_min<=theta)*(theta<=theta_max)) :
-        return 0.0
-    return -np.inf
+    if not np.all((hod_theta_min<=theta[NCOSMO:])*(theta[NCOSMO:]<=hodtheta_max)) :
+        return -np.inf
+    if del_tess.find_simplex(theta[:NCOSMO]).item() == -1 :
+        return -np.inf
+    return 0.0
 
 def loglike(theta) :
     mu = model(torch.from_numpy(theta).to(dtype=torch.float32)).detach().cpu().numpy() + 1e-8
@@ -63,8 +72,9 @@ if __name__ == '__main__' :
 
     sampler = emcee.EnsembleSampler(NWALKERS, NDIM, logprob)
 
-    rng = np.random.default_rng(42)
-    theta_init = rng.uniform(theta_min, theta_max, size=(NWALKERS, NDIM))
+    s = np.argsort(values)[::-1]
+    theta_init = params[s[:NWALKERS]]
+
     sampler.run_mcmc(theta_init, 100000, progress=True)
 
     chain = sampler.get_chain()

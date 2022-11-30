@@ -79,6 +79,7 @@ def get_loglike(void_file, cache={}) :
     if not cache :
         cache['cmass_hist'], _ = get_hist(f'/tigress/lthiele/boss_dr12/voids/sample_test/'\
                                           f'{vide_out}_centers_central_test.out')
+        print(cache['cmass_hist'])
         assert cache['cmass_hist'] is not None
         cache['total_bins'] = NBINS * ( len(ZEDGES) + 1 )
     sim_hist_str, sim_hist_arr = get_hist(void_file)

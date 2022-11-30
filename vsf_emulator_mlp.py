@@ -11,9 +11,11 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
 if torch.cuda.is_available() :
-    device = 'gpu'
+    device = 'cuda'
 else :
     device = 'cpu'
+
+torch.manual_seed(42)
 
 VALIDATION_FRAC = 0.2
 
@@ -35,6 +37,13 @@ train_hists = hists[~validation_select]
 validation_params = params[validation_select]
 validation_hists = hists[validation_select]
 
+# subsample training set to check convergence
+p = None
+if p is not None :
+    select = rng.choice([True, False], size=len(train_params), p=[p, 1.0-p])
+    train_params = train_params[select]
+    train_hists = train_hists[select]
+
 # normalize the inputs
 avg = np.mean(train_params, axis=0)
 std = np.std(train_params, axis=0)
@@ -46,11 +55,6 @@ train_hists = torch.from_numpy(train_hists.astype(np.float32)).to(device=device)
 validation_params = torch.from_numpy(validation_params.astype(np.float32)).to(device=device)
 validation_hists = torch.from_numpy(validation_hists.astype(np.float32)).to(device=device)
 
-train_params = torch.from_numpy(train_params.astype(np.float32))
-train_hists = torch.from_numpy(train_hists.astype(np.float32))
-validation_params = torch.from_numpy(validation_params.astype(np.float32))
-validation_hists = torch.from_numpy(validation_hists.astype(np.float32))
-
 class MLPLayer(nn.Sequential) :
     def __init__(self, Nin, Nout, activation=nn.LeakyReLU) :
         super().__init__(OrderedDict([('linear', nn.Linear(Nin, Nout, bias=True)),
@@ -58,7 +62,7 @@ class MLPLayer(nn.Sequential) :
                                      ]))
 
 class MLP(nn.Sequential) :
-    def __init__(self, Nin, Nout, Nlayers=8, Nhidden=1024) :
+    def __init__(self, Nin, Nout, Nlayers=4, Nhidden=512) :
         # output is manifestly positive so we use ReLU in the final layer
         super().__init__(*[MLPLayer(Nin if ii==0 else Nhidden,
                                     Nout if ii==Nlayers else Nhidden,
@@ -82,11 +86,12 @@ class Loss(nn.Module) :
 train_set = TensorDataset(train_params, train_hists)
 train_loader = DataLoader(train_set, batch_size=256)
 
+loss = Loss()
 model = MLP(train_params.shape[1], train_hists.shape[1]).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-loss = Loss()
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=200, gamma=0.1)
 
-for ii in range(1000) :
+for ii in range(400) :
     model.train()
     for jj, (x, y) in enumerate(train_loader) :
         optimizer.zero_grad()
@@ -94,6 +99,7 @@ for ii in range(1000) :
         l = loss(ypred, y)
         l.backward()
         optimizer.step()
+    scheduler.step()
 
     model.eval()
     ypred = model(train_params)
@@ -103,3 +109,11 @@ for ii in range(1000) :
     lvalidation = loss(ypred, validation_hists)
 
     print(f'iteration {ii:4}: {ltrain.item():8.2f}\t{lvalidation.item():8.2f}')
+
+model.eval()
+ypred = model(validation_params)
+np.savez('vsf_mlp_test.npz',
+         truth=validation_hists.detach().cpu().numpy(),
+         prediction=ypred.detach().cpu().numpy())
+
+torch.save(model.state_dict(), 'vsf_mlp.pt')

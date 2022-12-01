@@ -19,6 +19,10 @@ with np.load('/tigress/lthiele/emulator_data_RMIN30.0_RMAX80.0_NBINS32_ZEDGES0.5
     hists  = f['hists']
     values = f['values']
 
+with np.load('vsf_mlp_norm.npz') as f :
+    norm_avg = f['avg']
+    norm_std = f['std']
+
 # uniform priors for the HOD parameters + mnu
 NCOSMO = 5
 hod_theta_min = np.min(params[:, NCOSMO:], axis=0)
@@ -69,6 +73,7 @@ def logprior(theta) :
     return lp_lcdm
 
 def loglike(theta) :
+    theta = norm_avg + theta * norm_std
     mu = model(torch.from_numpy(theta).to(dtype=torch.float32)).detach().cpu().numpy() + 1e-8
     return np.sum(xlogy(target_hist, mu) - mu - gammaln(1.0+target_hist))
 

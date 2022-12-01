@@ -82,7 +82,7 @@ def logprior(theta) :
 
 
 def loglike(theta) :
-    theta = norm_avg + theta * norm_std
+    theta = (theta - norm_avg) / norm_std
     mu = model(torch.from_numpy(theta).to(dtype=torch.float32)).detach().cpu().numpy() + 1e-8
     return np.sum(xlogy(target_hist, mu) - mu - gammaln(1.0+target_hist))
 

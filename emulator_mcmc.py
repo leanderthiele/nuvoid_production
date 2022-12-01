@@ -12,6 +12,7 @@ import emcee
 
 # whether we do not allow points outside the convex hull
 # around our 5-D LCDM samples
+# If we set this to False the LCDM posterior gets unreasonably wide
 CONSTRAIN_CONVEX_HULL = True
 
 MCMC_STEPS = 100000
@@ -109,7 +110,7 @@ if __name__ == '__main__' :
 
         sampler.run_mcmc(theta_init, MCMC_STEPS, progress=True)
 
-        chain = sampler.get_chain(thin=30, discard=MCMC_STEPS//10)
+        chain = sampler.get_chain(thin=30, discard=MCMC_STEPS//5)
         np.save('vsf_mcmc_chain.npy', chain)
 
         acceptance_rates = sampler.acceptance_fraction

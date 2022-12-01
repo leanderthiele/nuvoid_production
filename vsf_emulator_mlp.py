@@ -50,6 +50,9 @@ std = np.std(train_params, axis=0)
 train_params = (train_params - avg[None, :]) / std[None, :]
 validation_params = (validation_params - avg[None, :]) / std[None, :]
 
+np.savez('vsf_mlp_norm.npz',
+         avg=avg, std=std)
+
 train_params = torch.from_numpy(train_params.astype(np.float32)).to(device=device)
 train_hists = torch.from_numpy(train_hists.astype(np.float32)).to(device=device)
 validation_params = torch.from_numpy(validation_params.astype(np.float32)).to(device=device)

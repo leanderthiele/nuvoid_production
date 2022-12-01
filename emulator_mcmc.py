@@ -12,7 +12,9 @@ import emcee
 
 # whether we do not allow points outside the convex hull
 # around our 5-D LCDM samples
-COSTRAIN_CONVEX_HULL = False
+CONSTRAIN_CONVEX_HULL = True
+
+MCMC_STEPS = 100000
 
 # the cmass data
 target_hist = np.array([58,62,51,54,47,44,41,42,42,25,30,19,18,27,14,9,9,5,7,4,6,1,2,2,1,0,0,1,2,0,0,0,57,56,67,48,45,53,41,45,49,37,39,50,49,36,28,17,17,33,15,13,14,7,5,12,6,6,2,4,0,1,2,0])
@@ -105,9 +107,9 @@ if __name__ == '__main__' :
     with Pool() as pool :
         sampler = emcee.EnsembleSampler(NWALKERS, NDIM, logprob, pool=pool)
 
-        sampler.run_mcmc(theta_init, 100000, progress=True)
+        sampler.run_mcmc(theta_init, MCMC_STEPS, progress=True)
 
-        chain = sampler.get_chain()
+        chain = sampler.get_chain(thin=30, discard=MCMC_STEPS//10)
         np.save('vsf_mcmc_chain.npy', chain)
 
         acceptance_rates = sampler.acceptance_fraction

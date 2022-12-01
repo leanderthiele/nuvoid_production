@@ -33,7 +33,8 @@ def get_cosmo(cosmo_idx, cache={}) :
                                 f'5 {codebase}/mu_cov_plikHM_TTTEEE_lowl_lowE.dat '\
                                 f'1 {codebase}/mnu_prior.dat',
                                 shell=True, capture_output=True, check=True)
-        cache[cosmo_idx] = dict(zip(keys, map(float, result.stdout.split(','))))
+        cache[cosmo_idx] = dict(zip(keys, map(float, result.stdout.split(b','))))
+        print(f'{cosmo_idx} ns={cache[cosmo_idx]["ns"]}')
     return cache[cosmo_idx]
 
 

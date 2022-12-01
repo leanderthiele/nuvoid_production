@@ -10,6 +10,10 @@ import torch.nn as nn
 
 import emcee
 
+# whether we do not allow points outside the convex hull
+# around our 5-D LCDM samples
+COSTRAIN_CONVEX_HULL = False
+
 # the cmass data
 target_hist = np.array([58,62,51,54,47,44,41,42,42,25,30,19,18,27,14,9,9,5,7,4,6,1,2,2,1,0,0,1,2,0,0,0,57,56,67,48,45,53,41,45,49,37,39,50,49,36,28,17,17,33,15,13,14,7,5,12,6,6,2,4,0,1,2,0])
 
@@ -38,7 +42,8 @@ mu_LCDM = np.loadtxt(mu_cov_fname, max_rows=1)
 cov_LCDM = np.loadtxt(mu_cov_fname, skiprows=3)
 
 # more complicated prior for the cosmology
-del_tess = Delaunay(params[:, :NCOSMO])
+if CONSTRAIN_CONVEX_HULL :
+    del_tess = Delaunay(params[:, :NCOSMO])
 
 class MLPLayer(nn.Sequential) :
     def __init__(self, Nin, Nout, activation=nn.LeakyReLU) :
@@ -57,6 +62,7 @@ class MLP(nn.Sequential) :
 model = MLP(params.shape[1], hists.shape[1])
 model.load_state_dict(torch.load('vsf_mlp.pt', map_location='cpu'))
 
+
 def logprior(theta) :
     
     # hod+mnu part
@@ -64,7 +70,7 @@ def logprior(theta) :
         return -np.inf
 
     # make sure emulator is valid
-    if del_tess.find_simplex(theta[:NCOSMO]).item() == -1 :
+    if CONSTRAIN_CONVEX_HULL and del_tess.find_simplex(theta[:NCOSMO]).item() == -1 :
         return -np.inf
     
     # LCDM part
@@ -72,10 +78,12 @@ def logprior(theta) :
     lp_lcdm = -0.5 * np.einsum('i,ij,j->', d, cov_LCDM, d)
     return lp_lcdm
 
+
 def loglike(theta) :
     theta = norm_avg + theta * norm_std
     mu = model(torch.from_numpy(theta).to(dtype=torch.float32)).detach().cpu().numpy() + 1e-8
     return np.sum(xlogy(target_hist, mu) - mu - gammaln(1.0+target_hist))
+
 
 def logprob(theta) :
     lp = logprior(theta)
@@ -83,6 +91,7 @@ def logprob(theta) :
         return -np.inf
     ll = loglike(theta)
     return lp + ll
+
 
 if __name__ == '__main__' :
 

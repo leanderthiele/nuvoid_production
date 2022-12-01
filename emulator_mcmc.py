@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from multiprocessing import Pool, cpu_count
 
 import numpy as np
 from scipy.special import gammaln, xlogy
@@ -33,7 +34,7 @@ mu_LCDM = np.loadtxt(mu_cov_fname, max_rows=1)
 cov_LCDM = np.loadtxt(mu_cov_fname, skiprows=3)
 
 # more complicated prior for the cosmology
-# del_tess = Delaunay(params[:, :NCOSMO])
+del_tess = Delaunay(params[:, :NCOSMO])
 
 class MLPLayer(nn.Sequential) :
     def __init__(self, Nin, Nout, activation=nn.LeakyReLU) :
@@ -42,7 +43,7 @@ class MLPLayer(nn.Sequential) :
                                      ]))
 
 class MLP(nn.Sequential) :
-    def __init__(self, Nin, Nout, Nlayers=4, Nhidden=512) :
+    def __init__(self, Nin, Nout, Nlayers=8, Nhidden=512) :
         # output is manifestly positive so we use ReLU in the final layer
         super().__init__(*[MLPLayer(Nin if ii==0 else Nhidden,
                                     Nout if ii==Nlayers else Nhidden,
@@ -57,8 +58,10 @@ def logprior(theta) :
     # hod+mnu part
     if not np.all((hod_theta_min<=theta[NCOSMO:])*(theta[NCOSMO:]<=hod_theta_max)) :
         return -np.inf
-#    if del_tess.find_simplex(theta[:NCOSMO]).item() == -1 :
-#        return -np.inf
+
+    # make sure emulator is valid
+    if del_tess.find_simplex(theta[:NCOSMO]).item() == -1 :
+        return -np.inf
     
     # LCDM part
     d = theta[:NCOSMO] - mu_LCDM
@@ -81,18 +84,20 @@ if __name__ == '__main__' :
     NWALKERS = 128
     NDIM = params.shape[1]
 
-    sampler = emcee.EnsembleSampler(NWALKERS, NDIM, logprob)
-
     s = np.argsort(values)[::-1]
     theta_init = params[s[:NWALKERS]]
 
-    sampler.run_mcmc(theta_init, 100000, progress=True)
+    print(f'Running on {cpu_count()} CPUs')
+    with Pool() as pool :
+        sampler = emcee.EnsembleSampler(NWALKERS, NDIM, logprob, pool=pool)
 
-    chain = sampler.get_chain()
-    np.save('vsf_mcmc_chain.npy', chain)
+        sampler.run_mcmc(theta_init, 100000, progress=True)
 
-    acceptance_rates = sampler.acceptance_fraction
-    print(f'acceptance={acceptance_rates}')
+        chain = sampler.get_chain()
+        np.save('vsf_mcmc_chain.npy', chain)
 
-    autocorr_times = sampler.get_autocorr_time()
-    print(f'autocorr={autocorr_times}')
+        acceptance_rates = sampler.acceptance_fraction
+        print(f'acceptance={acceptance_rates}')
+
+        autocorr_times = sampler.get_autocorr_time()
+        print(f'autocorr={autocorr_times}')

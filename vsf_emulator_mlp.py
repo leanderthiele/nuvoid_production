@@ -62,7 +62,7 @@ class MLPLayer(nn.Sequential) :
                                      ]))
 
 class MLP(nn.Sequential) :
-    def __init__(self, Nin, Nout, Nlayers=4, Nhidden=512) :
+    def __init__(self, Nin, Nout, Nlayers=8, Nhidden=512) :
         # output is manifestly positive so we use ReLU in the final layer
         super().__init__(*[MLPLayer(Nin if ii==0 else Nhidden,
                                     Nout if ii==Nlayers else Nhidden,
@@ -84,12 +84,12 @@ class Loss(nn.Module) :
                / pred.shape[0]
 
 train_set = TensorDataset(train_params, train_hists)
-train_loader = DataLoader(train_set, batch_size=256)
+train_loader = DataLoader(train_set, batch_size=1024)
 
 loss = Loss()
 model = MLP(train_params.shape[1], train_hists.shape[1]).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=200, gamma=0.1)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.3)
 
 for ii in range(400) :
     model.train()

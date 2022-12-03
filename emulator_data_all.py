@@ -12,6 +12,7 @@ codebase = '/home/lthiele/nuvoid_production'
 database = '/scratch/gpfs/lthiele/nuvoid_production'
 
 MAX_COUNT = 2000 # maximum number of voids supported
+RMIN = 30
 
 def get_setting_from_info(fname, name) :
     with open(fname, 'r') as f :
@@ -64,6 +65,7 @@ param_names = None
 params = []
 radii  = []
 redshifts = []
+cosmo_indices = []
 
 for f in tqdm(void_files) :
     cosmo_idx, hod_hash = split_path(f)
@@ -78,14 +80,19 @@ for f in tqdm(void_files) :
         R, z = np.loadtxt(f, usecols=(4,5,), unpack=True)
     except ValueError :
         continue
+    select = R > RMIN
+    R = R[select]
+    z = z[select]
     R = np.concatenate([R, np.full(MAX_COUNT-len(R), -1)]).astype(np.float32)
     z = np.concatenate([z, np.full(MAX_COUNT-len(z), -1)]).astype(np.float32)
     radii.append(R)
     redshifts.append(z)
     params.append(list(cosmo.values()) + list(hod.values()))
+    cosmo_indices.append(cosmo_idx)
 
-np.savez(f'all_emulator_data_{vide_out}.npz',
+np.savez(f'all_emulator_data_RMIN{RMIN}_{vide_out}.npz',
          param_names=param_names,
+         cosmo_indices=np.array(cosmo_indices, dtype=int),
          params=np.array(params, dtype=np.float32),
          radii=np.array(radii, dtype=np.float32),
          redshifts=np.array(redshifts, dtype=np.float32))

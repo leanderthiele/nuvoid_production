@@ -6,14 +6,14 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataSet, DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset
 
 if torch.cuda.is_available() :
     device = 'cuda'
 else :
     device = 'cpu'
 
-torch.manual_seed(42)
+torch.manual_seed(137)
 rng = np.random.default_rng(42)
 
 VALIDATION_FRAC = 0.2
@@ -55,6 +55,7 @@ validation_hists = torch.from_numpy(validation_hists.astype(np.float32)).to(devi
 
 # mask giving the real voids
 train_not_fake = (train_z>0) * (train_R>0)
+train_not_fake = torch.from_numpy(train_not_fake).to(device=device)
 
 avg = np.mean(train_x, axis=0)
 std = np.std(train_x, axis=0)
@@ -83,14 +84,14 @@ class MLP(nn.Sequential) :
         self.Nout = Nout
         super().__init__(*[MLPLayer(Nin if ii==0 else Nhidden,
                                     Nout if ii==Nlayers else Nhidden,
-                                    activation=(nn.LeakyReLU if ii!=Nlayers and out_positive else nn.ReLU))
+                                    activation=(nn.LeakyReLU if (ii!=Nlayers or not out_positive) else nn.ReLU))
                            for ii in range(Nlayers+1)])
 
 class CDFModel(nn.Module) :
-    def __init__(self, Nin, Nlayers=4, Nhidden=512) :
+    def __init__(self, Nin, Nlayers=2, Nhidden=512) :
         super().__init__()
         self.mlp1 = MLP(Nin, Nhidden, Nlayers, Nhidden, out_positive=False)
-        self.mlp2 = MLP(self.mlp1.Nout+2, 1, Nlayers, Nhidden)
+        self.mlp2 = MLP(self.mlp1.Nout+2, 1, Nlayers, Nhidden, out_positive=True)
     @staticmethod
     def _norm_edge(x, lo, hi) :
         return (x-0.5*(lo+hi))/(hi-lo)
@@ -101,24 +102,26 @@ class CDFModel(nn.Module) :
         batch = x.shape[0]
         x = self.mlp1(x) # output [batch, latent]
         ld = edge.shape[:-1]
-        edge = edge.reshape(-1, 2)
-        edge[:, 0] = CDFModel._norm_edge(edge[:, 0], ZMIN, ZMAX)
-        edge[:, 1] = CDFModel._norm_edge(edge[:, 1], RMIN, RMAX)
-        x = torch.cat([torch.unsqueeze(x, 1).expand(-1, edge.shape[0], -1),
-                       torch.unsqueeze(edge, 0).expand(x.shape[0], -1, -1)],
+        edge1 = torch.clone(edge).reshape(-1, 2)
+        edge1[:, 0] = CDFModel._norm_edge(edge1[:, 0], ZMIN, ZMAX)
+        edge1[:, 1] = CDFModel._norm_edge(edge1[:, 1], RMIN, RMAX)
+        x = torch.cat([torch.unsqueeze(x, 1).expand(-1, edge1.shape[0], -1),
+                       torch.unsqueeze(edge1, 0).expand(x.shape[0], -1, -1)],
                        dim=-1)
         x = self.mlp2(x).reshape(batch, *ld)
-        return x + 1e-8 # avoid zero below
+        return x + 1e-8 # ensure positive
 
 class Loss(nn.Module) :
     # implements a Poisson likelihood, applicable to any count data
-    def __init__(self, norm_until) :
+    def __init__(self, norm_until=None) :
         super().__init__()
         self.norm_until = norm_until
     def forward(self, pred, targ) :
         # input shapes are arbitrary but identical
         x = - torch.sum(torch.special.xlogy(targ, pred) - pred - torch.special.gammaln(1.0+targ))
         if self.norm_until is not None :
+            print(pred.shape)
+            print(np.prod(pred.shape[:self.norm_until]))
             x /= np.prod(pred.shape[:self.norm_until])
         return x
 
@@ -153,16 +156,18 @@ def epoch_data(idx, Npoints) :
     all_valid = valid_R * valid_z * train_not_fake[:, None, :] # shape [batch, Npoints, void index]
     target = torch.sum(all_valid, dim=-1).to(dtype=torch.float32) # shape [batch, Npoints]
     edges = torch.stack([zedges, Redges], -1)
+    del all_valid
     return edges, target
 
 train_loss = Loss()
-test_loss = Loss(norm_until=2)
-model = CDFModel(params.shape[1])
+test_loss = Loss(norm_until=1)
+model = CDFModel(params.shape[1]).to(device=device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.3)
 
 hist_model = HistModel(test_zedges, test_Redges)
 
-for epoch in range(100) :
+for epoch in range(400) :
     model.train()
     edge, target = epoch_data(epoch, 64)
     train_set = TensorDataset(train_x, target)
@@ -171,8 +176,10 @@ for epoch in range(100) :
         optimizer.zero_grad()
         pred = model(x, edge)
         l = train_loss(pred, y)
+#        print(l)
         l.backward()
         optimizer.step()
+    scheduler.step()
 
     model.eval()
     pred = hist_model(model, train_x)
@@ -182,3 +189,10 @@ for epoch in range(100) :
     lvalidation = test_loss(pred, validation_hists)
 
     print(f'iteration {epoch:4}: {ltrain.item():8.2f}\t{lvalidation.item():8.2f}')
+
+# test
+model.eval()
+pred = hist_model(model, validation_x)
+np.savez('cdf_test.npz',
+         truth=validation_hists.detach().cpu().numpy(),
+         prediction=pred.detach().cpu().numpy())

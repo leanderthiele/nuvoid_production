@@ -72,7 +72,7 @@ train_z = torch.from_numpy(train_z.astype(np.float32)).to(device=device) # shape
 validation_z = torch.from_numpy(validation_z.astype(np.float32)).to(device=device)
 train_R = torch.from_numpy(train_R.astype(np.float32)).to(device=device) # shape [samples, 2000]
 validation_R = torch.from_numpy(validation_R.astype(np.float32)).to(device=device)
-train_d = torch.stack([train_z, train_R], dim=-1) # z, R, shape [samples, 2000, 2]
+train_d = torch.stack([train_z, train_R], dim=-1).to(device='cpu') # z, R, shape [samples, 2000, 2]
 
 class MLPLayer(nn.Sequential) :
     def __init__(self, Nin, Nout, activation=nn.LeakyReLU) :
@@ -91,7 +91,7 @@ class MLP(nn.Sequential) :
                            for ii in range(Nlayers+1)])
 
 class CDFModel(nn.Module) :
-    def __init__(self, Nin, Nlayers=2, Nhidden=512) :
+    def __init__(self, Nin, Nlayers=4, Nhidden=256) :
         super().__init__()
         self.mlp1 = MLP(Nin, Nhidden, Nlayers, Nhidden, out_positive=False)
         self.mlp2 = MLP(self.mlp1.Nout+2, 1, Nlayers, Nhidden, out_positive=True)
@@ -123,8 +123,6 @@ class Loss(nn.Module) :
         # input shapes are arbitrary but identical
         x = - torch.sum(torch.special.xlogy(targ, pred) - pred - torch.special.gammaln(1.0+targ))
         if self.norm_until is not None :
-            print(pred.shape)
-            print(np.prod(pred.shape[:self.norm_until]))
             x /= np.prod(pred.shape[:self.norm_until])
         return x
 
@@ -142,7 +140,7 @@ class HistModel(nn.Module) :
     def __call__(self, x, zedges, Redges) :
         
         edges = torch.stack(torch.meshgrid(zedges, Redges,indexing='ij'), dim=-1)
-        x = self.cdfmodel(x, self.edges) # shape [batch, z, R]
+        x = self.cdfmodel(x, edges) # shape [batch, z, R]
 
         # now apply the convolution to get bin counts, constrain to positive non-zero
         x = F.relu(F.conv2d(x.unsqueeze(1), self.weight).squeeze(1)) + 1e-8
@@ -155,20 +153,25 @@ def epoch_data(idx, NZ, NR) :
     zedges = np.concatenate([np.array([ZMIN,]), np.sort(rng_.uniform(ZMIN, ZMAX, size=NZ-1)), np.array([ZMAX,])])
     Redges = np.concatenate([np.array([RMIN,]), np.sort(rng_.uniform(RMIN, RMAX, size=NZ-1)), np.array([RMAX,])])
 
-    zedges = torch.from_numpy(zedges.astype(np.float32)).to(device=device)
-    Redges = torch.from_numpy(Redges.astype(np.float32)).to(device=device)
+    zedges = torch.from_numpy(zedges.astype(np.float32))
+    Redges = torch.from_numpy(Redges.astype(np.float32))
 
-    target = torch.cat([torch.histogramdd(data_, [zedges, Redges])).hist
+    target = torch.stack([torch.histogramdd(data_, [zedges, Redges]).hist
+                          for data_ in train_d],
+                         dim=0)
 
-    return zedges, Redges, target
+    return zedges.to(device=device), Redges.to(device=device), target.to(device=device)
+
+EPOCHS = 1000
 
 train_loss = Loss()
 test_loss = Loss(norm_until=1)
 model = HistModel(params.shape[1]).to(device=device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.3)
+# scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.3)
+scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=1e-3, total_steps=EPOCHS, verbose=True)
 
-for epoch in range(400) :
+for epoch in range(EPOCHS) :
     model.train()
     zedges, Redges, target = epoch_data(epoch, NZ=2, NR=32)
     train_set = TensorDataset(train_x, target)
@@ -197,3 +200,5 @@ pred = model(validation_x, test_zedges, test_Redges)
 np.savez('cdf_test.npz',
          truth=validation_hists.detach().cpu().numpy(),
          prediction=pred.detach().cpu().numpy())
+
+torch.save(model.state_dict(), 'cdf_model.pt')

@@ -63,11 +63,16 @@ print(f'Found {len(void_files)} void catalogs.')
 
 param_names = None
 params = []
+cosmo_indices = []
 radii  = []
 redshifts = []
 density_constrasts = []
 num_parts = []
-cosmo_indices = []
+ellips = []
+# not sure what these are...
+eig1s = []
+eig2s = []
+eig3s = []
 
 for f in tqdm(void_files) :
     cosmo_idx, hod_hash = split_path(f)
@@ -80,6 +85,7 @@ for f in tqdm(void_files) :
         assert param_names == param_names_
     try :
         R, z, density_contrast, num_part = np.loadtxt(f, usecols=(4,5,8,9), unpack=True)
+        ellip, eig1, eig2, eig3 = np.loadtxt(f.replace('centers', 'shapes'), usecols=(1,2,3,4), unpack=True)
     except ValueError :
         continue
     select = R > RMIN
@@ -87,14 +93,26 @@ for f in tqdm(void_files) :
     z = z[select]
     density_contrast = density_contrast[select]
     num_part = num_part[select]
+    ellip = ellip[select]
+    eig1 = eig1[select]
+    eig2 = eig2[select]
+    eig3 = eig3[select]
     R = np.concatenate([R, np.full(MAX_COUNT-len(R), -1)]).astype(np.float32)
     z = np.concatenate([z, np.full(MAX_COUNT-len(z), -1)]).astype(np.float32)
     density_contrast = np.concatenate([density_contrast, np.full(MAX_COUNT-len(density_contrast), -1)]).astype(np.float32)
     num_part = np.concatenate([num_part, np.full(MAX_COUNT-len(num_part), -1)]).astype(np.float32)
+    ellip = np.concatenate([ellip, np.full(MAX_COUNT-len(ellip), -1)]).astype(np.float32)
+    eig1 = np.concatenate([eig1, np.full(MAX_COUNT-len(eig1), -1)]).astype(np.float32)
+    eig2 = np.concatenate([eig2, np.full(MAX_COUNT-len(eig2), -1)]).astype(np.float32)
+    eig3 = np.concatenate([eig3, np.full(MAX_COUNT-len(eig3), -1)]).astype(np.float32)
     radii.append(R)
     redshifts.append(z)
     density_constrasts.append(density_contrast)
     num_parts.append(num_part)
+    ellips.append(ellip)
+    eig1.append(eig1)
+    eig2.append(eig2)
+    eig3.append(eig3)
     params.append(list(cosmo.values()) + list(hod.values()))
     cosmo_indices.append(cosmo_idx)
 
@@ -105,4 +123,8 @@ np.savez(f'all_emulator_data_RMIN{RMIN}_{vide_out}.npz',
          radii=np.array(radii, dtype=np.float32),
          redshifts=np.array(redshifts, dtype=np.float32),
          density_contrasts=np.array(density_constrasts, dtype=np.float32),
-         num_parts=np.array(num_parts, dtype=np.float32))
+         num_parts=np.array(num_parts, dtype=np.float32),
+         ellips=np.array(ellips, dtype=np.float32),
+         eig1s=np.array(eig1s, dtype=np.float32),
+         eig2s=np.array(eig2s, dtype=np.float32),
+         eig3s=np.array(eig3s, dtype=np.float32))

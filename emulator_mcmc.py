@@ -70,6 +70,9 @@ def logprior(theta) :
     if not np.all((hod_theta_min<=theta[NCOSMO:])*(theta[NCOSMO:]<=hod_theta_max)) :
         return -np.inf
 
+    # NOTE I have tried here to restrict log(M_0)>13, which would be in line with SIMBIG's choice
+    #      and initially looked like it would tighten the M_nu posterior. This didn't happen however.
+
     # make sure emulator is valid
     if CONSTRAIN_CONVEX_HULL and del_tess.find_simplex(theta[:NCOSMO]).item() == -1 :
         return -np.inf

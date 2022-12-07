@@ -41,7 +41,7 @@ Nvoids = np.count_nonzero(data_dict['radii']>0, axis=1)
 assert np.all(Nvoids == np.count_nonzero(data_dict['redshifts']>=0, axis=1))
 for v in data_dict.values() :
     assert np.all(Nvoids == np.count_nonzero(v>=0, axis=1))
-    assert all(np.all(x[:n]>=0) for x in zip(v, Nvoids))
+    assert all(np.all(x[:n]>=0) for x, n in zip(v, Nvoids))
 
 # validation_select = rng.choice([True, False], size=len(radii), p=[VALIDATION_FRAC, 1-VALIDATION_FRAC])
 
@@ -57,11 +57,11 @@ N_avg = np.mean(train_N.astype(float))
 N_std = np.std(train_N.astype(float))
 
 # shape [Nsamples, void index, 2]
-data = np.stack(data_dict.values(), axis=-1)
+data = np.stack(list(data_dict.values()), axis=-1)
 norm_Nvoids = (Nvoids.astype(float) - N_avg) / N_std
 
-TARGET_IDX = 5 # M_nu
-# TARGET_IDX = 15 # mu_Mmin
+# TARGET_IDX = 5 # M_nu
+TARGET_IDX = 15 # mu_Mmin
 # TARGET_IDX = 8 # log_Mmin
 
 train_params = params[~validation_select]
@@ -150,22 +150,24 @@ class Loss(nn.Module) :
     # simple MSE at the moment
     def __init__(self) :
         super().__init__()
-        #self.l = nn.MSELoss(reduction='mean')
-        self.l = nn.HuberLoss(reduction='mean', delta=0.05)
+        self.l = nn.MSELoss(reduction='mean')
+        #self.l = nn.HuberLoss(reduction='mean', delta=0.05)
     def forward(self, pred, targ) :
         return self.l(pred, targ)
 
 EPOCHS = 20
 
 loss = Loss()
-model = DeepSet(data.shape[-1], 1, Nlatent=16, Ncontext=1, Nds=4).to(device=device)
+model = DeepSet(data.shape[-1], 1, Nlatent=16, Ncontext=1, Nds=1).to(device=device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=1e-2, total_steps=EPOCHS, verbose=True)
 
 train_set = TensorDataset(train_data, train_Nvoids, train_norm_Nvoids, train_target)
 train_loader = DataLoader(train_set, batch_size=256)
 validation_set = TensorDataset(validation_data, validation_Nvoids, validation_norm_Nvoids, validation_target)
-validation_loader = DataLoader(validation_set, batch_size=256)
+
+# no shuffling is super important!
+validation_loader = DataLoader(validation_set, batch_size=256, shuffle=False)
 
 for epoch in range(EPOCHS) :
     
@@ -180,7 +182,7 @@ for epoch in range(EPOCHS) :
         optimizer.step()
     scheduler.step()
 
-    ltrain = np.mean(np.array(ltrain))
+    ltrain = np.sqrt(np.mean(np.array(ltrain)))
 
     model.eval()
 
@@ -190,14 +192,17 @@ for epoch in range(EPOCHS) :
         l = loss(pred, y)
         lvalidation.append(l.item())
 
-    lvalidation = np.mean(np.array(lvalidation))
+    lvalidation = np.sqrt(np.mean(np.array(lvalidation)))
 
     print(f'iteration {epoch:4}: {ltrain:8.4f}\t{lvalidation:8.4f}')
 
 model.eval()
 predictions = []
+truth = []
 for ii, (x, n, nnorm, y) in enumerate(validation_loader) :
     pred = model(x, n, nnorm)
     predictions.extend(pred.squeeze().detach().cpu().numpy())
+    truth.extend(y.squeeze().cpu().numpy())
 predictions = np.array(predictions)
-np.savez('deepset_test.npz', predictions=predictions, truth=validation_target.squeeze().cpu().numpy())
+truth = np.array(truth)
+np.savez('deepset_test.npz', predictions=predictions, truth=truth)

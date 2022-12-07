@@ -26,6 +26,9 @@ with np.load(data_file) as f :
     params = f['params']
     hists  = f['hists']
 
+# deal with non-trivial dimensions
+hists = hists.reshape(hists.shape[0], -1)
+
 N = len(params)
 assert N == hists.shape[0]
 

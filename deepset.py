@@ -1,4 +1,5 @@
 from sys import argv
+from collections import OrderedDict
 
 import numpy as np
 
@@ -29,13 +30,20 @@ assert np.all(Nvoids == np.count_nonzero(redshifts>0, axis=1))
 assert all(np.all(x[:n]>0) for x, n in zip(radii, Nvoids))
 assert all(np.all(x[:n]>0) for x, n in zip(redshifts, Nvoids))
 
+# normalizations
+R_avg = np.mean(radii[radii>0])
+R_std = np.std(radii[radii>0])
+z_avg = np.mean(redshifts[radii>0])
+z_std = np.std(redshifts[radii>0])
+
 # shape [Nsamples, void index, 2]
-data = np.stack([radii, redshifts], axis=-1)
+data = np.stack([(radii-R_avg)/R_std, (redshifts-z_avg)/z_std], axis=-1)
 
 rng = np.random.default_rng(42)
 validation_select = rng.choice([True, False], size=len(radii), p=[VALIDATION_FRAC, 1-VALIDATION_FRAC])
 
-TARGET_IDX = 5 # M_nu
+# TARGET_IDX = 5 # M_nu
+TARGET_IDX = 15 # mu_Mmin
 
 train_params = params[~validation_select]
 train_data = data[~validation_select]
@@ -62,7 +70,7 @@ class MLPLayer(nn.Sequential) :
                                      ]))
 
 class MLP(nn.Sequential) :
-    def __init__(self, Nin, Nout, Nlayers=8, Nhidden=512, out_positive=True) :
+    def __init__(self, Nin, Nout, Nlayers=2, Nhidden=256, out_positive=True) :
         # output is manifestly positive so we use ReLU in the final layer
         self.Nin = Nin
         self.Nout = Nout
@@ -97,14 +105,15 @@ class DeepSet(nn.Module) :
     def __init__(self, Nin, Nout, Ncontext, *args, **kwargs) :
         # Ncontext should be a list of intermediate context dimensions, or None if only a single DeepSetLayer
         # should be used
+        # TODO we need to use the overall number of voids as a global context!!!
         self.Nin = Nin
         self.Nout = Nout
         self.Ncontext = list() if Ncontext is None else Ncontext
-        self.Nlayers = len(Ncontext)+1
+        self.Nlayers = len(self.Ncontext)+1
         super().__init__()
         self.layers = nn.ModuleList([DeepSetLayer(Nin,
-                                                  Nout if ii==self.Nlayers-1 else Ncontext[ii],
-                                                  other_dim=None if ii==0 else Ncontext[ii-1],
+                                                  Nout if ii==self.Nlayers-1 else self.Ncontext[ii],
+                                                  other_dim=None if ii==0 else self.Ncontext[ii-1],
                                                   *args, **kwargs)
                                      for ii in range(self.Nlayers)])
     def forward(self, x, N) :
@@ -124,28 +133,36 @@ class Loss(nn.Module) :
 EPOCHS = 100
 
 loss = Loss()
-model = DeepSet(data.shape[-1], 1, None).to(device=device)
+model = DeepSet(data.shape[-1], 1, [16,]).to(device=device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
 train_set = TensorDataset(train_data, train_Nvoids, train_target)
 train_loader = DataLoader(train_set, batch_size=256)
+validation_set = TensorDataset(validation_data, validation_Nvoids, validation_target)
+validation_loader = DataLoader(validation_set, batch_size=2048)
 
 for epoch in range(EPOCHS) :
     
     model.train()
+    ltrain = []
     for ii, (x, n, y) in enumerate(train_loader) :
         optimizer.zero_grad()
         pred = model(x, n)
         l = loss(pred, y)
+        ltrain.append(l.item())
         l.backward()
         optimizer.step()
 
+    ltrain = np.sqrt(np.mean(np.array(ltrain)))
+
     model.eval()
 
-    pred = model(train_data, train_Nvoids)
-    ltrain = loss(pred, train_target)
+    lvalidation = []
+    for ii, (x, n, y) in enumerate(validation_loader) :
+        pred = model(x, n)
+        l = loss(pred, y)
+        lvalidation.append(l.item())
 
-    pred = model(validation_data, validation_Nvoids)
-    lvalidation = loss(pred, validation_target)
+    lvalidation = np.sqrt(np.mean(np.array(lvalidation)))
 
-    print(f'iteration {epoch:4}: {ltrain.item():8.2f}\t{lvalidation.item():8.2f}')
+    print(f'iteration {epoch:4}: {ltrain:8.2f}\t{lvalidation:8.2f}')

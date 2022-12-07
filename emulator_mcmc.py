@@ -17,18 +17,16 @@ CONSTRAIN_CONVEX_HULL = True
 
 MCMC_STEPS = 100000
 
-# the cmass data
-target_hist = np.array([58,62,51,54,47,44,41,42,42,25,30,19,18,27,14,9,9,5,7,4,6,1,2,2,1,0,0,1,2,0,0,0,57,56,67,48,45,53,41,45,49,37,39,50,49,36,28,17,17,33,15,13,14,7,5,12,6,6,2,4,0,1,2,0])
-
-with np.load('/tigress/lthiele/emulator_data_RMIN30.0_RMAX80.0_NBINS32_ZEDGES0.53_untrimmed_dencut.npz') as f :
-    param_names = list(f['param_names'])
-    params = f['params']
-    hists  = f['hists']
-    values = f['values']
-
 with np.load('vsf_mlp_norm.npz') as f :
     norm_avg = f['avg']
     norm_std = f['std']
+
+with np.load('hists.npz') as f :
+    target_hist = f['hist_cmass'].flatten()
+    param_names = list(f['param_names'])
+    params = f['params']
+    hists  = f['hists']
+hists = hists.reshape(hists.shape[0], -1)
 
 # uniform priors for the HOD parameters + mnu
 NCOSMO = 5
@@ -101,8 +99,7 @@ if __name__ == '__main__' :
     NWALKERS = 128
     NDIM = params.shape[1]
 
-    s = np.argsort(values)[::-1]
-    theta_init = params[s[:NWALKERS]]
+    theta_init = np.load('vsf_mcmc_chain_wconvexhull.npy')[-1]
 
     print(f'Running on {cpu_count()} CPUs')
     with Pool() as pool :

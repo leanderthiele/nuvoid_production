@@ -110,9 +110,9 @@ for f in tqdm(void_files) :
     density_constrasts.append(density_contrast)
     num_parts.append(num_part)
     ellips.append(ellip)
-    eig1.append(eig1)
-    eig2.append(eig2)
-    eig3.append(eig3)
+    eig1s.append(eig1)
+    eig2s.append(eig2)
+    eig3s.append(eig3)
     params.append(list(cosmo.values()) + list(hod.values()))
     cosmo_indices.append(cosmo_idx)
 

@@ -17,12 +17,16 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 rng = np.random.default_rng(42)
 
+data_dict = dict()
+
 with np.load(datafile) as f :
     param_names = f['param_names']
     cosmo_indices = f['cosmo_indices']
     params = f['params']
-    radii = f['radii']
-    redshifts = f['redshifts']
+    data_dict['redshifts'] = f['redshifts']
+    data_dict['radii'] = f['radii']
+    data_dict['density_contrasts'] = f['density_contrasts']
+    data_dict['num_parts'] = f['num_parts']
 
 uniq_cosmo_indices = np.unique(cosmo_indices)
 validation_cosmo_indices = rng.choice(uniq_cosmo_indices, replace=False,
@@ -30,30 +34,30 @@ validation_cosmo_indices = rng.choice(uniq_cosmo_indices, replace=False,
 validation_select = np.array([idx in validation_cosmo_indices for idx in cosmo_indices], dtype=bool)
 print(f'validation Mnu: {np.unique(params[validation_select, 5])}')
 
-
 # number of voids per sample
-Nvoids = np.count_nonzero(radii>0, axis=1)
+Nvoids = np.count_nonzero(data_dict['radii']>0, axis=1)
 
 # sanity checks
-assert np.all(Nvoids == np.count_nonzero(redshifts>0, axis=1))
-assert all(np.all(x[:n]>0) for x, n in zip(radii, Nvoids))
-assert all(np.all(x[:n]>0) for x, n in zip(redshifts, Nvoids))
+assert np.all(Nvoids == np.count_nonzero(data_dict['redshifts']>=0, axis=1))
+for v in data_dict.values() :
+    assert np.all(Nvoids == np.count_nonzero(v>=0, axis=1))
+    assert all(np.all(x[:n]>=0) for x in zip(v, Nvoids))
 
 # validation_select = rng.choice([True, False], size=len(radii), p=[VALIDATION_FRAC, 1-VALIDATION_FRAC])
 
 # normalizations -- don't cheat!
-train_radii = radii[~validation_select]
-train_redshifts = redshifts[~validation_select]
+for k, v in data_dict.items() :
+    train_x = v[~validation_select]
+    avg = np.mean(train_x[train_x>=0])
+    std = np.std(train_x[train_x>=0])
+    data_dict[k] = (v-avg)/std
+
 train_N = Nvoids[~validation_select]
-R_avg = np.mean(train_radii[train_radii>0])
-R_std = np.std(train_radii[train_radii>0])
-z_avg = np.mean(train_redshifts[train_redshifts>0])
-z_std = np.std(train_redshifts[train_redshifts>0])
 N_avg = np.mean(train_N.astype(float))
 N_std = np.std(train_N.astype(float))
 
 # shape [Nsamples, void index, 2]
-data = np.stack([(radii-R_avg)/R_std, (redshifts-z_avg)/z_std], axis=-1)
+data = np.stack(data_dict.values(), axis=-1)
 norm_Nvoids = (Nvoids.astype(float) - N_avg) / N_std
 
 TARGET_IDX = 5 # M_nu

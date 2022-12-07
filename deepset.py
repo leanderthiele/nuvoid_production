@@ -27,6 +27,7 @@ with np.load(datafile) as f :
     data_dict['radii'] = f['radii']
     data_dict['density_contrasts'] = f['density_contrasts']
     data_dict['num_parts'] = f['num_parts']
+    data_dict['ellips'] = f['ellips']
 
 uniq_cosmo_indices = np.unique(cosmo_indices)
 validation_cosmo_indices = rng.choice(uniq_cosmo_indices, replace=False,

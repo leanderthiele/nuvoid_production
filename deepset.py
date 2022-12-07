@@ -146,11 +146,12 @@ class Loss(nn.Module) :
     # simple MSE at the moment
     def __init__(self) :
         super().__init__()
-        self.l = nn.MSELoss(reduction='mean')
+        #self.l = nn.MSELoss(reduction='mean')
+        self.l = nn.HuberLoss(reduction='mean', delta=0.05)
     def forward(self, pred, targ) :
         return self.l(pred, targ)
 
-EPOCHS = 100
+EPOCHS = 20
 
 loss = Loss()
 model = DeepSet(data.shape[-1], 1, Nlatent=16, Ncontext=1, Nds=4).to(device=device)
@@ -175,7 +176,7 @@ for epoch in range(EPOCHS) :
         optimizer.step()
     scheduler.step()
 
-    ltrain = np.sqrt(np.mean(np.array(ltrain)))
+    ltrain = np.mean(np.array(ltrain))
 
     model.eval()
 
@@ -185,9 +186,9 @@ for epoch in range(EPOCHS) :
         l = loss(pred, y)
         lvalidation.append(l.item())
 
-    lvalidation = np.sqrt(np.mean(np.array(lvalidation)))
+    lvalidation = np.mean(np.array(lvalidation))
 
-    print(f'iteration {epoch:4}: {ltrain:8.2f}\t{lvalidation:8.2f}')
+    print(f'iteration {epoch:4}: {ltrain:8.4f}\t{lvalidation:8.4f}')
 
 model.eval()
 predictions = []

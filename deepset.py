@@ -15,12 +15,21 @@ VALIDATION_FRAC = 0.2
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+rng = np.random.default_rng(42)
+
 with np.load(datafile) as f :
     param_names = f['param_names']
     cosmo_indices = f['cosmo_indices']
     params = f['params']
     radii = f['radii']
     redshifts = f['redshifts']
+
+uniq_cosmo_indices = np.unique(cosmo_indices)
+validation_cosmo_indices = rng.choice(uniq_cosmo_indices, replace=False,
+                                      size=int(VALIDATION_FRAC * len(uniq_cosmo_indices)))
+validation_select = np.array([idx in validation_cosmo_indices for idx in cosmo_indices], dtype=bool)
+print(f'validation Mnu: {np.unique(params[validation_select, 5])}')
+
 
 # number of voids per sample
 Nvoids = np.count_nonzero(radii>0, axis=1)
@@ -30,8 +39,7 @@ assert np.all(Nvoids == np.count_nonzero(redshifts>0, axis=1))
 assert all(np.all(x[:n]>0) for x, n in zip(radii, Nvoids))
 assert all(np.all(x[:n]>0) for x, n in zip(redshifts, Nvoids))
 
-rng = np.random.default_rng(42)
-validation_select = rng.choice([True, False], size=len(radii), p=[VALIDATION_FRAC, 1-VALIDATION_FRAC])
+# validation_select = rng.choice([True, False], size=len(radii), p=[VALIDATION_FRAC, 1-VALIDATION_FRAC])
 
 # normalizations -- don't cheat!
 train_radii = radii[~validation_select]
@@ -48,8 +56,9 @@ N_std = np.std(train_N.astype(float))
 data = np.stack([(radii-R_avg)/R_std, (redshifts-z_avg)/z_std], axis=-1)
 norm_Nvoids = (Nvoids.astype(float) - N_avg) / N_std
 
-# TARGET_IDX = 5 # M_nu
-TARGET_IDX = 15 # mu_Mmin
+TARGET_IDX = 5 # M_nu
+# TARGET_IDX = 15 # mu_Mmin
+# TARGET_IDX = 8 # log_Mmin
 
 train_params = params[~validation_select]
 train_data = data[~validation_select]
@@ -64,10 +73,10 @@ validation_norm_Nvoids = norm_Nvoids[validation_select]
 train_params = torch.from_numpy(train_params.astype(np.float32)).to(device=device)
 train_data = torch.from_numpy(train_data.astype(np.float32)).to(device=device)
 train_Nvoids = torch.from_numpy(train_Nvoids.astype(np.int32)).to(device=device)
-train_norm_Nvoids = torch.from_numpy(train_norm_Nvoids.astype(np.float32)).to(device=device)
+train_norm_Nvoids = torch.from_numpy(train_norm_Nvoids.astype(np.float32)).to(device=device).unsqueeze(-1)
 validation_params = torch.from_numpy(validation_params.astype(np.float32)).to(device=device)
 validation_data = torch.from_numpy(validation_data.astype(np.float32)).to(device=device)
-validation_Nvoids = torch.from_numpy(validation_Nvoids.astype(np.int32)).to(device=device).unsqueeze(-1)
+validation_Nvoids = torch.from_numpy(validation_Nvoids.astype(np.int32)).to(device=device)
 validation_norm_Nvoids = torch.from_numpy(validation_norm_Nvoids.astype(np.float32)).to(device=device).unsqueeze(-1)
 
 train_target = train_params[:, TARGET_IDX].unsqueeze(-1)
@@ -80,7 +89,7 @@ class MLPLayer(nn.Sequential) :
                                      ]))
 
 class MLP(nn.Sequential) :
-    def __init__(self, Nin, Nout, Nlayers=2, Nhidden=256, last_activation=True) :
+    def __init__(self, Nin, Nout, Nlayers=2, Nhidden=64, last_activation=True) :
         # output is manifestly positive so we use ReLU in the final layer
         self.Nin = Nin
         self.Nout = Nout
@@ -137,20 +146,22 @@ class Loss(nn.Module) :
     # simple MSE at the moment
     def __init__(self) :
         super().__init__()
-        self.l = nn.MSELoss(reduction='mean')
+        #self.l = nn.MSELoss(reduction='mean')
+        self.l = nn.HuberLoss(reduction='mean', delta=0.05)
     def forward(self, pred, targ) :
         return self.l(pred, targ)
 
-EPOCHS = 100
+EPOCHS = 20
 
 loss = Loss()
-model = DeepSet(data.shape[-1], 1, [16,]).to(device=device)
+model = DeepSet(data.shape[-1], 1, Nlatent=16, Ncontext=1, Nds=4).to(device=device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=1e-2, total_steps=EPOCHS, verbose=True)
 
 train_set = TensorDataset(train_data, train_Nvoids, train_norm_Nvoids, train_target)
 train_loader = DataLoader(train_set, batch_size=256)
 validation_set = TensorDataset(validation_data, validation_Nvoids, validation_norm_Nvoids, validation_target)
-validation_loader = DataLoader(validation_set, batch_size=2048)
+validation_loader = DataLoader(validation_set, batch_size=256)
 
 for epoch in range(EPOCHS) :
     
@@ -163,8 +174,9 @@ for epoch in range(EPOCHS) :
         ltrain.append(l.item())
         l.backward()
         optimizer.step()
+    scheduler.step()
 
-    ltrain = np.sqrt(np.mean(np.array(ltrain)))
+    ltrain = np.mean(np.array(ltrain))
 
     model.eval()
 
@@ -174,6 +186,14 @@ for epoch in range(EPOCHS) :
         l = loss(pred, y)
         lvalidation.append(l.item())
 
-    lvalidation = np.sqrt(np.mean(np.array(lvalidation)))
+    lvalidation = np.mean(np.array(lvalidation))
 
-    print(f'iteration {epoch:4}: {ltrain:8.2f}\t{lvalidation:8.2f}')
+    print(f'iteration {epoch:4}: {ltrain:8.4f}\t{lvalidation:8.4f}')
+
+model.eval()
+predictions = []
+for ii, (x, n, nnorm, y) in enumerate(validation_loader) :
+    pred = model(x, n, nnorm)
+    predictions.extend(pred.squeeze().detach().cpu().numpy())
+predictions = np.array(predictions)
+np.savez('deepset_test.npz', predictions=predictions, truth=validation_target.squeeze().cpu().numpy())

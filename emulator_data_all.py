@@ -65,6 +65,8 @@ param_names = None
 params = []
 radii  = []
 redshifts = []
+density_constrasts = []
+num_parts = []
 cosmo_indices = []
 
 for f in tqdm(void_files) :
@@ -77,16 +79,22 @@ for f in tqdm(void_files) :
     else :
         assert param_names == param_names_
     try :
-        R, z = np.loadtxt(f, usecols=(4,5,), unpack=True)
+        R, z, density_contrast, num_part = np.loadtxt(f, usecols=(4,5,8,9), unpack=True)
     except ValueError :
         continue
     select = R > RMIN
     R = R[select]
     z = z[select]
+    density_contrast = density_contrast[select]
+    num_part = num_part[select]
     R = np.concatenate([R, np.full(MAX_COUNT-len(R), -1)]).astype(np.float32)
     z = np.concatenate([z, np.full(MAX_COUNT-len(z), -1)]).astype(np.float32)
+    density_contrast = np.concatenate([density_contrast, np.full(MAX_COUNT-len(density_contrast), -1)]).astype(np.float32)
+    num_part = np.concatenate([num_part, np.full(MAX_COUNT-len(num_part), -1)]).astype(np.float32)
     radii.append(R)
     redshifts.append(z)
+    density_constrasts.append(density_contrast)
+    num_parts.append(num_part)
     params.append(list(cosmo.values()) + list(hod.values()))
     cosmo_indices.append(cosmo_idx)
 
@@ -95,4 +103,6 @@ np.savez(f'all_emulator_data_RMIN{RMIN}_{vide_out}.npz',
          cosmo_indices=np.array(cosmo_indices, dtype=int),
          params=np.array(params, dtype=np.float32),
          radii=np.array(radii, dtype=np.float32),
-         redshifts=np.array(redshifts, dtype=np.float32))
+         redshifts=np.array(redshifts, dtype=np.float32),
+         density_contrasts=np.array(density_constrasts, dtype=np.float32),
+         num_parts=np.array(num_parts, dtype=np.float32))

@@ -106,6 +106,8 @@ class DeepSet(nn.Module) :
         # Ncontext should be a list of intermediate context dimensions, or None if only a single DeepSetLayer
         # should be used
         # TODO we need to use the overall number of voids as a global context!!!
+        # TODO also need to be more careful with the out_positive thing, probably just get rid of it
+        #      and remove activation in final layer
         self.Nin = Nin
         self.Nout = Nout
         self.Ncontext = list() if Ncontext is None else Ncontext

@@ -83,10 +83,18 @@ for f in tqdm(void_files) :
         param_names = param_names_
     else :
         assert param_names == param_names_
+    with open(f, 'r') as fp :
+        first_line = fp.readline()
+        if first_line[0] != '#' :
+            print(f'Corrupted file {f} (no header)')
+            continue
     try :
         R, z, density_contrast, num_part = np.loadtxt(f, usecols=(4,5,8,9), unpack=True)
         ellip, eig1, eig2, eig3 = np.loadtxt(f.replace('centers', 'shapes'), usecols=(1,2,3,4), unpack=True)
     except ValueError :
+        continue
+    if not len(R) == len(ellip) :
+        print(f'Corrupted file {f} (centers and shape do not have same length)')
         continue
     select = R > RMIN
     R = R[select]

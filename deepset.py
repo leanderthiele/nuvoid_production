@@ -28,6 +28,9 @@ with np.load(datafile) as f :
     data_dict['density_contrasts'] = f['density_contrasts']
     data_dict['num_parts'] = f['num_parts']
     data_dict['ellips'] = f['ellips']
+    data_dict['eig1s'] = f['eig1s']
+    data_dict['eig2s'] = f['eig2s']
+    data_dict['eig3s'] = f['eig3s']
 
 uniq_cosmo_indices = np.unique(cosmo_indices)
 validation_cosmo_indices = rng.choice(uniq_cosmo_indices, replace=False,
@@ -41,8 +44,8 @@ Nvoids = np.count_nonzero(data_dict['radii']>0, axis=1)
 # sanity checks
 assert np.all(Nvoids == np.count_nonzero(data_dict['redshifts']>=0, axis=1))
 for v in data_dict.values() :
-    assert np.all(Nvoids == np.count_nonzero(v>=0, axis=1))
-    assert all(np.all(x[:n]>=0) for x, n in zip(v, Nvoids))
+    assert np.all(Nvoids == np.count_nonzero(v!=-1, axis=1))
+    assert all(np.all(x[:n]!=-1) for x, n in zip(v, Nvoids))
 
 # validation_select = rng.choice([True, False], size=len(radii), p=[VALIDATION_FRAC, 1-VALIDATION_FRAC])
 
@@ -61,8 +64,8 @@ N_std = np.std(train_N.astype(float))
 data = np.stack(list(data_dict.values()), axis=-1)
 norm_Nvoids = (Nvoids.astype(float) - N_avg) / N_std
 
-# TARGET_IDX = 5 # M_nu
-TARGET_IDX = 15 # mu_Mmin
+TARGET_IDX = 5 # M_nu
+# TARGET_IDX = 15 # mu_Mmin
 # TARGET_IDX = 8 # log_Mmin
 
 train_params = params[~validation_select]
@@ -94,7 +97,7 @@ class MLPLayer(nn.Sequential) :
                                      ]))
 
 class MLP(nn.Sequential) :
-    def __init__(self, Nin, Nout, Nlayers=2, Nhidden=64, last_activation=True) :
+    def __init__(self, Nin, Nout, Nlayers=4, Nhidden=256, last_activation=True) :
         # output is manifestly positive so we use ReLU in the final layer
         self.Nin = Nin
         self.Nout = Nout
@@ -156,19 +159,19 @@ class Loss(nn.Module) :
     def forward(self, pred, targ) :
         return self.l(pred, targ)
 
-EPOCHS = 20
+EPOCHS = 100
 
 loss = Loss()
-model = DeepSet(data.shape[-1], 1, Nlatent=16, Ncontext=1, Nds=1).to(device=device)
+model = DeepSet(data.shape[-1], 1, Nlatent=16, Ncontext=1, Nds=2).to(device=device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=1e-2, total_steps=EPOCHS, verbose=True)
+scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=1e-3, total_steps=EPOCHS, verbose=True)
 
 train_set = TensorDataset(train_data, train_Nvoids, train_norm_Nvoids, train_target)
-train_loader = DataLoader(train_set, batch_size=256)
+train_loader = DataLoader(train_set, batch_size=512)
 validation_set = TensorDataset(validation_data, validation_Nvoids, validation_norm_Nvoids, validation_target)
 
 # no shuffling is super important!
-validation_loader = DataLoader(validation_set, batch_size=256, shuffle=False)
+validation_loader = DataLoader(validation_set, batch_size=512, shuffle=False)
 
 for epoch in range(EPOCHS) :
     

@@ -26,11 +26,12 @@ function copy_data {
   return 0
 }
 
-if [ $do_copying -eq 1 ]; then
-  # copying is pretty low on the CPU so we can use the node-local root process for 
-  # useful work too
-  copy_data
-fi
+# Took this out as it doesn't work
+# if [ $do_copying -eq 1 ]; then
+#   # copying is pretty low on the CPU so we can use the node-local root process for 
+#  # useful work too
+#  copy_data
+# fi
 
 function cantor_pairing {
   k1="$1"

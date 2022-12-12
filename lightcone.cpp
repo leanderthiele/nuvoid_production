@@ -84,7 +84,7 @@ const unsigned long seed = 42;
 const char *inpath, *inident, *outident, *boss_dir;
 double BoxSize, Omega_m, zmin, zmax;
 int remap_case, Nsnaps;
-bool correct, veto, stitch_before_RSD, verbose;
+bool correct, veto, stitch_before_RSD, verbose, binary_output;
 unsigned augment;
 
 // describe the available snapshots and redshift stitching
@@ -261,6 +261,7 @@ void process_args (int argc, const char **argv)
                     "\tveto\n"
                     "\tstitch_before_RSD\n"
                     "\tverbose\n"
+                    "\tbinary_output\n"
                     "\tsnap_times[...]\n");
         throw std::runtime_error("Invalid arguments");
     }
@@ -279,6 +280,7 @@ void process_args (int argc, const char **argv)
     veto = std::atoi(*(c++)); // whether to apply veto, removes a bit less than 7% of galaxies
     stitch_before_RSD = std::atoi(*(c++));
     verbose = std::atoi(*(c++));
+    binary_output = std::atoi(*(c++));
 
     while (*c) snap_times.push_back(std::atof(*(c++)));
     Nsnaps = snap_times.size();
@@ -412,6 +414,7 @@ void read_snapshot (int snap_idx,
                         inpath, (std::strlen(inident)) ? "_" : "", inident, snap_times[snap_idx]);
 
     auto fp = std::fopen(fname, "rb");
+    if (!fp) throw std::runtime_error("galaxies file not available");
 
     // figure out number of galaxies
     std::fseek(fp, 0, SEEK_END);
@@ -865,10 +868,22 @@ double fibcoll ()
 void write_to_disk (void)
 {
     char fname[512];
-    std::sprintf(fname, "%s/lightcone%s%s_%s.txt",
-                        inpath, (std::strlen(inident)) ? "_" : "", inident, outident);
+    std::sprintf(fname, "%s/lightcone%s%s_%s.%s",
+                        inpath, (std::strlen(inident)) ? "_" : "", inident, outident,
+                        (binary_output) ? "bin" : "txt");
     auto fp = std::fopen(fname, "w");
-    for (size_t ii=0; ii<Z.size(); ++ii)
-        std::fprintf(fp, "%lu 0 0 %.10f %.10f %.8f 1.0000 0.0\n", ii, RA[ii], DEC[ii], 299792.458*Z[ii]);
+
+    if (binary_output)
+    {
+        auto Nobj = RA.size(); assert(Nobj==DEC.size()); assert(Nobj==Z.size());
+        std::fwrite(RA.data(), sizeof(double), Nobj, fp);
+        std::fwrite(DEC.data(), sizeof(double), Nobj, fp);
+        std::fwrite(Z.data(), sizeof(double), Nobj, fp);
+    }
+    else
+        for (size_t ii=0; ii<Z.size(); ++ii)
+            std::fprintf(fp, "%lu 0 0 %.10f %.10f %.8f 1.0000 0.0\n", ii, RA[ii], DEC[ii], 299792.458*Z[ii]);
+
+    std::fclose(fp);
 }
 

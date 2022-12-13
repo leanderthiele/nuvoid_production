@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include <mysql.h>
 
@@ -60,7 +62,7 @@ int get_cosmo_idx (const char *path)
         } \
     } while(0)
 
-int set_cosmologies (MYSQL *p)
+void set_cosmologies (MYSQL *p)
 {
     const char pattern[] = "cosmo_varied_*";
     int Nvalid;
@@ -86,8 +88,35 @@ int set_cosmologies (MYSQL *p)
         else
             assert(num_rows==1);
     }
+}
 
-    return 0;
+void get_cosmology (MYSQL *p)
+{
+    MYSQL_RES *query_res;
+
+    SAFE_MYSQL(mysql_query(p, "SELECT cosmo_idx FROM cosmologies WHERE num_lc=(SELECT MIN(num_lc) FROM cosmologies)"));
+    query_res = mysql_store_result(p);
+    uint64_t num_rows = mysql_num_rows(query_res);
+    assert(num_rows);
+    unsigned int num_fields = mysql_num_fields(query_res);
+    assert(num_fields==1);
+
+    int cosmo_indices[num_rows];
+
+    MYSQL_ROW row;
+    for (int ii=0; ii<num_rows; ++ii)
+    {
+        row = mysql_fetch_row(query_res);
+        assert(row);
+        cosmo_indices[ii] = atoi(row[0]);
+    }
+
+    mysql_free_result(query_res);
+
+    srandom(time(NULL));
+    int rand_row = random() % num_rows;
+
+    fprintf(stdout, "%d\n", cosmo_indices[rand_row]);
 }
 
 int main(int argc, char **argv)
@@ -108,7 +137,7 @@ int main(int argc, char **argv)
     if (!strcmp(mode, "set_cosmologies"))
         set_cosmologies(&p);
     else if (!strcmp(mode, "get_cosmology"))
-        get_cosmology(&p)
+        get_cosmology(&p);
     else
     {
         fprintf(stderr, "invalid mode\n");

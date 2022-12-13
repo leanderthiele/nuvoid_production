@@ -34,7 +34,7 @@
 // hod_idx (integer, auto-increment)
 // cosmo_idx (integer)
 // hod_hash (char 32)
-// state (int 0--created but not started, 1--started, 2--success, 3--fail)
+// state ('created','running','fail','success')
 
 // settings for the database
 const char db_hst[] = "tigercpu",
@@ -139,7 +139,7 @@ int create_trial (MYSQL *p, const char *seed, uint64_t *hod_idx)
     int cosmo_idx = get_cosmology(p, seed);
 
     char query_buffer[1024];
-    sprintf(query_buffer, "INSERT INTO lightcones (cosmo_idx, state) VALUES (%d, 0)", cosmo_idx);
+    sprintf(query_buffer, "INSERT INTO lightcones (cosmo_idx, state) VALUES (%d, 'created')", cosmo_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     *hod_idx = mysql_insert_id(p);
     assert(*hod_idx);
@@ -150,7 +150,7 @@ int create_trial (MYSQL *p, const char *seed, uint64_t *hod_idx)
 void start_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, const char *hod_hash)
 {
     char query_buffer[1024];
-    sprintf(query_buffer, "UPDATE lightcones SET hod_hash=%s, state=1 WHERE hod_idx=%lu AND cosmo_idx=%d",
+    sprintf(query_buffer, "UPDATE lightcones SET hod_hash=%s, state='running' WHERE hod_idx=%lu AND cosmo_idx=%d",
                           hod_hash, hod_idx, cosmo_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);
@@ -162,8 +162,8 @@ void end_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
     uint64_t num_rows;
     char query_buffer[1024];
 
-    sprintf(query_buffer, "UPDATE lightcones SET state=%d WHERE hod_idx=%lu AND cosmo_idx=%d",
-                          (state) ? 3 : 2, hod_idx, cosmo_idx);
+    sprintf(query_buffer, "UPDATE lightcones SET state='%s' WHERE hod_idx=%lu AND cosmo_idx=%d",
+                          (state) ? "fail" : "success", hod_idx, cosmo_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     num_rows = mysql_affected_rows(p);
     assert(num_rows==1);

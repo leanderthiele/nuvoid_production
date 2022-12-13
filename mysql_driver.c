@@ -7,6 +7,9 @@
 
 // possible commands:
 // [set_cosmologies]
+//     checks /scratch for available cosmo_varied cosmologies
+// [get_cosmology]
+//     returns index of a cosmology with smallest number of available lightcones
 
 // contents of the database
 //
@@ -48,7 +51,14 @@ int get_cosmo_idx (const char *path)
 }
 
 #define SAFE_MYSQL(expr) \
-    if (expr) assert(0);
+    do { \
+        int err = (int)(expr); \
+        if (err) \
+        { \
+            fprintf(stderr, "mysql error %d\n", err); \
+            assert(0); \
+        } \
+    } while(0)
 
 int set_cosmologies (MYSQL *p)
 {
@@ -87,11 +97,23 @@ int main(int argc, char **argv)
     SAFE_MYSQL(mysql_library_init(0, NULL, NULL));
 
     MYSQL p;
-    SAFE_MYSQL(mysql_init(&p));
-    SAFE_MYSQL(mysql_real_connect(&p, db_hst, db_usr, db_pwd, db_nme, db_prt, db_skt, /*client_flag=*/0));
+    mysql_init(&p);
+    MYSQL *q = mysql_real_connect(&p, db_hst, db_usr, db_pwd, db_nme, db_prt, db_skt, /*client_flag=*/0);
+    if (!q)
+    {
+        fprintf(stderr, "mysql connection failed!\n");
+        assert(0);
+    }
 
     if (!strcmp(mode, "set_cosmologies"))
         set_cosmologies(&p);
+    else if (!strcmp(mode, "get_cosmology"))
+        get_cosmology(&p)
+    else
+    {
+        fprintf(stderr, "invalid mode\n");
+        assert(0);
+    }
 
     // these return void
     mysql_close(&p);

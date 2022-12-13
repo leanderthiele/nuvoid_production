@@ -24,7 +24,16 @@
 //     argv[3] = hod_idx
 //     argv[4] = state (0=success, nonzero=failure)
 // [create_plk]
-//     returns cosmo_idx hod_idx
+//     returns cosmo_idx hod_idx hod_hash
+// [start_plk]
+//     argv[2] = cosmo_idx
+//     argv[3] = hod_idx
+// [end_plk]
+//     argv[2] = cosmo_idx
+//     argv[3] = hod_idx
+//     argv[4] = state
+// [reset_lightcones]
+//     CAUTION: this deletes all data!
 
 // contents of the database
 //
@@ -179,14 +188,15 @@ void end_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
     }
 }
 
-int create_plk (MYSQL *p, uint64_t *hod_idx)
+int create_plk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
 {
+    // FIXME add condition on finished lightcone here!!!
     SAFE_MYSQL(mysql_query(p,
                            "SET @updated_hod_idx := 0; "
                            "UPDATE lightcones SET plk_state='created', "
                            "hod_idx=(SELECT @updated_hod_idx := hod_idx) "
                            "WHERE plk_state IS NULL LIMIT 1; "
-                           "SELECT cosmo_idx, hod_idx FROM lightcones WHERE hod_idx=@updated_hod_idx;"
+                           "SELECT cosmo_idx, hod_idx, hod_hash FROM lightcones WHERE hod_idx=@updated_hod_idx;"
                           ));
 
     MYSQL_RES *query_res;
@@ -203,11 +213,12 @@ int create_plk (MYSQL *p, uint64_t *hod_idx)
             if (num_rows == 1) // this is our result
             {
                 unsigned int num_fields = mysql_num_fields(query_res);
-                assert(num_fields == 2);
+                assert(num_fields == 3);
                 MYSQL_ROW row = mysql_fetch_row(query_res);
                 assert(row);
                 cosmo_idx = atoi(row[0]);
                 *hod_idx = atoll(row[1]);
+                sprintf(hod_hash, "%s", row[2]);
             }
             mysql_free_result(query_res);
         }
@@ -218,6 +229,35 @@ int create_plk (MYSQL *p, uint64_t *hod_idx)
 
     assert(cosmo_idx>=0);
     return cosmo_idx;
+}
+
+void start_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx)
+{
+    char query_buffer[1024];
+    sprintf(query_buffer, "UPDATE lightcones SET plk_state='running' WHERE hod_idx=%lu AND cosmo_idx=%d",
+                          hod_idx, cosmo_idx);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    uint64_t num_rows = mysql_affected_rows(p);
+    assert(num_rows==1);
+}
+
+void end_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
+{
+    char query_buffer[1024];
+    sprintf(query_buffer, "UPDATE lightcones SET plk_state='%s' WHERE hod_idx=%lu AND cosmo_idx=%d",
+                          (state) ? "fail" : "success", hod_idx, cosmo_idx);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    uint64_t num_rows = mysql_affected_rows(p);
+    assert(num_rows==1);
+}
+
+void reset_lightcones (MYSQL *p)
+{
+    SAFE_MYSQL(mysql_query(p,
+                           "DELETE FROM lightcones;"
+                           "ALTER TABLE lightcones AUTO_INCREMENT=1;"
+                           "UPDATE cosmologies SET num_lc=0;"
+                          ));
 }
 
 int main(int argc, char **argv)
@@ -260,8 +300,21 @@ int main(int argc, char **argv)
     else if (!strcmp(mode, "create_plk"))
     {
         uint64_t hod_idx;
-        int cosmo_idx = create_plk(&p, &hod_idx);
-        fprintf(stdout, "%d %lu\n", cosmo_idx, hod_idx);
+        char hod_hash[40];
+        int cosmo_idx = create_plk(&p, &hod_idx, hod_hash);
+        fprintf(stdout, "%d %lu %s\n", cosmo_idx, hod_idx, hod_hash);
+    }
+    else if (!strcmp(mode, "start_plk"))
+    {
+        start_plk(&p, atoi(argv[2]), atoll(argv[3]));
+    }
+    else if (!strcmp(mode, "end_plk"))
+    {
+        end_plk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]));
+    }
+    else if (!strcmp(mode, "reset_lightcones"))
+    {
+        reset_lightcones(&p);
     }
     else
     {

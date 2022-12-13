@@ -3,37 +3,44 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include <mysql.h>
 
-// possible commands:
-// [set_cosmologies]
-//     checks /scratch for available cosmo_varied cosmologies
-// [get_cosmology]
-//     returns index of a cosmology with smallest number of available lightcones
-//     argv[2] = some random string for seeding
-// [create_trial]
-//     returns cosmo_idx hod_idx
-//     argv[2] = some random string for seeding
-// [start_trial]
-//     argv[2] = cosmo_idx
-//     argv[3] = hod_idx
-//     argv[4] = hod_hash
-// [end_trial]
-//     argv[2] = cosmo_idx
-//     argv[3] = hod_idx
-//     argv[4] = state (0=success, nonzero=failure)
-// [create_plk]
-//     returns cosmo_idx hod_idx hod_hash
-// [start_plk]
-//     argv[2] = cosmo_idx
-//     argv[3] = hod_idx
-// [end_plk]
-//     argv[2] = cosmo_idx
-//     argv[3] = hod_idx
-//     argv[4] = state
-// [reset_lightcones]
-//     CAUTION: this deletes all data!
+const char *usage = R""""(
+possible commands:
+[set_cosmologies]
+    checks /scratch for available cosmo_varied cosmologies
+[get_cosmology]
+    returns index of a cosmology with smallest number of available lightcones
+    argv[2] = some random string for seeding
+[create_trial]
+    returns cosmo_idx hod_idx
+    argv[2] = some random string for seeding
+[start_trial]
+    argv[2] = cosmo_idx
+    argv[3] = hod_idx
+    argv[4] = hod_hash
+[end_trial]
+    argv[2] = cosmo_idx
+    argv[3] = hod_idx
+    argv[4] = state (0=success, nonzero=failure)
+[create_plk]
+    returns cosmo_idx hod_idx hod_hash
+[start_plk]
+    argv[2] = cosmo_idx
+    argv[3] = hod_idx
+[end_plk]
+    argv[2] = cosmo_idx
+    argv[3] = hod_idx
+    argv[4] = state
+[reset_lightcones]
+    CAUTION: this deletes all data!
+[fail_old_lightcones]
+    argv[2] = minutes
+[null_old_plk]
+    argv[2] = minutes
+)"""";
 
 // contents of the database
 //
@@ -46,6 +53,9 @@
 // cosmo_idx (integer)
 // hod_hash (char 32)
 // state ('created','running','fail','success')
+// create_time (integer)
+// plk_state (NULL, 'created', 'running', 'fail', 'success')
+// plk_create_time (integer)
 
 // settings for the database
 const char db_hst[] = "tigercpu",
@@ -149,8 +159,12 @@ int create_trial (MYSQL *p, const char *seed, uint64_t *hod_idx)
 {
     int cosmo_idx = get_cosmology(p, seed);
 
+    time_t now = time(NULL); // 8-byte signed integer
+
     char query_buffer[1024];
-    sprintf(query_buffer, "INSERT INTO lightcones (cosmo_idx, state) VALUES (%d, 'created')", cosmo_idx);
+    sprintf(query_buffer, "INSERT INTO lightcones (cosmo_idx, state, create_time)"
+                          "VALUES (%d, 'created', %ld)",
+                          cosmo_idx, now);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     *hod_idx = mysql_insert_id(p);
     assert(*hod_idx);
@@ -190,14 +204,17 @@ void end_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
 
 int create_plk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
 {
-    // FIXME add condition on finished lightcone here!!!
-    SAFE_MYSQL(mysql_query(p,
-                           "SET @updated_hod_idx := 0; "
-                           "UPDATE lightcones SET plk_state='created', "
-                           "hod_idx=(SELECT @updated_hod_idx := hod_idx) "
-                           "WHERE plk_state IS NULL LIMIT 1; "
-                           "SELECT cosmo_idx, hod_idx, hod_hash FROM lightcones WHERE hod_idx=@updated_hod_idx;"
-                          ));
+    time_t now = time(NULL);
+
+    char query_buffer[1024];
+    sprintf(query_buffer, "SET @updated_hod_idx := 0; "
+                          "UPDATE lightcones SET plk_state='created', "
+                          "plk_create_time=%ld, "
+                          "hod_idx=(SELECT @updated_hod_idx := hod_idx), "
+                          "WHERE state='success' AND plk_state IS NULL LIMIT 1; "
+                          "SELECT cosmo_idx, hod_idx, hod_hash FROM lightcones WHERE hod_idx=@updated_hod_idx;",
+                          now);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
 
     MYSQL_RES *query_res;
 
@@ -260,8 +277,42 @@ void reset_lightcones (MYSQL *p)
                           ));
 }
 
+void fail_old_lightcones (MYSQL *p, float timeout_minutes)
+{
+    assert(timeout_minutes>60);
+    time_t now = time(NULL);
+    time_t cutoff = now - (time_t)(60 * timeout_minutes);
+    char query_buffer[1024];
+    sprintf(query_buffer, "UPDATE lightcones SET state='fail' "
+                          "WHERE state='running' AND create_time<%ld",
+                          cutoff);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    uint64_t num_rows = mysql_affected_rows(p);
+    fprintf(stdout, "Failed %lu trials\n", num_rows);
+}
+
+void null_old_plk (MYSQL *p, float timeout_minutes)
+{
+    assert(timeout_minutes>60);
+    time_t now = time(NULL);
+    time_t cutoff = now - (time_t)(60 * timeout_minutes);
+    char query_buffer[1024];
+    sprintf(query_buffer, "UPDATE lightcones SET plk_state=NULL "
+                          "WHERE plk_state='running' AND plk_create_time<%ld",
+                          cutoff);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    uint64_t num_rows = mysql_affected_rows(p);
+    fprintf(stdout, "Nulled %lu plks\n", num_rows);
+}
+
 int main(int argc, char **argv)
 {
+    if (argc==0)
+    {
+        fprintf(stderr, "%s", usage);
+        return -1;
+    }
+
     const char *mode = argv[1];
 
     SAFE_MYSQL(mysql_library_init(0, NULL, NULL));
@@ -315,6 +366,14 @@ int main(int argc, char **argv)
     else if (!strcmp(mode, "reset_lightcones"))
     {
         reset_lightcones(&p);
+    }
+    else if (!strcmp(mode, "fail_old_lightcones"))
+    {
+        fail_old_lightcones(&p, atof(argv[2]));
+    }
+    else if (!strcmp(mode, "null_old_plk"))
+    {
+        null_old_plk(&p, atof(argv[2]));
     }
     else
     {

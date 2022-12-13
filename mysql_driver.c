@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <time.h>
 
 #include <mysql.h>
 
@@ -12,6 +11,7 @@
 //     checks /scratch for available cosmo_varied cosmologies
 // [get_cosmology]
 //     returns index of a cosmology with smallest number of available lightcones
+//     argv[2] = some random string for seeding
 
 // contents of the database
 //
@@ -90,7 +90,7 @@ void set_cosmologies (MYSQL *p)
     }
 }
 
-void get_cosmology (MYSQL *p)
+void get_cosmology (MYSQL *p, const char *seed)
 {
     MYSQL_RES *query_res;
 
@@ -113,8 +113,12 @@ void get_cosmology (MYSQL *p)
 
     mysql_free_result(query_res);
 
-    srandom(time(NULL));
-    int rand_row = random() % num_rows;
+    // hash the seed string
+    unsigned long hash = 5381;
+    int c;
+    while ((c = *seed++))
+        hash = ((hash << 5) + hash) + c;
+    int rand_row = hash % num_rows;
 
     fprintf(stdout, "%d\n", cosmo_indices[rand_row]);
 }
@@ -137,7 +141,7 @@ int main(int argc, char **argv)
     if (!strcmp(mode, "set_cosmologies"))
         set_cosmologies(&p);
     else if (!strcmp(mode, "get_cosmology"))
-        get_cosmology(&p);
+        get_cosmology(&p, argv[2]);
     else
     {
         fprintf(stderr, "invalid mode\n");

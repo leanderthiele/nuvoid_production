@@ -13,7 +13,7 @@
 //     returns index of a cosmology with smallest number of available lightcones
 //     argv[2] = some random string for seeding
 // [create_trial]
-//     returns cosmo_idx,hod_idx
+//     returns cosmo_idx hod_idx
 //     argv[2] = some random string for seeding
 // [start_trial]
 //     argv[2] = cosmo_idx
@@ -203,7 +203,7 @@ int main(int argc, char **argv)
     {
         uint64_t hod_idx;
         int cosmo_idx = create_trial(&p, argv[2], &hod_idx);
-        fprintf(stdout, "%d,%lu\n", cosmo_idx, hod_idx);
+        fprintf(stdout, "%d %lu\n", cosmo_idx, hod_idx);
     }
     else if (!strcmp(mode, "start_trial"))
     {

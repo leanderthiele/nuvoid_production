@@ -52,7 +52,7 @@ dec_hash="$(utils::dec_hash "${cosmo_idx}${hod_desc}" 32)"
 augment_idx=$((dec_hash % 96))
 
 tmp_dir="/tmp/cosmo_varied_${cosmo_idx}"
-data_dir="/tmp/cosmo_varied_${cosmo_idx}"
+data_dir="/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_${cosmo_idx}"
 
 wrk_dir="/tmp/cosmo_varied_${cosmo_idx}"
 hod_dir="$wrk_dir/lightcones/${hod_hash}"

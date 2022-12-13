@@ -5,6 +5,6 @@
 #SBATCH --mem-per-cpu=4G
 #SBATCH -t 05:00:00
 
-#SBATCH --array=1-8
+#SBATCH --array=9-20
 
 srun -n $SLURM_NTASKS bash generate_lightcones_samples.sh

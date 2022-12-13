@@ -14,7 +14,7 @@ consecutive_fails=0
 # loop until time is up
 for ii in $( seq 0 10000 ); do
   
-  read cosmo_idx hod_idx <<< "$(MYSQL_EXE 'create_trial' "${SLURM_JOB_ID}${SLURM_ARRAY_TASK_ID}${SLURM_PROCID}$ii")"
+  read cosmo_idx hod_idx <<< "$($MYSQL_EXE 'create_trial' "${SLURM_JOB_ID}${SLURM_ARRAY_TASK_ID}${SLURM_PROCID}$ii")"
 
   # we do not consider failure a reason to abort
   bash $codebase/generate_lightcones_sample.sh $cosmo_idx $hod_idx \

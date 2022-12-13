@@ -150,7 +150,7 @@ int create_trial (MYSQL *p, const char *seed, uint64_t *hod_idx)
 void start_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, const char *hod_hash)
 {
     char query_buffer[1024];
-    sprintf(query_buffer, "UPDATE lightcones SET hod_hash=%s, state='running' WHERE hod_idx=%lu AND cosmo_idx=%d",
+    sprintf(query_buffer, "UPDATE lightcones SET hod_hash='%s', state='running' WHERE hod_idx=%lu AND cosmo_idx=%d",
                           hod_hash, hod_idx, cosmo_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);

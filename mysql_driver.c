@@ -23,6 +23,8 @@
 //     argv[2] = cosmo_idx
 //     argv[3] = hod_idx
 //     argv[4] = state (0=success, nonzero=failure)
+// [create_plk]
+//     returns cosmo_idx hod_idx
 
 // contents of the database
 //
@@ -177,6 +179,47 @@ void end_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
     }
 }
 
+int create_plk (MYSQL *p, uint64_t *hod_idx)
+{
+    SAFE_MYSQL(mysql_query(p,
+                           "SET @updated_hod_idx := 0; "
+                           "UPDATE lightcones SET plk_state='created', "
+                           "hod_idx=(SELECT @updated_hod_idx := hod_idx) "
+                           "WHERE plk_state IS NULL LIMIT 1; "
+                           "SELECT cosmo_idx, hod_idx FROM lightcones WHERE hod_idx=@updated_hod_idx;"
+                          ));
+
+    MYSQL_RES *query_res;
+
+    int cosmo_idx = -1;
+
+    // iterate through multi-statement results
+    while (1)
+    {
+        query_res = mysql_store_result(p);
+        if (query_res)
+        {
+            uint64_t num_rows = mysql_num_rows(query_res);
+            if (num_rows == 1) // this is our result
+            {
+                unsigned int num_fields = mysql_num_fields(query_res);
+                assert(num_fields == 2);
+                MYSQL_ROW row = mysql_fetch_row(query_res);
+                assert(row);
+                cosmo_idx = atoi(row[0]);
+                *hod_idx = atoll(row[1]);
+            }
+            mysql_free_result(query_res);
+        }
+        int status = mysql_next_result(p);
+        assert(status<=0);
+        if (status) break;
+    }
+
+    assert(cosmo_idx>=0);
+    return cosmo_idx;
+}
+
 int main(int argc, char **argv)
 {
     const char *mode = argv[1];
@@ -185,7 +228,8 @@ int main(int argc, char **argv)
 
     MYSQL p;
     mysql_init(&p);
-    MYSQL *q = mysql_real_connect(&p, db_hst, db_usr, db_pwd, db_nme, db_prt, db_skt, /*client_flag=*/0);
+    MYSQL *q = mysql_real_connect(&p, db_hst, db_usr, db_pwd, db_nme, db_prt, db_skt,
+                                  /*client_flag=*/CLIENT_MULTI_STATEMENTS);
     if (!q)
     {
         fprintf(stderr, "mysql connection failed!\n");
@@ -212,6 +256,12 @@ int main(int argc, char **argv)
     else if (!strcmp(mode, "end_trial"))
     {
         end_trial(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]));
+    }
+    else if (!strcmp(mode, "create_plk"))
+    {
+        uint64_t hod_idx;
+        int cosmo_idx = create_plk(&p, &hod_idx);
+        fprintf(stdout, "%d %lu\n", cosmo_idx, hod_idx);
     }
     else
     {

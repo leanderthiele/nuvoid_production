@@ -30,6 +30,7 @@ boss_dir="/tigress/lthiele/boss_dr12"
 veto=1
 stitch_before_RSD=1
 verbose=0
+binary_output=0
 
 # figure out some stuff
 Omega_m=$(grep -m1 -oP 'Omega\_m=+\K\d\.\d*' "$data_dir/cosmo.info")
@@ -55,7 +56,7 @@ $LIGHTCONE_EXE \
   $BoxSize $Omega_m $zmin $zmax \
   $remap $correct $reflecttranslate \
   $boss_dir $veto $stitch_before_RSD \
-  $verbose \
+  $verbose $binary_output \
   $(echo $comma_snap_times | tr ',' ' ')
 
 # and reset to avoid side effects

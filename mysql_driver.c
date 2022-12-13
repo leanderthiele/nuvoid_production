@@ -12,6 +12,17 @@
 // [get_cosmology]
 //     returns index of a cosmology with smallest number of available lightcones
 //     argv[2] = some random string for seeding
+// [create_trial]
+//     returns cosmo_idx,hod_idx
+//     argv[2] = some random string for seeding
+// [start_trial]
+//     argv[2] = cosmo_idx
+//     argv[3] = hod_idx
+//     argv[4] = hod_hash
+// [end_trial]
+//     argv[2] = cosmo_idx
+//     argv[3] = hod_idx
+//     argv[4] = state (0=success, nonzero=failure)
 
 // contents of the database
 //
@@ -23,7 +34,7 @@
 // hod_idx (integer, auto-increment)
 // cosmo_idx (integer)
 // hod_hash (char 32)
-// state (bool 0--in progress/fail, 1--competed)
+// state (int 0--created but not started, 1--started, 2--success, 3--fail)
 
 // settings for the database
 const char db_hst[] = "tigercpu",
@@ -90,7 +101,7 @@ void set_cosmologies (MYSQL *p)
     }
 }
 
-void get_cosmology (MYSQL *p, const char *seed)
+int get_cosmology (MYSQL *p, const char *seed)
 {
     MYSQL_RES *query_res;
 
@@ -120,7 +131,50 @@ void get_cosmology (MYSQL *p, const char *seed)
         hash = ((hash << 5) + hash) + c;
     int rand_row = hash % num_rows;
 
-    fprintf(stdout, "%d\n", cosmo_indices[rand_row]);
+    return cosmo_indices[rand_row];
+}
+
+int create_trial (MYSQL *p, const char *seed, uint64_t *hod_idx)
+{
+    int cosmo_idx = get_cosmology(p, seed);
+
+    char query_buffer[1024];
+    sprintf(query_buffer, "INSERT INTO lightcones (cosmo_idx, state) VALUES (%d, 0)", cosmo_idx);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    *hod_idx = mysql_insert_id(p);
+    assert(*hod_idx);
+
+    return cosmo_idx;
+}
+
+void start_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, const char *hod_hash)
+{
+    char query_buffer[1024];
+    sprintf(query_buffer, "UPDATE lightcones SET hod_hash=%s, state=1 WHERE hod_idx=%lu AND cosmo_idx=%d",
+                          hod_hash, hod_idx, cosmo_idx);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    uint64_t num_rows = mysql_affected_rows(p);
+    assert(num_rows==1);
+}
+
+void end_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
+{
+    uint64_t num_rows;
+    char query_buffer[1024];
+
+    sprintf(query_buffer, "UPDATE lightcones SET state=%d WHERE hod_idx=%lu AND cosmo_idx=%d",
+                          (state) ? 3 : 2, hod_idx, cosmo_idx);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    num_rows = mysql_affected_rows(p);
+    assert(num_rows==1);
+
+    if (!state) // only successful trials are counted
+    {
+        sprintf(query_buffer, "UPDATE cosmologies SET num_lc=num_lc+1 WHERE cosmo_idx=%d", cosmo_idx);
+        SAFE_MYSQL(mysql_query(p, query_buffer));
+        num_rows = mysql_affected_rows(p);
+        assert(num_rows==1);
+    }
 }
 
 int main(int argc, char **argv)
@@ -141,7 +195,24 @@ int main(int argc, char **argv)
     if (!strcmp(mode, "set_cosmologies"))
         set_cosmologies(&p);
     else if (!strcmp(mode, "get_cosmology"))
-        get_cosmology(&p, argv[2]);
+    {
+        int cosmo_idx = get_cosmology(&p, argv[2]);
+        fprintf(stdout, "%d\n", cosmo_idx);
+    }
+    else if (!strcmp(mode, "create_trial"))
+    {
+        uint64_t hod_idx;
+        int cosmo_idx = create_trial(&p, argv[2], &hod_idx);
+        fprintf(stdout, "%d,%lu\n", cosmo_idx, hod_idx);
+    }
+    else if (!strcmp(mode, "start_trial"))
+    {
+        start_trial(&p, atoi(argv[2]), atoll(argv[3]), argv[4]);
+    }
+    else if (!strcmp(mode, "end_trial"))
+    {
+        end_trial(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]));
+    }
     else
     {
         fprintf(stderr, "invalid mode\n");

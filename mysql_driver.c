@@ -106,6 +106,7 @@ int get_cosmo_idx (const char *path)
 #define MYSPRINTF(buffer, ...) \
     do { \
         size_t bufsz = sizeof(buffer); \
+        assert(bufsz > 32); \
         size_t would_write = snprintf(buffer, bufsz, __VA_ARGS__); \
         if (would_write > bufsz-1) \
         { \

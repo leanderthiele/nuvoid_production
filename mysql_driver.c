@@ -339,7 +339,7 @@ void new_table (MYSQL *p, const char *name, const char *columns)
     MYSPRINTF(query_buffer,
               "DROP TABLE %s; "
               "CREATE TABLE %s (%s);",
-              name, name, cosmologies_columns);
+              name, name, columns);
     SAFE_MYSQL(mysql_query(p, query_buffer));
 
     char spec_buffer[1024];

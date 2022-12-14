@@ -155,26 +155,21 @@ int get_cosmology (MYSQL *p, const char *seed)
     unsigned int num_fields = mysql_num_fields(query_res);
     assert(num_fields==1);
 
-    int cosmo_indices[num_rows];
-
-    MYSQL_ROW row;
-    for (int ii=0; ii<num_rows; ++ii)
-    {
-        row = mysql_fetch_row(query_res);
-        assert(row);
-        cosmo_indices[ii] = atoi(row[0]);
-    }
-
-    mysql_free_result(query_res);
-
     // hash the seed string
     unsigned long hash = 5381;
     int c;
     while ((c = *seed++))
         hash = ((hash << 5) + hash) + c;
-    int rand_row = hash % num_rows;
+    uint64_t rand_row = hash % num_rows;
 
-    return cosmo_indices[rand_row];
+    mysql_data_seek(query_res, rand_row);
+    MYSQL_ROW row = mysql_fetch_row(query_res);
+    assert(row);
+    int cosmo_idx = atoi(row[0]);
+
+    mysql_free_result(query_res);
+
+    return cosmo_idx;
 }
 
 int create_trial (MYSQL *p, const char *seed, uint64_t *hod_idx)

@@ -350,9 +350,15 @@ void new_table (MYSQL *p, const char *name, const char *columns)
     char spec_buffer[1024];
     char *dst = spec_buffer;
     const char *src = columns;
+    int in_pars = 0; // in parentheses, here we don't break
     for (; *src; ++src, ++dst)
-        if (*src==',') *dst = '\n';
+    {
+        if (*src=='(') in_pars = 1;
+        else if (*src==')') in_pars = 0;
+
+        if (*src==',' && !in_pars) *dst = '\n';
         else *dst = *src;
+    }
     *dst = '\0';
 
     fprintf(stdout, "Created table %s with the columns:\n%s\n", name, spec_buffer);

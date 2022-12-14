@@ -51,7 +51,7 @@ ulimit -c unlimited
 cd '/scratch/gpfs/lthiele/nuvoid_production/lightcone_core_files'
 
 $LIGHTCONE_EXE \
-  "$wrk_dir/emulator/$hod_hash" "" \
+  "$wrk_dir/lightcones/$hod_hash" "" \
   $augment \
   $BoxSize $Omega_m $zmin $zmax \
   $remap $correct $reflecttranslate \

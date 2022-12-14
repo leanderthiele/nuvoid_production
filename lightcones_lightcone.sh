@@ -58,7 +58,7 @@ for ii in $( seq 1 $NSAMPLES ); do
   remap=$((this_augment / 48))
   reflecttranslate=$((this_augment % 48))
   $LIGHTCONE_EXE \
-    "$wrk_dir/emulator/$hod_hash" "" \
+    "$wrk_dir/lightcones/$hod_hash" "" \
     $this_augment \
     $BoxSize $Omega_m $zmin $zmax \
     $remap $correct $reflecttranslate \

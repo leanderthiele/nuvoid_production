@@ -32,6 +32,7 @@ possible commands:
     argv[4] = state (0=success, nonzero=failure)
 [create_plk]
     returns cosmo_idx hod_idx hod_hash
+    (cosmo_idx will be negative if no work is remaining)
 [start_plk]
     argv[2] = cosmo_idx
     argv[3] = hod_idx
@@ -234,7 +235,7 @@ int create_plk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
               "SET @updated_hod_idx := 0; "
               "UPDATE lightcones SET plk_state='created', "
               "plk_create_time=%ld, "
-              "hod_idx=(SELECT @updated_hod_idx := hod_idx), "
+              "hod_idx=(SELECT @updated_hod_idx := hod_idx) "
               "WHERE state='success' AND plk_state IS NULL LIMIT 1; "
               "SELECT cosmo_idx, hod_idx, hod_hash FROM lightcones WHERE hod_idx=@updated_hod_idx;",
               now);
@@ -268,7 +269,7 @@ int create_plk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
         if (status) break;
     }
 
-    assert(cosmo_idx>=0);
+    // NOTE that cosmo_idx can be negative, in which case no work is remaining!
     return cosmo_idx;
 }
 

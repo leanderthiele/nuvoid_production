@@ -269,6 +269,13 @@ int create_plk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
         if (status) break;
     }
 
+    if (cosmo_idx<0)
+    // nothing left to work on, fill results to avoid UB
+    {
+        *hod_idx = 0;
+        sprintf(hod_hash, "NONE");
+    }
+
     // NOTE that cosmo_idx can be negative, in which case no work is remaining!
     return cosmo_idx;
 }

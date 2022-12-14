@@ -61,6 +61,8 @@ const char *lightcones_columns =
     "create_time BIGINT NOT NULL, "
     "plk_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
     "plk_create_time BIGINT, "
+    "voids_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "voids_create_time BIGINT, "
     "PRIMARY KEY (hod_idx)";
 
 // settings for the database
@@ -195,7 +197,8 @@ void start_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, const char *hod_has
 {
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
-              "UPDATE lightcones SET hod_hash='%s', state='running' WHERE hod_idx=%lu AND cosmo_idx=%d",
+              "UPDATE lightcones SET hod_hash='%s', state='running' "
+              "WHERE hod_idx=%lu AND cosmo_idx=%d",
               hod_hash, hod_idx, cosmo_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);
@@ -208,7 +211,8 @@ void end_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
     char query_buffer[1024];
 
     MYSPRINTF(query_buffer,
-              "UPDATE lightcones SET state='%s' WHERE hod_idx=%lu AND cosmo_idx=%d",
+              "UPDATE lightcones SET state='%s' "
+              "WHERE hod_idx=%lu AND cosmo_idx=%d",
               (state) ? "fail" : "success", hod_idx, cosmo_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     num_rows = mysql_affected_rows(p);

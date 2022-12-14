@@ -7,4 +7,4 @@
 
 #SBATCH --array=1-8
 
-srun -n $SLURM_NTASKS bash generate_lightcones_samples.sh
+srun -n $SLURM_NTASKS --wait=0 --kill-on-bad-exit=0 bash generate_lightcones_samples.sh

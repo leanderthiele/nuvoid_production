@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <mysql.h>
 
@@ -391,8 +392,18 @@ int main(int argc, char **argv)
 
     MYSQL p;
     mysql_init(&p);
-    MYSQL *q = mysql_real_connect(&p, db_hst, db_usr, db_pwd, db_nme, db_prt, db_skt,
-                                  /*client_flag=*/CLIENT_MULTI_STATEMENTS);
+
+    MYSQL *q;
+    for (int ii=1; ii</*connection attempts=*/8; ++ii)
+    {
+        q = mysql_real_connect(&p, db_hst, db_usr, db_pwd, db_nme, db_prt, db_skt,
+                               /*client_flag=*/CLIENT_MULTI_STATEMENTS);
+        if (q) break; // successful connection
+
+        // give a bit of time
+        sleep(1);
+    }
+
     if (!q)
     {
         fprintf(stderr, "mysql connection failed!\n");
@@ -400,7 +411,9 @@ int main(int argc, char **argv)
     }
 
     if (!strcmp(mode, "set_cosmologies"))
+    {
         set_cosmologies(&p);
+    }
     else if (!strcmp(mode, "get_cosmology"))
     {
         int cosmo_idx = get_cosmology(&p, argv[2]);

@@ -48,7 +48,7 @@ with NBL.TaskManager(cpus_per_task=CPUS_PER_TASK) as tm :
         # iterate over the lightcones
         for lightcone_file in lightcone_files :
             
-            augment = re.search('(?<=lightcone_)[0-9]*', lightcone_file)
+            augment = re.search('(?<=lightcone_)[0-9]*', lightcone_file)[0]
             plk_result = plk_calc.compute_from_fname(lightcone_file)
             np.savez(f'{wrk_dir}/plk_{augment}.npz', **plk_result)
 

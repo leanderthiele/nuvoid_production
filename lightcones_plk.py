@@ -63,6 +63,7 @@ with NBL.TaskManager(cpus_per_task=CPUS_PER_TASK) as tm :
         lightcone_files = tm.comm.bcast(lightcone_files)
 
         # iterate over the lightcones
+        at_least_one_successful = False
         for lightcone_file in lightcone_files :
             
             augment = re.search('(?<=lightcone_)[0-9]*', lightcone_file)[0]
@@ -79,9 +80,10 @@ with NBL.TaskManager(cpus_per_task=CPUS_PER_TASK) as tm :
                 else :
                     raise
 
+            at_least_one_successful = True
             if tm.comm.rank == 0 :
                 np.savez(f'{wrk_dir}/plk_{augment}.npz', **plk_result)
 
         # all done!
         if tm.comm.rank == 0 :
-            report_state(cosmo_idx, hod_idx, 0)
+            report_state(cosmo_idx, hod_idx, 0 if at_least_one_successful else 2)

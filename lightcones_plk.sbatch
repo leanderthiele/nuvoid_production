@@ -9,8 +9,9 @@ module load anaconda3/2021.11
 conda activate nbodykit
 
 export OMP_NUM_THREADS=1
-export CPUS_PER_TASK=2
+export CPUS_PER_TASK=3
 
-# TODO need to use the -hosts argument here becuase the
-#      MPI shipped with this conda is buggy...
-mpirun -n $SLURM_NTASKS python lightcones_plk.py
+codebase="/home/lthiele/nuvoid_production"
+nodelist="$("python $codebase/expand_nodelist.py" "$SLURM_JOB_NODELIST")"
+
+mpirun -n $SLURM_NTASKS -hosts "$nodelist" python lightcones_plk.py

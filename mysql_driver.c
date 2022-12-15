@@ -15,22 +15,38 @@ possible commands:
     replaces cosmologies table by newly created one
 [new_lightcones]
     replaces lightcones table by newly created one
+[new_fiducials]
+    replaces fiducials table by newly created one
+[new_fiducials_lightcones]
+    replaces fiducials_lightcones table by newly created one
 [set_cosmologies]
     checks /scratch for available cosmo_varied cosmologies
+[set_fiducials]
+    checks /scratch for available cosmo_fiducial runs
 [get_cosmology]
     returns index of a cosmology with smallest number of available lightcones
     argv[2] = some random string for seeding
 [create_trial]
     returns cosmo_idx hod_idx
     argv[2] = some random string for seeding
+[create_fiducial]
+    returns seed_idx
+    argv[2] = hod_hash
 [start_trial]
     argv[2] = cosmo_idx
     argv[3] = hod_idx
     argv[4] = hod_hash
+[start_fiducial]
+    argv[2] = seed_idx
+    argv[3] = hod_hash
 [end_trial]
     argv[2] = cosmo_idx
     argv[3] = hod_idx
     argv[4] = state (0=success, nonzero=failure)
+[end_fiducial]
+    argv[2] = seed_idx
+    argv[3] = hod_hash
+    argv[4] = state
 [create_plk]
     returns cosmo_idx hod_idx hod_hash
     (cosmo_idx will be negative if no work is remaining)
@@ -55,6 +71,10 @@ const char *cosmologies_columns =
     "num_lc INT UNSIGNED NOT NULL, "
     "PRIMARY KEY (cosmo_idx)";
 
+const char *fiducials_columns =
+    "seed_idx INT UNSIGNED NOT NULL, "
+    "PRIMARY KEY (cosmo_idx)";
+
 const char *lightcones_columns =
     "hod_idx BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, "
     "cosmo_idx INT UNSIGNED NOT NULL, "
@@ -66,6 +86,19 @@ const char *lightcones_columns =
     "voids_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
     "voids_create_time BIGINT, "
     "PRIMARY KEY (hod_idx)";
+
+const char *fiducial_lightcones_columns =
+    "idx BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, "
+    "seed_idx INT UNSIGNED NOT NULL, "
+    "hod_hash CHAR(40), "
+    "state ENUM('created', 'running', 'fail', 'success', 'timeout') NOT NULL, "
+    "create_time BIGINT NOT NULL, "
+    "plk_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "plk_create_time BIGINT, "
+    "voids_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "voids_create_time BIGINT, "
+    "PRIMARY KEY (idx)";
+
 
 // settings for the database
 const char db_hst[] = "tigercpu",
@@ -81,9 +114,8 @@ void check_cosmos (const char *pattern,
                    int *Nvalid, char **valid_paths, 
                    int *Ninvalid, char **invalid_paths);
 
-int get_cosmo_idx (const char *path)
+int get_run_idx (const char *path, const char *pattern)
 {
-    static const char pattern[] = "cosmo_varied_";
     const char *p = strstr(path, pattern);
     assert(p);
     char buffer[8];
@@ -130,7 +162,7 @@ void set_cosmologies (MYSQL *p)
 
     for (int ii=0; ii<Nvalid; ++ii)
     {
-        int cosmo_idx = get_cosmo_idx(valid_paths[ii]);
+        int cosmo_idx = get_run_idx(valid_paths[ii], "cosmo_varied_");
         MYSPRINTF(query_buffer, "SELECT * FROM cosmologies WHERE cosmo_idx=%d", cosmo_idx);
         SAFE_MYSQL(mysql_query(p, query_buffer));
         query_res = mysql_store_result(p);
@@ -139,6 +171,34 @@ void set_cosmologies (MYSQL *p)
         if (!num_rows) // not in the database
         {
             MYSPRINTF(query_buffer, "INSERT INTO cosmologies VALUES (%d, 0)", cosmo_idx);
+            SAFE_MYSQL(mysql_query(p, query_buffer));
+        }
+        else
+            assert(num_rows==1);
+    }
+}
+
+void set_fiducials (MYSQL *p)
+{
+    const char pattern[] = "cosmo_fiducial_*";
+    int Nvalid;
+    char *valid_paths[1024];
+    check_cosmos(pattern, &Nvalid, valid_paths, NULL, NULL);
+
+    char query_buffer[1024];
+    MYSQL_RES *query_res;
+
+    for (int ii=0; ii<Nvalid; ++ii)
+    {
+        int seed_idx = get_run_idx(valid_paths[ii], "cosmo_fiducial_");
+        MYSPRINTF(query_buffer, "SELECT * FROM fiducials WHERE seed_idx=%d", seed_idx);
+        SAFE_MYSQL(mysql_query(p, query_buffer));
+        query_res = mysql_store_result(p);
+        uint64_t num_rows = mysql_num_rows(query_res);
+        mysql_free_result(query_res);
+        if (!num_rows) // not in the database
+        {
+            MYSPRINTF(query_buffer, "INSERT INTO fiducials VALUES (%d)", seed_idx);
             SAFE_MYSQL(mysql_query(p, query_buffer));
         }
         else
@@ -185,7 +245,7 @@ int create_trial (MYSQL *p, const char *seed, uint64_t *hod_idx)
 
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
-              "INSERT INTO lightcones (cosmo_idx, state, create_time)"
+              "INSERT INTO lightcones (cosmo_idx, state, create_time) "
               "VALUES (%d, 'created', %ld)", cosmo_idx, now);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     *hod_idx = mysql_insert_id(p);
@@ -203,6 +263,39 @@ int create_trial (MYSQL *p, const char *seed, uint64_t *hod_idx)
     return cosmo_idx;
 }
 
+int create_fiducial (MYSQL *p, const char *hod_hash)
+{
+    // TODO deal with timeouts here
+    time_t now = time(NULL);
+
+    char query_buffer[1024];
+    MYSPRINTF(query_buffer,
+              "INSERT INTO fiducials_lightcones (seed_idx, hod_hash, state, create_time) "
+              "VALUES ((SELECT seed_idx FROM fiducials "
+                       "WHERE seed_idx NOT IN "
+                       "(SELECT seed_idx FROM fiducials_lightcones WHERE hod_hash != '%s') LIMIT 1), "
+                      "'%s', 'created', %ld)",
+              hod_hash, hod_hash, now);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    uint64_t idx = mysql_insert_id(p); // this is the new row we created
+    assert(idx);
+
+    MYSPRINTF(query_buffer,
+              "SELECT cosmo_idx FROM fiducials_lightcones WHERE idx=%lu",
+              idx);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    MYSQL_RES *query_res = mysql_store_result(p);
+    uint64_t num_rows = mysql_num_rows(query_res);
+    assert(num_rows==1);
+    MYSQL_ROW row = mysql_fetch_row(query_res);
+    assert(row);
+    int seed_idx = atoi(row[0]);
+
+    mysql_free_result(query_res);
+
+    return seed_idx;
+}
+
 void start_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, const char *hod_hash)
 {
     char query_buffer[1024];
@@ -215,14 +308,37 @@ void start_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, const char *hod_has
     assert(num_rows==1);
 }
 
+void start_fiducial (MYSQL *p, int seed_idx, const char *hod_hash)
+{
+    char query_buffer[1024];
+    MYSPRINTF(query_buffer,
+              "UPDATE fiducials_lightcones SET state='running' "
+              "WHERE seed_idx=%d AND hod_hash='%s'",
+              seed_idx, hod_hash);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    uint64_t num_rows = mysql_affected_rows(p);
+    assert(num_rows==1);
+}
+
 void end_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
 {
     char query_buffer[1024];
-
     MYSPRINTF(query_buffer,
               "UPDATE lightcones SET state='%s' "
               "WHERE hod_idx=%lu AND cosmo_idx=%d",
               (state) ? "fail" : "success", hod_idx, cosmo_idx);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    uint64_t num_rows = mysql_affected_rows(p);
+    assert(num_rows==1);
+}
+
+void end_fiducial (MYSQL *p, int seed_idx, const char *hod_hash, int state)
+{
+    char query_buffer[1024];
+    MYSPRINTF(query_buffer,
+              "UPDATE fiducials_lightcones SET state='%s' "
+              "WHERE seed_idx=%d AND hod_hash='%s'",
+              (state) ? "fail" : "success", seed_idx, hod_hash);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);
     assert(num_rows==1);
@@ -379,6 +495,16 @@ void new_lightcones (MYSQL *p)
     new_table(p, "lightcones", lightcones_columns);
 }
 
+void new_fiducials (MYSQL *p)
+{
+    new_table(p, "fiducials", fiducials_columns);
+}
+
+void new_fiducials_lightcones (MYSQL *p)
+{
+    new_table(p, "fiducials_lightcones", fiducial_lightcones_columns);
+}
+
 int main(int argc, char **argv)
 {
     if (argc==1)
@@ -468,6 +594,31 @@ int main(int argc, char **argv)
     else if (!strcmp(mode, "new_lightcones"))
     {
         new_lightcones(&p);
+    }
+    else if (!strcmp(mode, "new_fiducials"))
+    {
+        new_fiducials(&p);
+    }
+    else if (!strcmp(mode, "new_fiducials_lightcones"))
+    {
+        new_fiducials_lightcones(&p);
+    }
+    else if (!strcmp(mode, "set_fiducials"))
+    {
+        set_fiducials(&p);
+    }
+    else if (!strcmp(mode, "create_fiducial"))
+    {
+        int seed_idx = create_fiducial(&p, argv[2]);
+        fprintf(stdout, "%d\n", seed_idx);
+    }
+    else if (!strcmp(mode, "start_fiducial"))
+    {
+        start_fiducial(&p, atoi(argv[2]), argv[3]);
+    }
+    else if (!strcmp(mode, "end_fiducial"))
+    {
+        end_fiducial(&p, atoi(argv[2]), argv[3], atoi(argv[4]));
     }
     else
     {

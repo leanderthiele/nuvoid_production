@@ -6,6 +6,7 @@
 #   [3] hod hash
 #   [4] augmentation (0..95)
 #   [5] halo finder (rockstar or rfof)
+#   [6] number of samples to generate
 
 # how many lightcones we generate per call (with different augmentations)
 NSAMPLES=8
@@ -24,6 +25,7 @@ wrk_dir="$2"
 hod_hash="$3"
 augment="$4"
 halo_finder="$5"
+nsamples="$6"
 
 # fixed settings
 zmin=0.42
@@ -53,7 +55,7 @@ cd '/scratch/gpfs/lthiele/nuvoid_production/lightcone_core_files'
 
 # we can generate a bunch of samples as this is super cheap
 this_augment=$augment
-for ii in $( seq 1 $NSAMPLES ); do
+for ii in $( seq 1 $nsamples ); do
 
   remap=$((this_augment / 48))
   reflecttranslate=$((this_augment % 48))

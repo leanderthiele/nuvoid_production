@@ -67,7 +67,8 @@ else
   export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 fi
 
-bash $codebase/lightcones_lightcone.sh $data_dir $wrk_dir $hod_hash $augment_idx 'rockstar'
+# generates 8 lightcones
+bash $codebase/lightcones_lightcone.sh $data_dir $wrk_dir $hod_hash $augment_idx 'rockstar' 8
 
 # now we have the lightcone file and shouldn't need to use the data_dir anymore
 

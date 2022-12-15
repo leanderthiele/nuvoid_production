@@ -150,7 +150,10 @@ int get_cosmology (MYSQL *p, const char *seed)
 {
     MYSQL_RES *query_res;
 
-    SAFE_MYSQL(mysql_query(p, "SELECT cosmo_idx FROM cosmologies WHERE num_lc=(SELECT MIN(num_lc) FROM cosmologies)"));
+    SAFE_MYSQL(mysql_query(p,
+                           "SELECT cosmo_idx FROM cosmologies "
+                           "WHERE num_lc=(SELECT MIN(num_lc) FROM cosmologies)"
+                          ));
     query_res = mysql_store_result(p);
     uint64_t num_rows = mysql_num_rows(query_res);
     assert(num_rows);

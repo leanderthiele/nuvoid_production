@@ -14,6 +14,6 @@ export OMP_NUM_THREADS=1
 export CPUS_PER_TASK=3
 
 codebase="/home/lthiele/nuvoid_production"
-nodelist="$(python "$codebase/expand_nodelist.py" "$SLURM_JOB_NODELIST")"
+nodelist="$("$codebase/expand_nodelist" "$SLURM_JOB_NODELIST")"
 
 mpirun -n $SLURM_NTASKS -hosts="$nodelist" python lightcones_plk.py

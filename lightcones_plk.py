@@ -3,6 +3,8 @@ import sys
 import re
 from glob import glob
 import subprocess
+import warnings
+
 import numpy as np
 
 import nbodykit.lab as NBL
@@ -15,6 +17,10 @@ world_rank = comm_world.Get_rank()
 
 codebase = '/home/lthiele/nuvoid_production'
 CPUS_PER_TASK = int(os.environ['CPUS_PER_TASK'])
+
+# get rid of annoying warnings from nbodykit
+for w in [np.ComplexWarning, np.VisibleDeprecationWarning, ] :
+    warnings.filterwarnings('ignore', category=w)
 
 def report_state(cosmo_idx, hod_idx, state) :
     subprocess.run(f'{codebase}/mysql_driver end_plk {cosmo_idx} {hod_idx} {state}',

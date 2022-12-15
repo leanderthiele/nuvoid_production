@@ -65,10 +65,21 @@ with NBL.TaskManager(cpus_per_task=CPUS_PER_TASK) as tm :
         # iterate over the lightcones
         for lightcone_file in lightcone_files :
             
-            plk_result = plk_calc.compute_from_fname(lightcone_file)
+            augment = re.search('(?<=lightcone_)[0-9]*', lightcone_file)[0]
+
+            try :
+                plk_result = plk_calc.compute_from_fname(lightcone_file)
+            except ValueError as e :
+                if 'normalization in ConvolvedFFTPower' in str(e) :
+                    # this is a failure mode we sometimes have unfortunately
+                    if tm.comm.rank == 0 :
+                        with open(f'{wrk_dir}/plk_msg_{augment}.info', 'w') as fp :
+                            fp.write(f'{e}\n')
+                    continue
+                else :
+                    raise
 
             if tm.comm.rank == 0 :
-                augment = re.search('(?<=lightcone_)[0-9]*', lightcone_file)[0]
                 np.savez(f'{wrk_dir}/plk_{augment}.npz', **plk_result)
 
         # all done!

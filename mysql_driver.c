@@ -325,12 +325,12 @@ void timeout_old_lightcones (MYSQL *p, float timeout_minutes)
               cutoff);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);
-    fprintf(stdout, "Failed %lu trials\n", num_rows);
+    fprintf(stdout, "Timed out %lu trials\n", num_rows);
 }
 
 void timeout_old_plk (MYSQL *p, float timeout_minutes)
 {
-    assert(timeout_minutes>60);
+    assert(timeout_minutes>30);
     time_t now = time(NULL);
     time_t cutoff = now - (time_t)(60 * timeout_minutes);
     char query_buffer[1024];
@@ -340,7 +340,7 @@ void timeout_old_plk (MYSQL *p, float timeout_minutes)
               cutoff);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);
-    fprintf(stdout, "Nulled %lu plks\n", num_rows);
+    fprintf(stdout, "Timed out %lu plks\n", num_rows);
 }
 
 void new_table (MYSQL *p, const char *name, const char *columns)

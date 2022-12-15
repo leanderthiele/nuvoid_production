@@ -7,6 +7,9 @@
 #   [4] augmentation (0..95)
 #   [5] halo finder (rockstar or rfof)
 
+# FIXME this is a small hack
+echo "SLURM_JOB_NODELIST=$SLURM_JOB_NODELIST"
+
 # how many lightcones we generate per call (with different augmentations)
 NSAMPLES=8
 

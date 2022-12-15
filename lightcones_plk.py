@@ -7,6 +7,7 @@ import numpy as np
 
 import nbodykit.lab as NBL
 
+from mpi4py import MPI
 from plk import PLKCalc
 
 comm_world = MPI.COMM_WORLD
@@ -49,13 +50,11 @@ with NBL.TaskManager(cpus_per_task=CPUS_PER_TASK) as tm :
                 print(f'No lightcones found in {wrk_dir}!', file=sys.stderr)
                 report_state(cosmo_idx, hod_idx, 1)
                 continue
-
-        print(f'RANK {world_rank} working on {ii}')
+        else :
+            lightcone_files = None
 
         # let everyone on the team know which files we should operate on
         lightcone_files = tm.comm.bcast(lightcone_files)
-
-        print(f'RANK {world_rank} working on {lightcone_files[0]}...')
 
         # iterate over the lightcones
         for lightcone_file in lightcone_files :

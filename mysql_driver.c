@@ -191,6 +191,15 @@ int create_trial (MYSQL *p, const char *seed, uint64_t *hod_idx)
     *hod_idx = mysql_insert_id(p);
     assert(*hod_idx);
 
+    // to avoid everyone going to the same cosmology, we make this a bit fuzzy
+    // (so num_lc also has some non-completed trials)
+    MYSPRINTF(query_buffer,
+              "UPDATE cosmologies SET num_lc=num_lc+1 WHERE cosmo_idx=%d",
+              cosmo_idx);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    uint64_t num_rows = mysql_affected_rows(p);
+    assert(num_rows==1);
+
     return cosmo_idx;
 }
 
@@ -208,7 +217,6 @@ void start_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, const char *hod_has
 
 void end_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
 {
-    uint64_t num_rows;
     char query_buffer[1024];
 
     MYSPRINTF(query_buffer,
@@ -216,18 +224,8 @@ void end_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
               "WHERE hod_idx=%lu AND cosmo_idx=%d",
               (state) ? "fail" : "success", hod_idx, cosmo_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
-    num_rows = mysql_affected_rows(p);
+    uint64_t num_rows = mysql_affected_rows(p);
     assert(num_rows==1);
-
-    if (!state) // only successful trials are counted
-    {
-        MYSPRINTF(query_buffer,
-                  "UPDATE cosmologies SET num_lc=num_lc+1 WHERE cosmo_idx=%d",
-                  cosmo_idx);
-        SAFE_MYSQL(mysql_query(p, query_buffer));
-        num_rows = mysql_affected_rows(p);
-        assert(num_rows==1);
-    }
 }
 
 int create_plk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)

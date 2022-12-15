@@ -26,7 +26,7 @@ def report_state(cosmo_idx, hod_idx, state) :
     subprocess.run(f'{codebase}/mysql_driver end_plk {cosmo_idx} {hod_idx} {state}',
                    shell=True, check=True)
 
-with NBL.TaskManager(cpus_per_task=CPUS_PER_TASK) as tm :
+with NBL.TaskManager(cpus_per_task=CPUS_PER_TASK, use_all_cpus=True) as tm :
     
     plk_calc = PLKCalc()
 

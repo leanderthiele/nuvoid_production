@@ -280,7 +280,7 @@ int create_fiducial (MYSQL *p, const char *hod_hash)
     assert(idx);
 
     MYSPRINTF(query_buffer,
-              "SELECT cosmo_idx FROM fiducials_lightcones WHERE idx=%lu",
+              "SELECT seed_idx FROM fiducials_lightcones WHERE idx=%lu",
               idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     MYSQL_RES *query_res = mysql_store_result(p);

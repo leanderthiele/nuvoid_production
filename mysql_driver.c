@@ -72,8 +72,7 @@ const char *cosmologies_columns =
     "PRIMARY KEY (cosmo_idx)";
 
 const char *fiducials_columns =
-    "seed_idx INT UNSIGNED NOT NULL, "
-    "PRIMARY KEY (cosmo_idx)";
+    "seed_idx INT UNSIGNED NOT NULL";
 
 const char *lightcones_columns =
     "hod_idx BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, "
@@ -273,7 +272,7 @@ int create_fiducial (MYSQL *p, const char *hod_hash)
               "INSERT INTO fiducials_lightcones (seed_idx, hod_hash, state, create_time) "
               "VALUES ((SELECT seed_idx FROM fiducials "
                        "WHERE seed_idx NOT IN "
-                       "(SELECT seed_idx FROM fiducials_lightcones WHERE hod_hash != '%s') LIMIT 1), "
+                       "(SELECT seed_idx FROM fiducials_lightcones WHERE hod_hash = '%s') LIMIT 1), "
                       "'%s', 'created', %ld)",
               hod_hash, hod_hash, now);
     SAFE_MYSQL(mysql_query(p, query_buffer));
@@ -463,7 +462,7 @@ void new_table (MYSQL *p, const char *name, const char *columns)
 {
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
-              "DROP TABLE %s; "
+              "DROP TABLE IF EXISTS %s; "
               "CREATE TABLE %s (%s);",
               name, name, columns);
     SAFE_MYSQL(mysql_query(p, query_buffer));

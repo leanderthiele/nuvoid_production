@@ -73,7 +73,7 @@ const char *cosmologies_columns =
     "PRIMARY KEY (cosmo_idx)";
 
 const char *fiducials_columns =
-    "seed_idx INT UNSIGNED NOT NULL "
+    "seed_idx INT UNSIGNED NOT NULL, "
     "hod_hash CHAR(40), "
     "state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
     "create_time BIGINT NOT NULL, "

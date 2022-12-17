@@ -194,7 +194,7 @@ void set_fiducials (MYSQL *p, int version)
         mysql_free_result(query_res);
         if (!num_rows) // not in the database
         {
-            MYSPRINTF(query_buffer, "INSERT INTO fiducials_v%d VALUES (%d)", version, seed_idx);
+            MYSPRINTF(query_buffer, "INSERT INTO fiducials_v%d (seed_idx) VALUES (%d)", version, seed_idx);
             SAFE_MYSQL(mysql_query(p, query_buffer));
         }
         else

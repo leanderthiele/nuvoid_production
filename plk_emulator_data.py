@@ -51,7 +51,7 @@ def split_path(path) :
 
     return cosmo_idx, hod_hash
 
-# do a glob for all available void catalogs
+# do a glob for all available plk files
 print('globbing...')
 plk_files = glob(f'{database}/cosmo_varied_*/lightcones/[a-f,0-9]*/plk_[0-9]*.npz')
 print(f'Found {len(plk_files)} plk files.')
@@ -64,7 +64,7 @@ p0k = None
 p2k = None
 p4k = None
 
-for f in tqdm(void_files) :
+for f in tqdm(plk_files) :
     cosmo_idx, hod_hash = split_path(f)
     cosmo = get_cosmo(cosmo_idx)
     hod = get_hod(cosmo_idx, hod_hash)

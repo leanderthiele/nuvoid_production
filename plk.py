@@ -24,10 +24,18 @@ class PLKCalc :
     fsky = 0.16795440
 
     
-    def __init__(self) :
+    def __init__(self, comm) :
+        self.comm = comm
         self.cosmo = NBL.cosmology.Cosmology(h=PLKCalc.h).match(Omega0_m=PLKCalc.Om)
         with np.load(PLKCalc.rand_file) as f :
             ra_rand, dec_rand, z_rand = [f[s] for s in ['RA', 'DEC', 'Z']]
+
+        # get data for our rank
+        lo, hi = self.interval(len(z_rand))
+        ra_rand = ra_rand[lo:hi]
+        dec_rand = dec_rand[lo:hi]
+        z_rand = z_rand[lo:hi]
+
         zselect = (z_rand>PLKCalc.zmin) * (z_rand<PLKCalc.zmax)
         ra_rand = ra_rand[zselect]
         dec_rand = dec_rand[zselect]
@@ -41,7 +49,15 @@ class PLKCalc :
         dec_gals = dec_gals[zselect]
         z_gals = z_gals[zselect]
 
+        # everyone needs to compute the same for this
         ng_of_z = self.nz(z_gals)
+
+        # get data for our rank
+        lo, hi = self.interval(len(z_gals))
+        ra_gals = ra_gals[lo:hi]
+        dec_gals = dec_gals[lo:hi]
+        z_gals = z_gals[lo:hi]
+
         nbar_gals = ng_of_z(z_gals)
         nbar_rand = ng_of_z(self.z_rand)
 
@@ -82,3 +98,10 @@ class PLKCalc :
         R_lo = self.cosmo.comoving_distance(edges[:-1])
         dV = 4*np.pi/3 * (R_hi**3 - R_lo**3) * PLKCalc.fsky
         return InterpolatedUnivariateSpline(0.5*(edges[1:]+edges[:-1]), N/dV, ext='const')
+
+
+    def interval(self, N) :
+        per_rank = N // self.comm.size
+        lo = self.comm.rank * per_rank
+        hi = (self.comm.rank+1)*per_rank if self.comm.rank != (self.comm.size-1) else N
+        return lo, hi

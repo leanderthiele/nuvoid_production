@@ -28,7 +28,7 @@ def report_state(cosmo_idx, hod_idx, state) :
 
 with NBL.TaskManager(cpus_per_task=CPUS_PER_TASK, use_all_cpus=True) as tm :
     
-    plk_calc = PLKCalc()
+    plk_calc = PLKCalc(comm=tm.comm)
 
     # we make a fake long list
     for ii in tm.iterate(list(range(10000))) :

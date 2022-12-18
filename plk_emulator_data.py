@@ -53,7 +53,7 @@ def split_path(path) :
 
 # do a glob for all available plk files
 print('globbing...')
-plk_files = glob(f'{database}/cosmo_varied_*/lightcones/[a-f,0-9]*/plk_[0-9]*.npz')
+plk_files = glob(f'{database}/cosmo_varied_*/lightcones/[a-f,0-9]*/NEW_plk_[0-9]*.npz')
 print(f'Found {len(plk_files)} plk files.')
 
 param_names = None

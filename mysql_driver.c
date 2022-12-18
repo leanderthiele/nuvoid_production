@@ -76,7 +76,7 @@ const char *fiducials_columns =
     "seed_idx INT UNSIGNED NOT NULL, "
     "hod_hash CHAR(40), "
     "state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
-    "create_time BIGINT NOT NULL, "
+    "create_time BIGINT, "
     "plk_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
     "plk_create_time BIGINT, "
     "voids_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "

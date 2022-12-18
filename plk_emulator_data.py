@@ -60,9 +60,9 @@ param_names = None
 params = []
 cosmo_indices = []
 k = None
-p0k = None
-p2k = None
-p4k = None
+p0k = []
+p2k = []
+p4k = []
 
 for f in tqdm(plk_files) :
     cosmo_idx, hod_hash = split_path(f)
@@ -73,14 +73,18 @@ for f in tqdm(plk_files) :
         param_names = param_names_
     else :
         assert param_names == param_names_
-    with np.load(f) as fp :
-        if k is None :
-            k = fp['k']
-        else :
-            assert np.allclose(k, fp['k'])
-        p0k.append(fp['p0k'])
-        p2k.append(fp['p2k'])
-        p4k.append(fp['p4k'])
+    try :
+        with np.load(f) as fp :
+            if k is None :
+                k = fp['k']
+            else :
+                assert np.allclose(k, fp['k'])
+            p0k.append(fp['p0k'])
+            p2k.append(fp['p2k'])
+            p4k.append(fp['p4k'])
+    except ValueError :
+        print(f'Problem with file {f}')
+        continue
     params.append(list(cosmo.values()) + list(hod.values()))
     cosmo_indices.append(cosmo_idx)
 

@@ -64,6 +64,10 @@ possible commands:
     argv[2] = minutes
 [timeout_old_plk]
     argv[2] = minutes
+[get_run]
+    argv[2] = hod_idx
+    returns cosmo_idx hod_hash state plk_state
+    cosmo_idx == -1 if nothing left
 )"""";
 
 // contents of the database
@@ -512,6 +516,38 @@ void new_fiducials (MYSQL *p, int version)
     new_table(p, buffer, fiducials_columns);
 }
 
+int get_run (MYSQL *p, uint64_t hod_idx, char *hod_hash, char *state, char *plk_state)
+{
+    char query_buffer[1024];
+    MYSPRINTF(query_buffer,
+              "SELECT cosmo_idx, hod_hash, state, plk_state FROM lightcones "
+              "WHERE hod_idx=%lu",
+              hod_idx);
+
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+
+    MYSQL_RES *query_res = mysql_store_result(p);
+    uint64_t num_rows = mysql_num_rows(query_res);
+    if (num_rows==0)
+    {
+        sprintf(hod_hash, "NONE"); sprintf(state, "NONE"); sprintf(plk_state, "NONE");
+        return -1;
+    }
+    assert(num_rows==1);
+
+    unsigned int num_fields = mysql_num_fields(query_res);
+    assert(num_fields==4);
+    MYSQL_ROW row = mysql_fetch_row(query_res);
+    int cosmo_idx = atoi(row[0]);
+    sprintf(hod_hash, "%s", row[1]);
+    sprintf(state, "%s", row[2]);
+    sprintf(plk_state, "%s", row[3]);
+
+    mysql_free_result(query_res);
+
+    return cosmo_idx;
+}
+
 int main(int argc, char **argv)
 {
     if (argc==1)
@@ -622,6 +658,12 @@ int main(int argc, char **argv)
     else if (!strcmp(mode, "end_fiducial"))
     {
         end_fiducial(&p, atoi(argv[2]), atoi(argv[3]), atoi(argv[4]));
+    }
+    else if (!strcmp(mode, "get_run"))
+    {
+        char hod_hash[40], state[40], plk_state[40];
+        int cosmo_idx = get_run(&p, atoll(argv[2]), hod_hash, state, plk_state);
+        fprintf(stdout, "%d\n", cosmo_idx);
     }
     else
     {

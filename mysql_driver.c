@@ -539,9 +539,11 @@ int get_run (MYSQL *p, uint64_t hod_idx, char *hod_hash, char *state, char *plk_
     assert(num_fields==4);
     MYSQL_ROW row = mysql_fetch_row(query_res);
     int cosmo_idx = atoi(row[0]);
-    sprintf(hod_hash, "%s", row[1]);
-    sprintf(state, "%s", row[2]);
-    sprintf(plk_state, "%s", row[3]);
+
+    // need to account for possible NULL here!
+    sprintf(hod_hash, "%s", (row[1]) ? row[1] : "NULL");
+    sprintf(state, "%s", (row[2]) ? row[2] : "NULL");
+    sprintf(plk_state, "%s", (row[3]) ? row[3] : "NULL");
 
     mysql_free_result(query_res);
 
@@ -663,7 +665,7 @@ int main(int argc, char **argv)
     {
         char hod_hash[40], state[40], plk_state[40];
         int cosmo_idx = get_run(&p, atoll(argv[2]), hod_hash, state, plk_state);
-        fprintf(stdout, "%d\n", cosmo_idx);
+        fprintf(stdout, "%d %s %s %s\n", cosmo_idx, hod_hash, state, plk_state);
     }
     else
     {

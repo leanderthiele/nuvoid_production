@@ -57,7 +57,7 @@ p0k = []
 p2k = []
 p4k = []
 
-hod_idx = 0
+hod_idx = 1
 while True :
     result = subprocess.run(f'{codebase}/mysql_driver_NEW get_run {hod_idx}',
                             shell=True, check=True, capture_output=True)
@@ -68,7 +68,7 @@ while True :
         print(f'At hod_idx={hod_idx}')
 
     # these are all strings
-    cosmo_idx, hod_hash, state, plk_state = result.stdout.decode().split(',')
+    cosmo_idx, hod_hash, state, plk_state = result.stdout.decode().split()
     cosmo_idx = int(cosmo_idx)
     if cosmo_idx < 0 :
         # reached end
@@ -102,7 +102,7 @@ while True :
                 this_p2k[ii] = fp['p2k']
                 this_p4k[ii] = fp['p4k']
         except ValueError :
-            print(f'Problem with file {fname')
+            print(f'Problem with file {fname}')
             all_successful = False
             break
     if all_successful :

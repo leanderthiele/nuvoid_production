@@ -116,6 +116,7 @@ np.savez('plk_grouped_data.npz',
          param_names=param_names,
          cosmo_indices=np.array(cosmo_indices, dtype=int),
          params=np.array(params, dtype=np.float32),
+         k=k,
          p0k=np.array(p0k, dtype=np.float32),
          p2k=np.array(p2k, dtype=np.float32),
          p4k=np.array(p4k, dtype=np.float32))

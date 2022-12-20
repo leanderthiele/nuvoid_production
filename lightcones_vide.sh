@@ -44,6 +44,8 @@ cd $logdir
 module load $VIDE_MODULES
 conda activate $VIDE_CONDA_ENV
 
+num_success=0
+
 for lightcone in "${lightcones[@]}"; do
 
   augment="$(echo $lightcone | grep -m 1 -oP 'lightcone_+\K\d*')"
@@ -71,6 +73,8 @@ for lightcone in "${lightcones[@]}"; do
     continue
   fi
 
+  num_success=$((num_success+1))
+
   # copy output into permanent storage
   tmp_out="$indir/sample_$augment"
   perm_out="$outdir/voids_$augment"
@@ -84,3 +88,11 @@ done
 
 conda deactivate
 module rm $VIDE_MODULES
+
+if [ $num_success -ne $num_lightcones ]; then
+  utils::printerr "failures: succeeded $num_success/$num_lightcones in $outdir"
+fi
+
+if [ $num_success -eq 0 ]; then
+  exit 1
+fi

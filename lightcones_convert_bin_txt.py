@@ -6,7 +6,7 @@ Command line arguments:
 
 import os.path
 from sys import argv
-import glob
+from glob import glob
 
 import numpy as np
 

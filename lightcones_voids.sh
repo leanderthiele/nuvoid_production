@@ -23,6 +23,7 @@ for ii in $( seq 1 10000 ); do
 
   perm_dir="/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_${cosmo_idx}/lightcones/${hod_hash}"
   tmp_dir="/tmp/cosmo_varied_${cosmo_idx}/lightcones/${hod_hash}"
+  mkdir -p $tmp_dir
 
   # convert .bin -> .txt
   module load anaconda3/2021.11

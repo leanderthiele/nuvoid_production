@@ -58,6 +58,16 @@ possible commands:
     argv[2] = cosmo_idx
     argv[3] = hod_idx
     argv[4] = state
+[create_voids]
+    returns cosmo_idx hod_idx hod_hash
+    (cosmo_idx will be negative if no work is remaining)
+[start_voids]
+    argv[2] = cosmo_idx
+    argv[3] = hod_idx
+[end_voids]
+    argv[2] = cosmo_idx
+    argv[3] = hod_idx
+    argv[4] = state
 [reset_lightcones]
     CAUTION: this deletes all data!
 [timeout_old_lightcones]
@@ -358,19 +368,19 @@ void end_fiducial (MYSQL *p, int version, int seed_idx, int state)
     assert(num_rows==1);
 }
 
-int create_plk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
+int create_summary (MYSQL *p, const char *name, uint64_t *hod_idx, char *hod_hash)
 {
     time_t now = time(NULL);
 
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
               "SET @updated_hod_idx := 0; "
-              "UPDATE lightcones SET plk_state='created', "
-              "plk_create_time=%ld, "
+              "UPDATE lightcones SET %s_state='created', "
+              "%s_create_time=%ld, "
               "hod_idx=(SELECT @updated_hod_idx := hod_idx) "
-              "WHERE state='success' AND plk_state IS NULL LIMIT 1; "
+              "WHERE state='success' AND %s_state IS NULL LIMIT 1; "
               "SELECT cosmo_idx, hod_idx, hod_hash FROM lightcones WHERE hod_idx=@updated_hod_idx;",
-              now);
+              name, name, now, name);
     SAFE_MYSQL(mysql_query(p, query_buffer));
 
     MYSQL_RES *query_res;
@@ -412,26 +422,56 @@ int create_plk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
     return cosmo_idx;
 }
 
-void start_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx)
+void start_summary (MYSQL *p, const char *name, int cosmo_idx, uint64_t hod_idx)
 {
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
-              "UPDATE lightcones SET plk_state='running' WHERE hod_idx=%lu AND cosmo_idx=%d",
-              hod_idx, cosmo_idx);
+              "UPDATE lightcones SET %s_state='running' WHERE hod_idx=%lu AND cosmo_idx=%d",
+              name, hod_idx, cosmo_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);
     assert(num_rows==1);
 }
 
-void end_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
+void end_summary (MYSQL *p, const char *name, int cosmo_idx, uint64_t hod_idx, int state)
 {
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
-              "UPDATE lightcones SET plk_state='%s' WHERE hod_idx=%lu AND cosmo_idx=%d",
-              (state) ? "fail" : "success", hod_idx, cosmo_idx);
+              "UPDATE lightcones SET %s_state='%s' WHERE hod_idx=%lu AND cosmo_idx=%d",
+              name, (state) ? "fail" : "success", hod_idx, cosmo_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);
     assert(num_rows==1);
+}
+
+int create_plk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
+{
+    return create_summary(p, "plk", hod_idx, hod_hash);
+}
+
+int create_voids (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
+{
+    return create_summary(p, "voids", hod_idx, hod_hash);
+}
+
+void start_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx)
+{
+    start_summary(p, "plk", cosmo_idx, hod_idx);
+}
+
+void start_voids (MYSQL *p, int cosmo_idx, uint64_t hod_idx)
+{
+    start_summary(p, "voids", cosmo_idx, hod_idx);
+}
+
+void end_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
+{
+    end_summary(p, "plk", cosmo_idx, hod_idx, state);
+}
+
+void end_voids (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
+{
+    end_summary(p, "voids", cosmo_idx, hod_idx, state);
 }
 
 void reset_lightcones (MYSQL *p)
@@ -619,6 +659,21 @@ int main(int argc, char **argv)
     else if (!strcmp(mode, "end_plk"))
     {
         end_plk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]));
+    }
+    else if (!strcmp(mode, "create_voids"))
+    {
+        uint64_t hod_idx;
+        char hod_hash[40];
+        int cosmo_idx = create_voids(&p, &hod_idx, hod_hash);
+        fprintf(stdout, "%d %lu %s\n", cosmo_idx, hod_idx, hod_hash);
+    }
+    else if (!strcmp(mode, "start_voids"))
+    {
+        start_voids(&p, atoi(argv[2]), atoll(argv[3]));
+    }
+    else if (!strcmp(mode, "end_voids"))
+    {
+        end_voids(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]));
     }
     else if (!strcmp(mode, "reset_lightcones"))
     {

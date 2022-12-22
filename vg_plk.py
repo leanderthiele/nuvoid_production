@@ -2,7 +2,7 @@ import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 from astropy.stats import scott_bin_width
 import nbodykit.lab as NBL
-from pypower import MeshFFTPower, CatalogMesh
+from pypower import MeshFFTPower, CatalogMesh, CatalogFFTPower
 from sklearn.neighbors import KernelDensity
 
 class PLKCalc :
@@ -15,10 +15,10 @@ class PLKCalc :
                    # which may be using a lot more voids. Probably worth playing with
                    # TODO
 
-    Nmesh = 360 # TODO is this really enough???
+    Nmesh = 512 # TODO is this really enough???
     kmax = 0.2
     dk = 0.005
-    poles = [0, 2, 4]
+    poles = [0, ]
 
     # these were used when constructing the lightcones
     zmin = 0.42
@@ -29,7 +29,7 @@ class PLKCalc :
     fsky = 0.16795440
 
     # void Rmin, Rmax values
-    Rmin = [30, 40, 50, 60, ] # needs to be increasing
+    Rmin = [30, ] # needs to be increasing
     Rmax = 80
 
     # how many random voids we use
@@ -84,6 +84,7 @@ class PLKCalc :
         zselect = (z_gals>PLKCalc.zmin) * (z_gals<PLKCalc.zmax)
         ra_gals = ra_gals[zselect]
         dec_gals = dec_gals[zselect]
+        z_gals = z_gals[zselect]
 
         ng_of_z = self.nz(z_gals)
 
@@ -101,11 +102,15 @@ class PLKCalc :
 
         pos_gals = NBL.transform.SkyToCartesian(ra_gals, dec_gals, z_gals,
                                                 cosmo=self.cosmo).compute()
-        mesh_gals = CatalogMesh(data_positions=pos_gals, data_weights=fkp_gals,
-                                randoms_positions=self.pos_rand_gals, randoms_weights=fkp_rand_gals,
-                                position_type='pos',
-                                nmesh=PLKCalc.Nmesh,
-                                mpicomm=self.comm).to_mesh(field='fkp')
+
+        if False :
+            print('constructing gals mesh')
+            mesh_gals = CatalogMesh(data_positions=pos_gals, data_weights=fkp_gals,
+                                    randoms_positions=self.pos_rand_gals, randoms_weights=fkp_rand_gals,
+                                    position_type='pos',
+                                    nmesh=PLKCalc.Nmesh,
+                                    mpicomm=self.comm).to_mesh(field='fkp')
+            print('done constructing gals mesh')
 
         results = []
         for rmin in PLKCalc.Rmin :
@@ -131,15 +136,31 @@ class PLKCalc :
                                                      cosmo=self.cosmo).compute()
             pos_rand_voids = NBL.transform.SkyToCartesian(ra_rand_voids, dec_rand_voids, z_rand_voids,
                                                           cosmo=self.cosmo).compute()
-            mesh_voids = CatalogMesh(data_positions=pos_voids, data_weights=fkp_voids,
-                                     randoms_positions=pos_rand_voids, randoms_weight=fkp_rand_voids,
-                                     position_type='pos',
-                                     nmesh=PLKCalc.Nmesh,
-                                     mpicomm=self.comm).to_mesh(field='fkp')
+            if False :
+                print('constructing voids mesh')
+                mesh_voids = CatalogMesh(data_positions=pos_voids, data_weights=fkp_voids,
+                                         randoms_positions=pos_rand_voids, randoms_weights=fkp_rand_voids,
+                                         position_type='pos',
+                                         nmesh=PLKCalc.Nmesh,
+                                         mpicomm=self.comm).to_mesh(field='fkp')
 
-            p = MeshFFTPower(mesh_gals, mesh_voids, ells=[0, ], edges=np.linspace(0, 0.5, num=50))
+            print('computing fft power')
+            # p = MeshFFTPower(mesh_gals, mesh_voids, ells=PLKCalc.poles, edges=np.linspace(0, 0.5, num=50))
+            p = CatalogFFTPower(data_positions1=pos_gals, data_positions2=pos_voids,
+                                randoms_positions1=self.pos_rand_gals,
+                                randoms_positions2=pos_rand_voids,
+                                data_weights1=fkp_gals, data_weights2=fkp_voids,
+                                randoms_weights1=fkp_rand_gals,
+                                randoms_weights2=fkp_rand_voids,
+                                nmesh=PLKCalc.Nmesh,
+                                position_type='pos',
+                                ells=PLKCalc.poles,
+                                mpicomm=self.comm,
+                                edges=np.linspace(0.0, 0.5, num=50))
+            print(p.boxsize)
 
-            results.append({'k': p.k, 'kavg': p.kavg, 'Plk': p.power})
+            # .power is a (ell, k) array
+            results.append({'k': p.poles.k, 'kavg': p.poles.kavg, 'Plk': p.poles.power})
 
         return results
 
@@ -174,7 +195,7 @@ class PLKCalc :
         kernel_density = KernelDensity(bandwidth=scott_bin_width(z_voids)).fit(z_voids.reshape(-1, 1))
 
         N_rand_voids = PLKCalc.N_rand_voids // self.comm.size
-        z_rand_voids = kernel_density.sample(N_rand_voids, random_state=self.rng)
+        z_rand_voids = kernel_density.sample(N_rand_voids, random_state=123456+self.comm.rank).reshape(-1)
 
         # here we are assuming that the cut according to minimum radius has already been
         # performed

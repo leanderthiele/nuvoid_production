@@ -75,6 +75,13 @@ DEC = np.empty(0, dtype=np.float32)
 Z = np.empty(0, dtype=np.float32)
 R = np.empty(0, dtype=np.float32)
 
+def save() :
+    np.savez('collected_voids.npz',
+             param_names=param_names,
+             cosmo_indices=np.array(cosmo_indices, dtype=int),
+             params=np.array(params, dtype=np.float32),
+             Nvoids=Nvoids, RA=RA, DEC=DEC, Z=Z, R=R)
+
 hod_idx = 1
 while True :
     result = subprocess.run(f'{codebase}/mysql_driver get_run {hod_idx}',
@@ -83,6 +90,9 @@ while True :
     hod_idx += 1
     if hod_idx % 100 == 0 :
         print(f'At hod_idx={hod_idx}')
+
+    if hod_idx % 1000 == 0 :
+        save()
 
     # these are all strings
     cosmo_idx, hod_hash, state, plk_state, voids_state = result.stdout.decode().split()
@@ -106,7 +116,7 @@ while True :
     else :
         assert param_names == param_names_
 
-    this_Nvoids = np.zeros(8)
+    this_Nvoids = np.zeros(8, dtype=int)
     for ii, voids_dir in enumerate(voids_dirs) :
         # find the augmentation index
         m = re.search('(?<=voids_)[0-9]*', voids_dir)
@@ -142,19 +152,8 @@ while True :
     params.append(list(cosmo.values()) + list(hod.values()))
     cosmo_indices.append(cosmo_idx)
     Nvoids = np.concatenate((Nvoids, this_Nvoids.reshape(1, -1)), axis=0)
-
-    if hod_idx % 1000 == 0 :
-        np.savez('collected_voids.npz',
-                 param_names=param_names,
-                 cosmo_indices=np.array(cosmo_indices, dtype=int),
-                 params=np.array(params, dtype=np.float32),
-                 Nvoids=Nvoids, RA=RA, DEC=DEC, Z=Z, R=R)
         
 
 
 # final output
-np.savez('collected_voids.npz',
-         param_names=param_names,
-         cosmo_indices=np.array(cosmo_indices, dtype=int),
-         params=np.array(params, dtype=np.float32),
-         Nvoids=Nvoids, RA=RA, DEC=DEC, Z=Z, R=R)
+save()

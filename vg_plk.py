@@ -171,7 +171,7 @@ class PLKCalc :
 
     def rand_voids(self, z_voids) :
         # construct a probability distribution for the randoms redshift distribution
-        kernel_density = KernelDensity(bandwidth=scott_bin_width(z)).fit(z_voids.reshape(-1, 1))
+        kernel_density = KernelDensity(bandwidth=scott_bin_width(z_voids)).fit(z_voids.reshape(-1, 1))
 
         N_rand_voids = PLKCalc.N_rand_voids // self.comm.size
         z_rand_voids = kernel_density.sample(N_rand_voids, random_state=self.rng)

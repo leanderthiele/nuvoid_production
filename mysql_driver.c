@@ -719,7 +719,7 @@ int main(int argc, char **argv)
     }
     else if (!strcmp(mode, "get_run"))
     {
-        char hod_hash[40], state[40], plk_state[40], voids_state[4];
+        char hod_hash[40], state[40], plk_state[40], voids_state[40];
         int cosmo_idx = get_run(&p, atoll(argv[2]), hod_hash, state, plk_state, voids_state);
         fprintf(stdout, "%d %s %s %s %s\n", cosmo_idx, hod_hash, state, plk_state, voids_state);
     }

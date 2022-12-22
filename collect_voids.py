@@ -19,6 +19,9 @@ import numpy as np
 
 RMIN = 30
 
+codebase = '/home/lthiele/nuvoid_production'
+database = '/scratch/gpfs/lthiele/nuvoid_production'
+
 
 def get_setting_from_info(fname, name) :
     with open(fname, 'r') as f :
@@ -144,7 +147,7 @@ while True :
         np.savez('collected_voids.npz',
                  param_names=param_names,
                  cosmo_indices=np.array(cosmo_indices, dtype=int),
-                 params=np.array(params, dtype=np.float32)
+                 params=np.array(params, dtype=np.float32),
                  Nvoids=Nvoids, RA=RA, DEC=DEC, Z=Z, R=R)
         
 
@@ -153,5 +156,5 @@ while True :
 np.savez('collected_voids.npz',
          param_names=param_names,
          cosmo_indices=np.array(cosmo_indices, dtype=int),
-         params=np.array(params, dtype=np.float32)
+         params=np.array(params, dtype=np.float32),
          Nvoids=Nvoids, RA=RA, DEC=DEC, Z=Z, R=R)

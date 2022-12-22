@@ -76,7 +76,7 @@ possible commands:
     argv[2] = minutes
 [get_run]
     argv[2] = hod_idx
-    returns cosmo_idx hod_hash state plk_state
+    returns cosmo_idx hod_hash state plk_state voids_state
     cosmo_idx == -1 if nothing left
 )"""";
 
@@ -556,11 +556,11 @@ void new_fiducials (MYSQL *p, int version)
     new_table(p, buffer, fiducials_columns);
 }
 
-int get_run (MYSQL *p, uint64_t hod_idx, char *hod_hash, char *state, char *plk_state)
+int get_run (MYSQL *p, uint64_t hod_idx, char *hod_hash, char *state, char *plk_state, char *voids_state)
 {
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
-              "SELECT cosmo_idx, hod_hash, state, plk_state FROM lightcones "
+              "SELECT cosmo_idx, hod_hash, state, plk_state, voids_state FROM lightcones "
               "WHERE hod_idx=%lu",
               hod_idx);
 
@@ -576,7 +576,7 @@ int get_run (MYSQL *p, uint64_t hod_idx, char *hod_hash, char *state, char *plk_
     assert(num_rows==1);
 
     unsigned int num_fields = mysql_num_fields(query_res);
-    assert(num_fields==4);
+    assert(num_fields==5);
     MYSQL_ROW row = mysql_fetch_row(query_res);
     int cosmo_idx = atoi(row[0]);
 
@@ -584,6 +584,7 @@ int get_run (MYSQL *p, uint64_t hod_idx, char *hod_hash, char *state, char *plk_
     sprintf(hod_hash, "%s", (row[1]) ? row[1] : "NULL");
     sprintf(state, "%s", (row[2]) ? row[2] : "NULL");
     sprintf(plk_state, "%s", (row[3]) ? row[3] : "NULL");
+    sprintf(voids_state, "%s", (row[4]) ? row[4] : "NULL");
 
     mysql_free_result(query_res);
 
@@ -718,9 +719,9 @@ int main(int argc, char **argv)
     }
     else if (!strcmp(mode, "get_run"))
     {
-        char hod_hash[40], state[40], plk_state[40];
-        int cosmo_idx = get_run(&p, atoll(argv[2]), hod_hash, state, plk_state);
-        fprintf(stdout, "%d %s %s %s\n", cosmo_idx, hod_hash, state, plk_state);
+        char hod_hash[40], state[40], plk_state[40], voids_state[4];
+        int cosmo_idx = get_run(&p, atoll(argv[2]), hod_hash, state, plk_state, voids_state);
+        fprintf(stdout, "%d %s %s %s %s\n", cosmo_idx, hod_hash, state, plk_state, voids_state);
     }
     else
     {

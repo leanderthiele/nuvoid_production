@@ -2,7 +2,7 @@ import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 from astropy.stats import scott_bin_width
 import nbodykit.lab as NBL
-from pypower import MeshFFTPower, CatalogMesh, CatalogFFTPower
+from pypower import CatalogFFTPower
 from sklearn.neighbors import KernelDensity
 
 class PLKCalc :
@@ -14,9 +14,8 @@ class PLKCalc :
     P0_voids = 1e2 # even order of magnitude variations around this value don't really matter
 
     Nmesh = 512
-    kmax = 0.2
-    dk = 0.005
-    poles = [0, ]
+    kedges = np.linspace(0.0, 0.2, num=41)
+    poles = [0, 2, 4, ]
 
     # these were used when constructing the lightcones
     zmin = 0.42
@@ -27,7 +26,7 @@ class PLKCalc :
     fsky = 0.16795440
 
     # void Rmin, Rmax values
-    Rmin = [30, 40, 50, ] # needs to be increasing
+    Rmin = [30, 40, 50, ] # needs to be increasing!
     Rmax = 80
 
     # how many random voids we use
@@ -36,8 +35,6 @@ class PLKCalc :
     # this file contains voids from our simulations, can be used to construct a randoms catalog
     # that respects the mask
     voids_file = '/home/lthiele/nuvoid_production/collected_voids.npz'
-
-    kedges = np.linspace(0.0, 0.2, num=41)
 
 
     def __init__(self, comm) :
@@ -88,7 +85,7 @@ class PLKCalc :
                                   ra_voids, dec_voids, z_voids,
                                   R_voids) :
 
-        # first put the galaxies on a mesh
+        # cut the galaxies according to reshift
         zselect = (z_gals>PLKCalc.zmin) * (z_gals<PLKCalc.zmax)
         ra_gals = ra_gals[zselect]
         dec_gals = dec_gals[zselect]
@@ -125,10 +122,6 @@ class PLKCalc :
             z_voids = z_voids[select]
             R_voids = R_voids[select]
             
-            select = self.r_collected_voids > rmin
-            self.ra_dec_collected_voids = self.ra_dec_collected_voids[select]
-            self.r_collected_voids = self.r_collected_voids[select]
-
             nv_of_z = self.nz(z_voids)
             ra_rand_voids, dec_rand_voids, z_rand_voids = self.rand_voids(ii, z_voids)
 

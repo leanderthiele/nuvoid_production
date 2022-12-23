@@ -11,9 +11,7 @@ class PLKCalc :
     h = 0.71 # found this somewhere in the VIDE source, shouldn't matter
     Om = 0.3439 # this is what we used for the VIDE runs (first emulator)
     P0_gals = 1e4
-    P0_voids = 1e3 # I got this value by looking at the vv line in Fig. 1 (right) of https://arxiv.org/pdf/1307.2571.pdf,
-                   # which may be using a lot more voids. Probably worth playing with
-                   # TODO
+    P0_voids = 1e2 # even order of magnitude variations around this value don't really matter
 
     Nmesh = 512
     kmax = 0.2
@@ -111,6 +109,8 @@ class PLKCalc :
         for ii, rmin in enumerate(PLKCalc.Rmin) :
             select = (R_voids > rmin) * (R_voids < PLKCalc.Rmax)
 
+            # FIXME
+            print(f'Have {np.count_nonzero(select)} voids')
             if np.count_nonzero(select) < 3 :
                 # this is not meaningful anymore
                 break
@@ -138,17 +138,19 @@ class PLKCalc :
             pos_rand_voids = NBL.transform.SkyToCartesian(ra_rand_voids, dec_rand_voids, z_rand_voids,
                                                           cosmo=self.cosmo).compute()
 
-            p = CatalogFFTPower(data_positions1=pos_gals, data_positions2=pos_voids,
+            p = CatalogFFTPower(data_positions1=pos_gals,
+                                data_positions2=pos_voids,
                                 randoms_positions1=self.pos_rand_gals,
                                 randoms_positions2=pos_rand_voids,
-                                data_weights1=fkp_gals, data_weights2=fkp_voids,
+                                data_weights1=fkp_gals,
+                                data_weights2=fkp_voids,
                                 randoms_weights1=fkp_rand_gals,
                                 randoms_weights2=fkp_rand_voids,
                                 nmesh=PLKCalc.Nmesh,
                                 position_type='pos',
                                 ells=PLKCalc.poles,
-                                edges=PLKCalc.kedges
-                                mpicomm=self.comm,
+                                edges=PLKCalc.kedges,
+                                mpicomm=self.comm
                                ).poles
 
             if np.all(np.isnan(k)) :
@@ -159,7 +161,7 @@ class PLKCalc :
 
         return dict(k=k,
                     **{f'p{ell}k_Rmin{Rmin}': Plk[PLKCalc.Rmin.index(Rmin), PLKCalc.poles.index(ell), :]
-                       for ell in PLKCalc.poles} for Rmin in PLKCalc.Rmin)
+                       for ell in PLKCalc.poles for Rmin in PLKCalc.Rmin})
 
 
     def compute_from_fnames(self, gals_fname, voids_fname) :

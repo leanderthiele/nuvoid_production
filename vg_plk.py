@@ -29,7 +29,7 @@ class PLKCalc :
     fsky = 0.16795440
 
     # void Rmin, Rmax values
-    Rmin = [30, ] # needs to be increasing
+    Rmin = [30, 40, 50, ] # needs to be increasing
     Rmax = 80
 
     # how many random voids we use
@@ -106,14 +106,20 @@ class PLKCalc :
         pos_gals = NBL.transform.SkyToCartesian(ra_gals, dec_gals, z_gals,
                                                 cosmo=self.cosmo).compute()
 
-        k = None
-        Plk = np.empty((len(PLKCalc.Rmin), len(PLKCalc.poles), len(PLKCalc.kedges)-1))
+        k = np.full(len(PLKCalc.kedges)-1, float('nan'))
+        Plk = np.full((len(PLKCalc.Rmin), len(PLKCalc.poles), len(PLKCalc.kedges)-1), float('nan'))
         for ii, rmin in enumerate(PLKCalc.Rmin) :
             select = (R_voids > rmin) * (R_voids < PLKCalc.Rmax)
+
+            if np.count_nonzero(select) < 3 :
+                # this is not meaningful anymore
+                break
+
             ra_voids = ra_voids[select]
             dec_voids = dec_voids[select]
             z_voids = z_voids[select]
             R_voids = R_voids[select]
+            
             select = self.r_collected_voids > rmin
             self.ra_dec_collected_voids = self.ra_dec_collected_voids[select]
             self.r_collected_voids = self.r_collected_voids[select]
@@ -145,14 +151,15 @@ class PLKCalc :
                                 mpicomm=self.comm,
                                ).poles
 
-            if k is None :
-                k = p.k
+            if np.all(np.isnan(k)) :
+                k[:] = p.k
             else :
                 assert np.allclose(k, p.k)
             Plk[ii] = p.power
 
         return dict(k=k,
-                    **{f'p{ell}k': Plk[:, PLKCalc.index(ell), :] for ell in PLKCalc.poles})
+                    **{f'p{ell}k_Rmin{Rmin}': Plk[PLKCalc.Rmin.index(Rmin), PLKCalc.poles.index(ell), :]
+                       for ell in PLKCalc.poles} for Rmin in PLKCalc.Rmin)
 
 
     def compute_from_fnames(self, gals_fname, voids_fname) :

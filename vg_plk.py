@@ -15,7 +15,7 @@ class PLKCalc :
                    # which may be using a lot more voids. Probably worth playing with
                    # TODO
 
-    Nmesh = 512 # TODO is this really enough???
+    Nmesh = 512
     kmax = 0.2
     dk = 0.005
     poles = [0, ]
@@ -37,7 +37,10 @@ class PLKCalc :
 
     # this file contains voids from our simulations, can be used to construct a randoms catalog
     # that respects the mask
-    voids_file = '/home/lthiele/nuvoid_production/collected_voids.npz'
+    # FIXME revert to complete file when done
+    voids_file = '/home/lthiele/nuvoid_production/collected_voids_TEST.npz'
+
+    kedges = np.linspace(0.0, 0.2, num=41)
 
 
     def __init__(self, comm) :
@@ -103,17 +106,9 @@ class PLKCalc :
         pos_gals = NBL.transform.SkyToCartesian(ra_gals, dec_gals, z_gals,
                                                 cosmo=self.cosmo).compute()
 
-        if False :
-            print('constructing gals mesh')
-            mesh_gals = CatalogMesh(data_positions=pos_gals, data_weights=fkp_gals,
-                                    randoms_positions=self.pos_rand_gals, randoms_weights=fkp_rand_gals,
-                                    position_type='pos',
-                                    nmesh=PLKCalc.Nmesh,
-                                    mpicomm=self.comm).to_mesh(field='fkp')
-            print('done constructing gals mesh')
-
-        results = []
-        for rmin in PLKCalc.Rmin :
+        k = None
+        Plk = np.empty((len(PLKCalc.Rmin), len(PLKCalc.poles), len(PLKCalc.kedges)-1))
+        for ii, rmin in enumerate(PLKCalc.Rmin) :
             select = (R_voids > rmin) * (R_voids < PLKCalc.Rmax)
             ra_voids = ra_voids[select]
             dec_voids = dec_voids[select]
@@ -136,16 +131,7 @@ class PLKCalc :
                                                      cosmo=self.cosmo).compute()
             pos_rand_voids = NBL.transform.SkyToCartesian(ra_rand_voids, dec_rand_voids, z_rand_voids,
                                                           cosmo=self.cosmo).compute()
-            if False :
-                print('constructing voids mesh')
-                mesh_voids = CatalogMesh(data_positions=pos_voids, data_weights=fkp_voids,
-                                         randoms_positions=pos_rand_voids, randoms_weights=fkp_rand_voids,
-                                         position_type='pos',
-                                         nmesh=PLKCalc.Nmesh,
-                                         mpicomm=self.comm).to_mesh(field='fkp')
 
-            print('computing fft power')
-            # p = MeshFFTPower(mesh_gals, mesh_voids, ells=PLKCalc.poles, edges=np.linspace(0, 0.5, num=50))
             p = CatalogFFTPower(data_positions1=pos_gals, data_positions2=pos_voids,
                                 randoms_positions1=self.pos_rand_gals,
                                 randoms_positions2=pos_rand_voids,
@@ -155,14 +141,18 @@ class PLKCalc :
                                 nmesh=PLKCalc.Nmesh,
                                 position_type='pos',
                                 ells=PLKCalc.poles,
+                                edges=PLKCalc.kedges
                                 mpicomm=self.comm,
-                                edges=np.linspace(0.0, 0.5, num=50))
-            print(p.boxsize)
+                               ).poles
 
-            # .power is a (ell, k) array
-            results.append({'k': p.poles.k, 'kavg': p.poles.kavg, 'Plk': p.poles.power})
+            if k is None :
+                k = p.k
+            else :
+                assert np.allclose(k, p.k)
+            Plk[ii] = p.power
 
-        return results
+        return dict(k=k,
+                    **{f'p{ell}k': Plk[:, PLKCalc.index(ell), :] for ell in PLKCalc.poles})
 
 
     def compute_from_fnames(self, gals_fname, voids_fname) :
@@ -170,7 +160,6 @@ class PLKCalc :
         # and voids_fname is the sky positions file from VIDE
         return self.compute_from_arrays(*np.fromfile(gals_fname).reshape(3, -1),
                                         *np.loadtxt(voids_fname, usecols=(0,1,2,3,), unpack=True))
-
 
 
     def nz(self, z) :

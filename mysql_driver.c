@@ -68,6 +68,16 @@ possible commands:
     argv[2] = cosmo_idx
     argv[3] = hod_idx
     argv[4] = state
+[create_vgplk]
+    returns cosmo_idx hod_idx hod_hash
+    (cosmo_idx will be negative if no work is remaining)
+[start_vgplk]
+    argv[2] = cosmo_idx
+    argv[3] = hod_idx
+[end_vgplk]
+    argv[2] = cosmo_idx
+    argv[3] = hod_idx
+    argv[4] = state
 [reset_lightcones]
     CAUTION: this deletes all data!
 [timeout_old_lightcones]
@@ -107,6 +117,8 @@ const char *lightcones_columns =
     "plk_create_time BIGINT, "
     "voids_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
     "voids_create_time BIGINT, "
+    "vgplk_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "vgplk_create_time BIGINT, "
     "PRIMARY KEY (hod_idx)";
 
 
@@ -454,6 +466,11 @@ int create_voids (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
     return create_summary(p, "voids", hod_idx, hod_hash);
 }
 
+int create_vgplk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
+{
+    return create_summary(p, "vgplk", hod_idx, hod_hash);
+}
+
 void start_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx)
 {
     start_summary(p, "plk", cosmo_idx, hod_idx);
@@ -464,6 +481,11 @@ void start_voids (MYSQL *p, int cosmo_idx, uint64_t hod_idx)
     start_summary(p, "voids", cosmo_idx, hod_idx);
 }
 
+void start_vgplk (MYSQL *p, int cosmo_idx, uint64_t hod_idx)
+{
+    start_summary(p, "vgplk", cosmo_idx, hod_idx);
+}
+
 void end_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
 {
     end_summary(p, "plk", cosmo_idx, hod_idx, state);
@@ -472,6 +494,11 @@ void end_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
 void end_voids (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
 {
     end_summary(p, "voids", cosmo_idx, hod_idx, state);
+}
+
+void end_vgplk (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
+{
+    end_summary(p, "vgplk", cosmo_idx, hod_idx, state);
 }
 
 void reset_lightcones (MYSQL *p)
@@ -675,6 +702,21 @@ int main(int argc, char **argv)
     else if (!strcmp(mode, "end_voids"))
     {
         end_voids(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]));
+    }
+    else if (!strcmp(mode, "create_vgplk"))
+    {
+        uint64_t hod_idx;
+        char hod_hash[40];
+        int cosmo_idx = create_vgplk(&p, &hod_idx, hod_hash);
+        fprintf(stdout, "%d %lu %s\n", cosmo_idx, hod_idx, hod_hash);
+    }
+    else if (!strcmp(mode, "start_vgplk"))
+    {
+        start_vgplk(&p, atoi(argv[2]), atoll(argv[3]));
+    }
+    else if (!strcmp(mode, "end_vgplk"))
+    {
+        end_vgplk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]));
     }
     else if (!strcmp(mode, "reset_lightcones"))
     {

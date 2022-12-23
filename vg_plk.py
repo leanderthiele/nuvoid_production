@@ -111,6 +111,7 @@ class PLKCalc :
         k = np.full(len(PLKCalc.kedges)-1, float('nan'))
         Plk = np.full((len(PLKCalc.Rmin), len(PLKCalc.poles), len(PLKCalc.kedges)-1), float('nan'))
         for ii, rmin in enumerate(PLKCalc.Rmin) :
+
             select = (R_voids > rmin) * (R_voids < PLKCalc.Rmax)
 
             if np.count_nonzero(select) < 3 :
@@ -190,7 +191,7 @@ class PLKCalc :
         # construct a probability distribution for the randoms redshift distribution
         kernel_density = KernelDensity(bandwidth=scott_bin_width(z_voids)).fit(z_voids.reshape(-1, 1))
 
-        z_rand_voids = kernel_density.sample(len(self.ra_dec_rand_voids),
+        z_rand_voids = kernel_density.sample(len(self.ra_dec_rand_voids[0]),
                                              random_state=123456+self.comm.rank).reshape(-1)
 
         return *self.ra_dec_rand_voids[R_min_idx].T, z_rand_voids

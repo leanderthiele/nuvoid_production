@@ -35,8 +35,7 @@ class PLKCalc :
 
     # this file contains voids from our simulations, can be used to construct a randoms catalog
     # that respects the mask
-    # FIXME revert to complete file when done
-    voids_file = '/home/lthiele/nuvoid_production/collected_voids_TEST.npz'
+    voids_file = '/home/lthiele/nuvoid_production/collected_voids.npz'
 
     kedges = np.linspace(0.0, 0.2, num=41)
 
@@ -70,11 +69,19 @@ class PLKCalc :
         dec_voids = dec_voids[lo:hi]
         r_voids = r_voids[lo:hi]
         select = r_voids < PLKCalc.Rmax
-        self.ra_dec_collected_voids = np.stack([ra_voids[select], dec_voids[select]], axis=1)
-        self.r_collected_voids = r_voids[select]
+        ra_dec_voids = np.stack([ra_voids[select], dec_voids[select]], axis=1)
+        r_voids = r_voids[select]
 
-        # to construct the random voids
-        self.rng = np.random.default_rng(123456+self.comm.rank)
+        # we consistently have the same randoms.
+        # By doing this in the constructor we also save some memory
+        # because there are loads of voids...
+        self.ra_dec_rand_voids = []
+        rng = np.random.default_rng(123456+self.comm.rank)
+        for rmin in PLKCalc.Rmin :
+            select = r_voids > rmin
+            ra_dec_voids = ra_dec_voids[select]
+            r_voids = r_voids[select]
+            self.ra_dec_rand_voids.append(rng.choice(ra_dec_voids, size=PLKCalc.N_rand_voids//comm.size))
 
     
     def compute_from_arrays(self, ra_gals, dec_gals, z_gals,
@@ -109,8 +116,6 @@ class PLKCalc :
         for ii, rmin in enumerate(PLKCalc.Rmin) :
             select = (R_voids > rmin) * (R_voids < PLKCalc.Rmax)
 
-            # FIXME
-            print(f'Have {np.count_nonzero(select)} voids')
             if np.count_nonzero(select) < 3 :
                 # this is not meaningful anymore
                 break
@@ -125,7 +130,7 @@ class PLKCalc :
             self.r_collected_voids = self.r_collected_voids[select]
 
             nv_of_z = self.nz(z_voids)
-            ra_rand_voids, dec_rand_voids, z_rand_voids = self.rand_voids(z_voids)
+            ra_rand_voids, dec_rand_voids, z_rand_voids = self.rand_voids(ii, z_voids)
 
             nbar_voids = nv_of_z(z_voids)
             nbar_rand_voids = nv_of_z(z_rand_voids)
@@ -188,14 +193,11 @@ class PLKCalc :
         return lo, hi
 
 
-    def rand_voids(self, z_voids) :
+    def rand_voids(self, R_min_idx, z_voids) :
         # construct a probability distribution for the randoms redshift distribution
         kernel_density = KernelDensity(bandwidth=scott_bin_width(z_voids)).fit(z_voids.reshape(-1, 1))
 
-        N_rand_voids = PLKCalc.N_rand_voids // self.comm.size
-        z_rand_voids = kernel_density.sample(N_rand_voids, random_state=123456+self.comm.rank).reshape(-1)
+        z_rand_voids = kernel_density.sample(len(self.ra_dec_rand_voids),
+                                             random_state=123456+self.comm.rank).reshape(-1)
 
-        # here we are assuming that the cut according to minimum radius has already been
-        # performed
-        ra_dec_rand_voids = self.rng.choice(self.ra_dec_collected_voids, size=N_rand_voids)
-        return *ra_dec_rand_voids.T, z_rand_voids
+        return *self.ra_dec_rand_voids[R_min_idx].T, z_rand_voids

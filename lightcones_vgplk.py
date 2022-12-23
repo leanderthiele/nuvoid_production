@@ -59,7 +59,7 @@ with NBL.TaskManager(cpus_per_task=CPUS_PER_TASK, use_all_cpus=True) as tm :
             for lightcone_file in lightcone_files_ :
                 augment = re.search('(?<=lightcone_)[0-9]*', lightcone_file)[0]
                 voids_file = f'{wrk_dir}/voids_{augment}/sky_positions_central_{augment}.out'
-                if not os.path(voids_file) :
+                if not os.path.isfile(voids_file) :
                     continue
                 with open(voids_file, 'r') as f :
                     first_line = f.readline()
@@ -90,7 +90,7 @@ with NBL.TaskManager(cpus_per_task=CPUS_PER_TASK, use_all_cpus=True) as tm :
 
             # consistency check
             augment1 = re.search('(?<=voids_)[0-9]*', voids_file)[0]
-            augment2 = re.search('(?<=central_)[0-9*]', voids_file)[0]
+            augment2 = re.search('(?<=central_)[0-9]*', voids_file)[0]
             assert augment == augment1 and augment == augment2
 
             try :

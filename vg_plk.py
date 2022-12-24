@@ -20,6 +20,7 @@ class PLKCalc :
     # these were used when constructing the lightcones
     zmin = 0.42
     zmax = 0.70
+    z_buffer_vide = 0.03 # this is the buffer we used around zmin, zmax when finding voids
     
     gals_rand_file = '/tigress/lthiele/boss_dr12/random_DR12v5_CMASS_North_downsampled6188060.npz'
     # from Monte Carlo, valid for CMASS North
@@ -127,7 +128,8 @@ class PLKCalc :
             ra_rand_voids, dec_rand_voids, z_rand_voids = self.rand_voids(ii, z_voids)
 
             # some of these are potentially outside our mapped redshift range
-            select = (z_rand_voids > PLKCalc.zmin) * (z_rand_voids < PLKCalc.zmax)
+            select = (z_rand_voids > PLKCalc.zmin+PLKCalc.z_buffer_vide) \
+                     * (z_rand_voids < PLKCalc.zmax-PLKCalc.z_buffer_vide)
             ra_rand_voids = ra_rand_voids[select]
             dec_rand_voids = dec_rand_voids[select]
             z_rand_voids = z_rand_voids[select]

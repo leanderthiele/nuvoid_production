@@ -15,7 +15,7 @@ class PLKCalc :
 
     Nmesh = 512
     kedges = np.linspace(0.0, 0.2, num=41)
-    poles = [0, 2, 4, ]
+    poles = [0, 2, ]
 
     # these were used when constructing the lightcones
     zmin = 0.42
@@ -152,6 +152,8 @@ class PLKCalc :
                                 randoms_weights1=fkp_rand_gals,
                                 randoms_weights2=fkp_rand_voids,
                                 nmesh=PLKCalc.Nmesh,
+                                # need to fix boxsize, otherwise k will be slightly varying
+                                boxsize=6170.3,
                                 position_type='pos',
                                 ells=PLKCalc.poles,
                                 edges=PLKCalc.kedges,

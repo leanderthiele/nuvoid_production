@@ -106,7 +106,7 @@ with NBL.TaskManager(cpus_per_task=CPUS_PER_TASK, use_all_cpus=True) as tm :
 
             at_least_one_successful = True
             if tm.comm.rank == 0 :
-                np.savez(f'{wrk_dir}/vgplk_{augment}.npz', **plk_result)
+                np.savez(f'{wrk_dir}/NEW_vgplk_{augment}.npz', **plk_result)
 
         # all done!
         if tm.comm.rank == 0 :

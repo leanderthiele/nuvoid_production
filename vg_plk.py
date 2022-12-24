@@ -126,6 +126,12 @@ class PLKCalc :
             nv_of_z = self.nz(z_voids)
             ra_rand_voids, dec_rand_voids, z_rand_voids = self.rand_voids(ii, z_voids)
 
+            # some of these are potentially outside our mapped redshift range
+            select = (z_rand_voids > PLKCalc.zmin) * (z_rand_voids < PLKCalc.zmax)
+            ra_rand_voids = ra_rand_voids[select]
+            dec_rand_voids = dec_rand_voids[select]
+            z_rand_voids = z_rand_voids[select]
+
             nbar_voids = nv_of_z(z_voids)
             nbar_rand_voids = nv_of_z(z_rand_voids)
 

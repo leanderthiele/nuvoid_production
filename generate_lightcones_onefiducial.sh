@@ -3,8 +3,7 @@
 set -e -o pipefail
 
 # Command line arguments:
-#   [1] cosmo fiducial index
-#   [2] fiducial hod version
+#   [1] fiducial hod version
 
 codebase=$HOME/nuvoid_production
 
@@ -13,23 +12,22 @@ source $codebase/utils.sh
 # our small driver to interact with the database
 MYSQL_EXE="$codebase/mysql_driver"
 
-seed_idx="$1"
-hod_version="$2"
+hod_version="$1"
 
 # these are coming from the voids posterior
 if [ $hod_version -eq 0 ]; then
   HOD_FID=(
-           'hod_transfP1=1.5'
-           'hod_abias=-0.5'
-           'hod_log_Mmin=12.73'
-           'hod_sigma_logM=0.3'
+           'hod_transfP1=0.0'
+           'hod_abias=0.0'
+           'hod_log_Mmin=13.0'
+           'hod_sigma_logM=0.4'
            'hod_log_M0=14.4'
            'hod_log_M1=14.4'
            'hod_alpha=0.6'
            'hod_transf_eta_cen=6.0'
            'hod_transf_eta_sat=-0.5'
-           'hod_mu_Mmin=-2.0'
-           'hod_mu_M1=-10.0'
+           'hod_mu_Mmin=-5.0'
+           'hod_mu_M1=10.0'
           )
 else
   exit 1
@@ -44,6 +42,12 @@ done
 # compute the HOD hash
 hod_hash="$(utils::hex_hash "$hod_desc")"
 
+# get our seed
+seed_idx="$($MYSQL_EXE 'create_fiducial' $hod_version $hod_hash)"
+
+# indicate we are starting
+$MYSQL_EXE 'start_fiducial' $hod_version $seed_idx
+
 # we start computing at 0, it doesn't really matter
 augment_idx=0
 
@@ -53,8 +57,14 @@ wrk_dir="/tmp/cosmo_fiducial_${seed_idx}"
 hod_dir="$wrk_dir/lightcones/${hod_hash}"
 mkdir -p $hod_dir
 
-export OMP_NUM_THREADS=1 # I think we need to do this to avoid OOM
-bash $codebase/lightcones_galaxies.sh $data_dir $wrk_dir $hod_hash $hod_desc
+export OMP_NUM_THREADS=$((SLURM_CPUS_PER_TASK / 2)) # I think we need to do this to avoid OOM
+bash $codebase/lightcones_galaxies.sh $data_dir $wrk_dir $hod_hash $hod_desc \
+  && status=$? || status=$?
+
+if [ $status -ne 0 ]; then
+  $MYSQL_EXE 'end_fiducial' $hod_version $seed_idx $status
+  exit 1
+fi
 
 if [ -z $SLURM_CPUS_PER_TASK ]; then
   export OMP_NUM_THREADS=4
@@ -63,7 +73,13 @@ else
 fi
 
 # generate all augmentations
-bash $codebase/lightcones_lightcone.sh $data_dir $wrk_dir $hod_hash $augment_idx 'rockstar' 96
+bash $codebase/lightcones_lightcone.sh $data_dir $wrk_dir $hod_hash $augment_idx 'rockstar' 96 \
+  && status=$? || status=$?
+
+if [ $status -ne 0 ]; then
+  $MYSQL_EXE 'end_fiducial' $hod_version $seed_idx $status
+  exit 1
+fi
 
 # now we have the lightcone file and shouldn't need to use the data_dir anymore
 bash $codebase/lightcones_cleanup.sh $wrk_dir $hod_hash
@@ -72,3 +88,5 @@ bash $codebase/lightcones_cleanup.sh $wrk_dir $hod_hash
 target_dir="/scratch/gpfs/lthiele/nuvoid_production/cosmo_fiducial_${seed_idx}/lightcones"
 mkdir -p $target_dir
 mv "$hod_dir" "$target_dir"
+
+$MYSQL_EXE 'end_fiducial' $hod_version $seed_idx 0

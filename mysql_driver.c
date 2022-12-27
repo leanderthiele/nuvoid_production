@@ -183,7 +183,8 @@ int get_run_idx (const char *path, const char *pattern)
         int err = (int)(expr); \
         if (err) \
         { \
-            fprintf(stderr, "mysql error %d\n", err); \
+            unsigned int this_errno = mysql_errno(p); \
+            fprintf(stderr, "mysql error %u\n", this_errno); \
             assert(0); \
         } \
     } while(0)
@@ -681,6 +682,19 @@ void new_table (MYSQL *p, const char *name, const char *columns)
               name, name, columns);
     SAFE_MYSQL(mysql_query(p, query_buffer));
 
+    // iterate through multi-statement results, we don't actually use them
+    // but otherwise subsequent calls will fail
+    MYSQL_RES *query_res;
+    while (1)
+    {
+        query_res = mysql_store_result(p);
+        if (query_res)
+            mysql_free_result(query_res);
+        int status = mysql_next_result(p);
+        assert(status<=0);
+        if (status) break; // used up all results
+    }
+
     char spec_buffer[1024];
     char *dst = spec_buffer;
     const char *src = columns;
@@ -736,7 +750,11 @@ void new_fiducials_lightcones (MYSQL *p, int version)
         SAFE_MYSQL(mysql_query(p, query_buffer));
         query_res = mysql_store_result(p);
         uint64_t num_rows = mysql_num_rows(query_res);
-        if (!num_rows) continue;
+        if (!num_rows)
+        {
+            mysql_free_result(query_res);
+            continue;
+        }
         assert(num_rows==1);
         unsigned int num_fields = mysql_num_fields(query_res);
         assert(num_fields==1);
@@ -749,7 +767,7 @@ void new_fiducials_lightcones (MYSQL *p, int version)
         {
             MYSPRINTF(query_buffer,
                       "INSERT INTO fiducials_lightcones_v%d (seed_idx, lightcone_idx, hod_hash) "
-                      "VALUES (%d, %d, %s)",
+                      "VALUES (%d, %d, '%s')",
                       version, seed_idx, lightcone_idx, hod_hash);
             SAFE_MYSQL(mysql_query(p, query_buffer));
             uint64_t running_idx = mysql_insert_id(p);
@@ -803,7 +821,8 @@ int main(int argc, char **argv)
 
     const char *mode = argv[1];
 
-    SAFE_MYSQL(mysql_library_init(0, NULL, NULL));
+    int init_err = mysql_library_init(0, NULL, NULL);
+    assert(!init_err);
 
     MYSQL p;
     mysql_init(&p);

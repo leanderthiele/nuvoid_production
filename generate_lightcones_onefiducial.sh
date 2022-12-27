@@ -19,7 +19,7 @@ if [ $hod_version -eq 0 ]; then
   HOD_FID=(
            'hod_transfP1=0.0'
            'hod_abias=0.0'
-           'hod_log_Mmin=13.0'
+           'hod_log_Mmin=12.9'
            'hod_sigma_logM=0.4'
            'hod_log_M0=14.4'
            'hod_log_M1=14.4'

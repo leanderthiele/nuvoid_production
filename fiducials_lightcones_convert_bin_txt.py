@@ -14,11 +14,7 @@ indir = argv[1]
 outdir = argv[2]
 lightcone_idx = int(argv[3])
 
-bin_fnames = glob(f'{indir}/lightcone_[0-9]*.bin')
-assert(bin_fnames)
-
 bin_fname = f'{indir}/lightcone_{lightcone_idx}.bin'
-
 txt_fname = f'{outdir}/{os.path.splitext(os.path.basename(bin_fname))[0]}.txt'
 ra, dec, z = np.fromfile(bin_fname).reshape(3, -1)
 v = z * 299792.458

@@ -13,7 +13,7 @@ MYSQL_DRIVER="$codebase/mysql_driver"
 
 # these take input, output directory as command line arguments
 BIN_TXT="python $codebase/lightcones_convert_bin_txt.py"
-VIDE_SH="bash $codebase/lightcones_vide.sh"
+VIDE_SH="bash $codebase/fiducials_lightcones_vide.sh"
 
 # loop until time is up
 for ii in $( seq 1 10000 ); do
@@ -41,7 +41,7 @@ for ii in $( seq 1 10000 ); do
   fi
 
   # find voids
-  $VIDE_SH $tmp_dir $perm_dir \
+  $VIDE_SH $tmp_dir $perm_dir $lightcone_idx \
     && status=$? || status=$?
   $MYSQL_DRIVER 'end_fiducials_voids' $version $running_idx $seed_idx $lightcone_idx $status
 done

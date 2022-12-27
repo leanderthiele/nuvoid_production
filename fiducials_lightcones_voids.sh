@@ -12,7 +12,7 @@ codebase="$HOME/nuvoid_production"
 MYSQL_DRIVER="$codebase/mysql_driver"
 
 # these take input, output directory as command line arguments
-BIN_TXT="python $codebase/lightcones_convert_bin_txt.py"
+BIN_TXT="python $codebase/fiducials_lightcones_convert_bin_txt.py"
 VIDE_SH="bash $codebase/fiducials_lightcones_vide.sh"
 
 # loop until time is up
@@ -32,7 +32,7 @@ for ii in $( seq 1 10000 ); do
 
   # convert .bin -> .txt
   module load anaconda3/2021.11
-  $BIN_TXT $perm_dir $tmp_dir \
+  $BIN_TXT $perm_dir $tmp_dir $lightcone_idx \
     && status=$? || status=$?
   module rm anaconda3/2021.11
   if [ $status -ne 0 ]; then

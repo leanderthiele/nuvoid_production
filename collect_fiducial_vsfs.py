@@ -1,10 +1,13 @@
+from sys import argv
 import os.path
 from glob import glob
 import re
 
 import numpy as np
 
-Redges = np.linspace(30.0, 80.0, num=33)
+NBINS = int(argv[1])
+
+Redges = np.linspace(30.0, 80.0, num=NBINS+1)
 zedges = np.array([0.45, 0.53, 0.67])
 
 results = {}
@@ -26,12 +29,13 @@ for fid_dir in fid_dirs :
         voids_file = f'{fid_dir}/lightcones/{hod_hash}/voids_{ii}/sky_positions_central_{ii}.out'
         if not os.path.isfile(voids_file) :
             hists[ii] = float('nan')
+            continue
 
         z, R = np.loadtxt(voids_file, usecols=(2,3), unpack=True)
-        h, _ = np.histogram2d(z, R, bins=[zedges, Redges])
+        h = np.histogram2d(z, R, bins=[zedges, Redges])[0]
         hists[ii] = h.flatten().astype(float)
 
     if np.count_nonzero(np.isfinite(hists[:, 0])) > 70 :
         results[f'seed_{seed_idx}'] = hists
 
-np.savez('fiducial_vsfs.npz', Redges=Redges, zedges=zedges, **results)
+np.savez(f'fiducial_vsfs_{NBINS}bins.npz', Redges=Redges, zedges=zedges, **results)

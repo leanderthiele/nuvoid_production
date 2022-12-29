@@ -832,6 +832,7 @@ int get_run (MYSQL *p, uint64_t hod_idx, char *hod_hash, char *state,
     if (num_rows==0)
     {
         sprintf(hod_hash, "NONE"); sprintf(state, "NONE"); sprintf(plk_state, "NONE");
+        sprintf(voids_state, "NONE"); sprintf(vgplk_state, "NONE");
         return -1;
     }
     assert(num_rows==1);

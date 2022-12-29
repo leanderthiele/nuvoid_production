@@ -12,4 +12,4 @@ codebase="$HOME/nuvoid_production"
 
 version=0
 
-srun -n $SLURM_NTASKS bash "$codebase/fiducials_lightcones_voids.sh" $version
+srun -n $SLURM_NTASKS --wait=0 --kill-on-bad-exit=0 bash "$codebase/fiducials_lightcones_voids.sh" $version

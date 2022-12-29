@@ -1,4 +1,5 @@
 import os.path
+import re
 
 import numpy as np
 
@@ -36,7 +37,7 @@ for fid_dir in fid_dirs :
             else :
                 assert np.allclose(k, k_)
             Rmin_ = np.array(sorted(list(map(lambda s: int(s.split('Rmin')[1]),
-                                         filter(lambda s: 'plk' in s, list(f.keys()))))))
+                                         filter(lambda s: 'p0k' in s, list(f.keys()))))))
             if Rmin is None :
                 Rmin = Rmin_
                 assert len(Rmin) == vgplk.shape[1]

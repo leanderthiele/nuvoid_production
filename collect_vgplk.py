@@ -13,6 +13,7 @@ Output file contents:
 import sys
 from glob import glob
 import re
+import subprocess
 
 import numpy as np
 
@@ -105,7 +106,7 @@ for cosmo_idx in tqdm(range(130)) :
                     else :
                         assert np.allclose(k, k_)
                     Rmin_ = np.array(sorted(list(map(lambda s: int(s.split('Rmin')[1]),
-                                                 filter(lambda s: 'plk' in s, list(f.keys()))))))
+                                                 filter(lambda s: 'p0k' in s, list(f.keys()))))))
                     if Rmin is None :
                         Rmin = Rmin_
                         assert len(Rmin) == this_vgplk.shape[1]

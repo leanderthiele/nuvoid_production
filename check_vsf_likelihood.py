@@ -92,7 +92,10 @@ for a_s, a_h, a_v, a_r, a_c, s, v, c in \
     a_h.hist(to_hist, bins=np.linspace(0.7, 1.3, num=33))
     for v_ in v :
         a_v.plot(v_)
-    a_v.errorbar(np.arange(0, v.shape[-1]), cmass_vsf, yerr=np.sqrt(mean), linestyle='none', marker='o', color='black', label='CMASS')
+    a_v.errorbar(np.arange(0, v.shape[-1]), cmass_vsf, yerr=np.sqrt(mean), linestyle='none', marker='o',
+                 color='black', label='CMASS')
+    for ii in range(len(zedges)-1) :
+        a_v.text(ii*(len(Redges)-1), 0, f'${zedges[ii]:.2}<z<{zedges[ii+1]}$', transform=a_v.transData)
     a_v.plot(mean, linestyle='none', marker='x', color='black', label='fiducial mean')
     a_v.legend(loc='upper right')
     for v_ in v :
@@ -116,7 +119,6 @@ for a_s, a_h, a_v, a_r, a_c, s, v, c in \
     a_c.matshow(img, vmin=-1, vmax=1, cmap='seismic')
     a_c.set_ylabel('randomly picked correlation matrices')
     remove_frame(a_c)
-
 
     a_s.set_xlabel('VSF data vector index')
     a_v.set_xlabel('VSF data vector index')

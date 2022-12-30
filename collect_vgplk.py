@@ -8,6 +8,7 @@ Output file contents:
     k[Nk]
     vgplk[Nparams, 8, Nr, [ell=0,2], Nk]
         entries are NaN if not enough files available
+    Nvoids[Nparams, 8, Nr] -- how many voids were used for the computation
 """
 
 import sys
@@ -21,6 +22,9 @@ from tqdm import tqdm
 
 codebase = '/home/lthiele/nuvoid_production'
 database = '/scratch/gpfs/lthiele/nuvoid_production'
+
+# hardcoded...
+RMAX = 80
 
 def get_setting_from_info(fname, name) :
     with open(fname, 'r') as f :
@@ -70,6 +74,7 @@ cosmo_indices = []
 Rmin = None
 k = None
 vgplk = []
+Nvoids = []
 
 def save() :
     np.savez('collected_vgplk.npz',
@@ -77,7 +82,8 @@ def save() :
              cosmo_indices=np.array(cosmo_indices, dtype=int),
              params=np.array(params, dtype=np.float32),
              Rmin=Rmin, k=k,
-             vgplk=np.array(vgplk, dtype=np.float32))
+             vgplk=np.array(vgplk, dtype=np.float32),
+             Nvoids=np.array(Nvoids, dtype=np.float32))
 
 for cosmo_idx in tqdm(range(130)) :
     
@@ -96,6 +102,7 @@ for cosmo_idx in tqdm(range(130)) :
             continue
         one_successful = False
         this_vgplk = np.full((8, 3, 2, 40), float('nan'))
+        this_Nvoids = np.full((8, 3), float('nan'))
         for ii, vgplk_file in enumerate(vgplk_files) :
             try :
                 with np.load(vgplk_file) as f :
@@ -119,6 +126,11 @@ for cosmo_idx in tqdm(range(130)) :
             except ValueError :
                 print(f'Problem with {vgplk_file}')
                 continue
+            augment = int(re.search('(?<=NEW_vgplk_)[0-9*]', vgplk_file)[0])
+            voids_file = f'{hod_dir}/voids_{augment}/sky_positions_central_{augment}.out'
+            R = np.loadtxt(voids_file, usecols=(3,))
+            for jj, r in enumerate(Rmin) :
+                this_Nvoids[ii, jj] = np.count_nonzero((R<RMAX)*(R>r))
         if one_successful : 
             hod_hash = hod_dir.rstrip('/').split('/')[-1]
             cosmo = get_cosmo(cosmo_idx)
@@ -131,6 +143,7 @@ for cosmo_idx in tqdm(range(130)) :
             params.append(list(cosmo.values()) + list(hod.values()))
             cosmo_indices.append(cosmo_idx)
             vgplk.append(this_vgplk)
+            Nvoids.append(this_Nvoids)
 
 # final save
 save()

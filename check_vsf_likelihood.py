@@ -34,6 +34,7 @@ assert np.all(np.isfinite(all_hists))
 # the big correlation matrix
 allcov = np.cov(all_hists.reshape(-1, all_hists.shape[-1]), rowvar=False)
 allcorr = allcov/np.sqrt(np.diagonal(allcov)[:,None]*np.diagonal(allcov)[None,:])
+allcovinv = np.linalg.inv(allcov)
 
 # this is the approximate answer
 stds_by_realization = np.array([np.nanstd(h, axis=0) for h in all_hists])
@@ -68,22 +69,28 @@ def cov_distances(l1, l2) :
             out.append(np.linalg.norm(delta, ord='fro'))
     return np.array(out)
 
-fig, ax = plt.subplots(nrows=6, ncols=2,
-                       gridspec_kw={'height_ratios': [1, 1, 1, 1, 2, 2]},
-                       figsize=(15,23))
+def wishart(C) :
+    # returns the Wishart "chi-squared", assuming that allcov is the true covariance matrix
+    n = N_augments
+    p = C.shape[0]
+    return -(n-p-1)*np.log(np.linalg.det(C)) + np.trace(allcovinv @ C)
+
+fig, ax = plt.subplots(nrows=7, ncols=2,
+                       gridspec_kw={'height_ratios': [1, 1, 1, 1, 2, 1, 2]},
+                       figsize=(15,28))
 
 ax_stds = [ax[0,0], ax[0,1]]
 ax_hists = [ax[1,0], ax[1,1]]
 ax_vsfs = [ax[2,0], ax[2,1]]
 ax_res = [ax[3,0], ax[3,1]]
 ax_corrs = [ax[4,0], ax[4,1]]
-ax_allcorr = ax[5,0]
-ax_disthists = ax[5,1]
+ax_disthists = ax[5,0]
+ax_wishart = ax[5,1]
 
-#gs = ax[5,0].get_gridspec()
-#for a in ax[5, :] :
-#    a.remove()
-#ax_allcorr = fig.add_subplot(gs[5, :])
+gs = ax[6,0].get_gridspec()
+for a in ax[6, :] :
+    a.remove()
+ax_allcorr = fig.add_subplot(gs[6, :])
 
 def remove_frame(axis) :
     for s in ['top', 'bottom', 'right', 'left'] :
@@ -167,12 +174,23 @@ d_aa = cov_distances(covs_by_augmentation, covs_by_augmentation)
 d_ra = cov_distances(covs_by_realization, covs_by_augmentation)
 edges = np.histogram_bin_edges(np.concatenate([d_rr, d_aa, d_ra]), bins=30)
 kwargs = dict(histtype='step', linewidth=2)
-ax_disthists.hist(d_rr, bins=edges, label='r-r', **kwargs)
-ax_disthists.hist(d_aa, bins=edges, label='a-a', **kwargs)
-ax_disthists.hist(d_ra, bins=edges, label='r-a', **kwargs)
+ax_disthists.hist(d_rr, bins=edges, label='left-left', **kwargs)
+ax_disthists.hist(d_aa, bins=edges, label='right-right', **kwargs)
+ax_disthists.hist(d_ra, bins=edges, label='left-right', **kwargs)
 ax_disthists.legend()
 ax_disthists.set_xlabel('covariance matrix distance')
 ax_disthists.set_ylabel('counts')
+
+# the Wishart scores
+w_r = np.array([wishart(c) for c in covs_by_realization])
+w_a = np.array([wishart(c) for c in covs_by_augmentation])
+edges = np.histogram_bin_edges(np.concatenate([w_r, w_a]), bins=10)
+kwargs = dict(histtype='step', linewidth=2)
+ax_wishart.hist(w_r, bins=edges, label='left', **kwargs)
+ax_wishart.hist(w_a, bins=edges, label='right', **kwargs)
+ax_wishart.legend()
+ax_wishart.set_xlabel('Wishart "$\chi^2$"')
+ax_wishart.set_ylabel('counts')
 
 ax[0,0].set_title('grouped by realization (quasi-independent augmentations)')
 ax[0,1].set_title('grouped by augmentation (genuinely independent realizations)')

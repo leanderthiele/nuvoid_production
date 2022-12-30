@@ -7,7 +7,7 @@ from glob import glob
 
 hod_hash = 'c2c93dbc97d64a7c20a043121f7d23d8'
 root = '/scratch/gpfs/lthiele/nuvoid_production'
-fid_dirs = glob(f'{root}/cosmo_fiducial_[0-9]*')
+fid_dirs = sorted(glob(f'{root}/cosmo_fiducial_[0-9]*'))
 
 k = None
 Rmin = None

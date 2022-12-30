@@ -126,7 +126,7 @@ for cosmo_idx in tqdm(range(130)) :
             except ValueError :
                 print(f'Problem with {vgplk_file}')
                 continue
-            augment = int(re.search('(?<=NEW_vgplk_)[0-9*]', vgplk_file)[0])
+            augment = int(re.search('(?<=NEW_vgplk_)[0-9]*', vgplk_file)[0])
             voids_file = f'{hod_dir}/voids_{augment}/sky_positions_central_{augment}.out'
             R = np.loadtxt(voids_file, usecols=(3,))
             for jj, r in enumerate(Rmin) :

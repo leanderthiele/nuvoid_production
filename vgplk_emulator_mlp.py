@@ -35,7 +35,7 @@ Nvoids_fid_all = {30: 1463.39, 40: 786.59, 50: 315.81}
 Nvoids_fid = Nvoids_fid_all[RMIN]
 
 # choose Rmin
-rmin_idx = np.where(Rmin == RMIN)[0]
+rmin_idx = np.where(Rmin == RMIN)[0][0]
 vgplk = vgplk[:, :, rmin_idx, :, :]
 Nvoids = Nvoids[:, :, rmin_idx]
 cov = cov[rmin_idx, ...]
@@ -74,6 +74,8 @@ validation_x = validation_x.repeat(8, axis=0)
 # shapes [paramsx8, ellxk]
 train_vgplk = train_vgplk.reshape(-1, train_vgplk.shape[-1])
 validation_vgplk = validation_vgplk.reshape(-1, validation_vgplk.shape[-1])
+train_Nvoids = train_Nvoids.flatten()
+validation_Nvoids = validation_Nvoids.flatten()
 
 # choose the runs where we have data
 select = np.all(np.isfinite(train_vgplk), axis=-1)
@@ -100,6 +102,7 @@ train_Nvoids = torch.from_numpy(train_Nvoids.astype(np.float32)).to(device=devic
 validation_x = torch.from_numpy(validation_x.astype(np.float32)).to(device=device)
 validation_vgplk = torch.from_numpy(validation_vgplk.astype(np.float32)).to(device=device)
 validation_Nvoids = torch.from_numpy(validation_Nvoids.astype(np.float32)).to(device=device)
+covinv = torch.from_numpy(covinv.astype(np.float32)).to(device=device)
 
 class MLPLayer(nn.Sequential) :
     def __init__(self, Nin, Nout, activation=nn.LeakyReLU) :
@@ -108,7 +111,7 @@ class MLPLayer(nn.Sequential) :
                                      ]))
 
 class MLP(nn.Sequential) :
-    def __init__(self, Nin, Nout, Nlayers=4, Nhidden=512, out_positive=True) :
+    def __init__(self, Nin, Nout, Nlayers=8, Nhidden=512, out_positive=True) :
         # output is manifestly positive so we use ReLU in the final layer
         self.Nin = Nin
         self.Nout = Nout
@@ -123,7 +126,7 @@ class Loss(nn.Module) :
     def forward(self, pred, targ, n) :
         # shapes are pred, targ: [batch, data], n: [batch]
         delta = pred - targ
-        x = torch.einsum('...i,ij,...j->...', delta, covinv, delta)
+        x = torch.einsum('bi,ij,bj->b', delta, covinv, delta)
         scaling = n / Nvoids_fid
         return torch.mean(scaling * x)
 
@@ -135,7 +138,7 @@ train_loader = DataLoader(train_set, batch_size=256, shuffle=True)
 validation_loader = DataLoader(validation_set, batch_size=512)
 
 loss = Loss()
-model = MLP(train_x.shape[-1], train_vgplk.shape[-1], out_positive=False)
+model = MLP(train_x.shape[-1], train_vgplk.shape[-1], out_positive=False).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=1e-3, total_steps=EPOCHS, verbose=True)
 
@@ -162,3 +165,14 @@ for epoch in range(EPOCHS) :
     lvalidation = np.mean(np.array(lvalidation))
 
     print(f'iteration {epoch:4}: {ltrain:16.2f}\t{lvalidation:16.2f}')
+
+model.eval()
+predictions = []
+truth = []
+for x, y, n in validation_loader :
+    pred = model(x)
+    predictions.extend(pred.detach().cpu().numpy())
+    truth.extend(y.cpu().numpy())
+predictions = np.array(predictions)
+truth = np.array(truth)
+np.savez('vgplk_validation_test.npz', predictions=predictions, truth=truth)

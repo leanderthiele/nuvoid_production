@@ -8,6 +8,8 @@ from torch.utils.data import DataLoader, TensorDataset
 
 RMIN = 40
 
+USE_QUADRUPOLE = False
+
 if torch.cuda.is_available() :
     device = 'cuda'
 else :
@@ -39,6 +41,11 @@ rmin_idx = np.where(Rmin == RMIN)[0][0]
 vgplk = vgplk[:, :, rmin_idx, :, :]
 Nvoids = Nvoids[:, :, rmin_idx]
 cov = cov[rmin_idx, ...]
+
+# remove the quadrupole if requested
+if not USE_QUADRUPOLE :
+    cov = cov[:len(k_indices), :len(k_indices)]
+    vgplk = vgplk[..., :len(k_indices)]
 
 # choose k and flatten ellxk
 vgplk = vgplk[..., k_indices]

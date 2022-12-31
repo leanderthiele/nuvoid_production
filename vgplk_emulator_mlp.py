@@ -45,7 +45,7 @@ cov = cov[rmin_idx, ...]
 # remove the quadrupole if requested
 if not USE_QUADRUPOLE :
     cov = cov[:len(k_indices), :len(k_indices)]
-    vgplk = vgplk[..., :len(k_indices)]
+    vgplk = vgplk[..., 0, :]
 
 # choose k and flatten ellxk
 vgplk = vgplk[..., k_indices]
@@ -118,7 +118,7 @@ class MLPLayer(nn.Sequential) :
                                      ]))
 
 class MLP(nn.Sequential) :
-    def __init__(self, Nin, Nout, Nlayers=8, Nhidden=512, out_positive=True) :
+    def __init__(self, Nin, Nout, Nlayers=4, Nhidden=512, out_positive=True) :
         # output is manifestly positive so we use ReLU in the final layer
         self.Nin = Nin
         self.Nout = Nout
@@ -137,17 +137,17 @@ class Loss(nn.Module) :
         scaling = n / Nvoids_fid
         return torch.mean(scaling * x)
 
-EPOCHS = 100
+EPOCHS = 50
 
 train_set = TensorDataset(train_x, train_vgplk, train_Nvoids)
 validation_set = TensorDataset(validation_x, validation_vgplk, validation_Nvoids)
-train_loader = DataLoader(train_set, batch_size=256, shuffle=True)
+train_loader = DataLoader(train_set, batch_size=64, shuffle=True)
 validation_loader = DataLoader(validation_set, batch_size=512)
 
 loss = Loss()
 model = MLP(train_x.shape[-1], train_vgplk.shape[-1], out_positive=False).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=1e-3, total_steps=EPOCHS, verbose=True)
+scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=3e-3, total_steps=EPOCHS, verbose=True)
 
 for epoch in range(EPOCHS) :
     

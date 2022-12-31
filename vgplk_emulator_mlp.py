@@ -35,7 +35,7 @@ Nvoids_fid_all = {30: 1463.39, 40: 786.59, 50: 315.81}
 Nvoids_fid = Nvoids_fid_all[RMIN]
 
 # choose Rmin
-rmin_idx = np.where(Rmin == RMIN)
+rmin_idx = np.where(Rmin == RMIN)[0]
 vgplk = vgplk[:, :, rmin_idx, :, :]
 Nvoids = Nvoids[:, :, rmin_idx]
 cov = cov[rmin_idx, ...]

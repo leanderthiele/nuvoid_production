@@ -18,6 +18,9 @@ possible commands:
 [new_fiducials]
     replaces fiducials table by newly created one
     argv[2] = version index
+[new_fiducials_lightcones]
+    replaces fiducials_lightcones table by newly created one
+    argv[2] = version index
 [set_cosmologies]
     checks /scratch for available cosmo_varied cosmologies
 [set_fiducials]
@@ -58,6 +61,54 @@ possible commands:
     argv[2] = cosmo_idx
     argv[3] = hod_idx
     argv[4] = state
+[create_voids]
+    returns cosmo_idx hod_idx hod_hash
+    (cosmo_idx will be negative if no work is remaining)
+[start_voids]
+    argv[2] = cosmo_idx
+    argv[3] = hod_idx
+[end_voids]
+    argv[2] = cosmo_idx
+    argv[3] = hod_idx
+    argv[4] = state
+[create_fiducials_voids]
+    returns running_idx seed_idx lightcone_idx hod_hash
+    argv[2] = version index
+[start_fiducials_voids]
+    argv[2] = version index
+    argv[3] = running_idx
+    argv[4] = seed_idx
+    argv[5] = lightcone_idx
+[end_fiducials_voids]
+    argv[2] = version index
+    argv[3] = running_idx
+    argv[4] = seed_idx
+    argv[5] = lightcone_idx
+    argv[6] = state
+[create_vgplk]
+    returns cosmo_idx hod_idx hod_hash
+    (cosmo_idx will be negative if no work is remaining)
+[start_vgplk]
+    argv[2] = cosmo_idx
+    argv[3] = hod_idx
+[end_vgplk]
+    argv[2] = cosmo_idx
+    argv[3] = hod_idx
+    argv[4] = state
+[create_fiducials_vgplk]
+    returns running_idx seed_idx lightcone_idx hod_hash
+    argv[2] = version index
+[start_fiducials_vgplk]
+    argv[2] = version index
+    argv[3] = running_idx
+    argv[4] = seed_idx
+    argv[5] = lightcone_idx
+[end_fiducials_vgplk]
+    argv[2] = version index
+    argv[3] = running_idx
+    argv[4] = seed_idx
+    argv[5] = lightcone_idx
+    argv[6] = state
 [reset_lightcones]
     CAUTION: this deletes all data!
 [timeout_old_lightcones]
@@ -66,7 +117,7 @@ possible commands:
     argv[2] = minutes
 [get_run]
     argv[2] = hod_idx
-    returns cosmo_idx hod_hash state plk_state
+    returns cosmo_idx hod_hash state plk_state voids_state vgplk_state
     cosmo_idx == -1 if nothing left
 )"""";
 
@@ -97,7 +148,22 @@ const char *lightcones_columns =
     "plk_create_time BIGINT, "
     "voids_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
     "voids_create_time BIGINT, "
+    "vgplk_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "vgplk_create_time BIGINT, "
     "PRIMARY KEY (hod_idx)";
+
+const char *fiducials_lightcones_columns =
+    "running_idx BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, "
+    "seed_idx INT UNSIGNED NOT NULL, "
+    "lightcone_idx INT UNSIGNED NOT NULL, "
+    "hod_hash CHAR(40) NOT NULL, "
+    "plk_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "plk_create_time BIGINT, "
+    "voids_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "voids_create_time BIGINT, "
+    "vgplk_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "vgplk_create_time BIGINT, "
+    "PRIMARY KEY (running_idx)";
 
 
 // settings for the database
@@ -131,7 +197,8 @@ int get_run_idx (const char *path, const char *pattern)
         int err = (int)(expr); \
         if (err) \
         { \
-            fprintf(stderr, "mysql error %d\n", err); \
+            unsigned int this_errno = mysql_errno(p); \
+            fprintf(stderr, "mysql error %u\n", this_errno); \
             assert(0); \
         } \
     } while(0)
@@ -358,19 +425,23 @@ void end_fiducial (MYSQL *p, int version, int seed_idx, int state)
     assert(num_rows==1);
 }
 
-int create_plk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
+int create_summary (MYSQL *p, const char *name, uint64_t *hod_idx, char *hod_hash, const char *depends)
 {
     time_t now = time(NULL);
+
+    char depends_buffer[256];
+    if (depends)
+        MYSPRINTF(depends_buffer, "AND %s_state='success'", depends);
 
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
               "SET @updated_hod_idx := 0; "
-              "UPDATE lightcones SET plk_state='created', "
-              "plk_create_time=%ld, "
+              "UPDATE lightcones SET %s_state='created', "
+              "%s_create_time=%ld, "
               "hod_idx=(SELECT @updated_hod_idx := hod_idx) "
-              "WHERE state='success' AND plk_state IS NULL LIMIT 1; "
+              "WHERE state='success' AND %s_state IS NULL %s LIMIT 1; "
               "SELECT cosmo_idx, hod_idx, hod_hash FROM lightcones WHERE hod_idx=@updated_hod_idx;",
-              now);
+              name, name, now, name, (depends) ? depends_buffer : "");
     SAFE_MYSQL(mysql_query(p, query_buffer));
 
     MYSQL_RES *query_res;
@@ -412,26 +483,194 @@ int create_plk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
     return cosmo_idx;
 }
 
-void start_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx)
+int create_fiducials_summary (MYSQL *p, int version, const char *name,
+                              uint64_t *running_idx, int *lightcone_idx, char *hod_hash, const char *depends)
+{
+    time_t now = time(NULL);
+
+    char depends_buffer[256];
+    if (depends)
+        MYSPRINTF(depends_buffer, "AND %s_state='success'", depends);
+
+    char query_buffer[1024];
+    MYSPRINTF(query_buffer,
+              "SET @updated_running_idx := 0; "
+              "UPDATE fiducials_lightcones_v%d SET %s_state='created', "
+              "%s_create_time=%ld, "
+              "running_idx=(SELECT @updated_running_idx := running_idx) "
+              "WHERE %s_state IS NULL %s LIMIT 1; "
+              "SELECT running_idx, seed_idx, lightcone_idx, hod_hash FROM fiducials_lightcones_v%d "
+              "WHERE running_idx=@updated_running_idx;",
+              version, name, name, now, name, (depends) ? depends_buffer : "", version);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+
+    MYSQL_RES *query_res;
+
+    int seed_idx = -1;
+
+    // iterate through multi-statement results
+    while (1)
+    {
+        query_res = mysql_store_result(p);
+        if (query_res)
+        {
+            uint64_t num_rows = mysql_num_rows(query_res);
+            if (num_rows == 1) // this is our result
+            {
+                unsigned int num_fields = mysql_num_fields(query_res);
+                assert(num_fields == 4);
+                MYSQL_ROW row = mysql_fetch_row(query_res);
+                assert(row);
+                *running_idx = atoll(row[0]);
+                seed_idx = atoi(row[1]);
+                *lightcone_idx = atoi(row[2]);
+                sprintf(hod_hash, "%s", row[3]);
+            }
+            mysql_free_result(query_res);
+        }
+        int status = mysql_next_result(p);
+        assert(status<=0);
+        if (status) break;
+    }
+
+    if (seed_idx<0)
+    // nothing left to work on, fill results to avoid UB
+    {
+        *running_idx = 0;
+        *lightcone_idx = 0;
+        sprintf(hod_hash, "NONE");
+    }
+
+    // NOTE that cosmo_idx can be negative, in which case no work is remaining!
+    return seed_idx;
+
+}
+
+void start_summary (MYSQL *p, const char *name, int cosmo_idx, uint64_t hod_idx)
 {
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
-              "UPDATE lightcones SET plk_state='running' WHERE hod_idx=%lu AND cosmo_idx=%d",
-              hod_idx, cosmo_idx);
+              "UPDATE lightcones SET %s_state='running' WHERE hod_idx=%lu AND cosmo_idx=%d",
+              name, hod_idx, cosmo_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);
     assert(num_rows==1);
 }
 
-void end_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
+void start_fiducials_summary (MYSQL *p, int version, const char *name, uint64_t running_idx,
+                              int seed_idx, int lightcone_idx)
 {
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
-              "UPDATE lightcones SET plk_state='%s' WHERE hod_idx=%lu AND cosmo_idx=%d",
-              (state) ? "fail" : "success", hod_idx, cosmo_idx);
+              "UPDATE fiducials_lightcones_v%d SET %s_state='running' "
+              "WHERE running_idx=%lu AND seed_idx=%d AND lightcone_idx=%d",
+              version, name, running_idx, seed_idx, lightcone_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);
     assert(num_rows==1);
+}
+
+void end_summary (MYSQL *p, const char *name, int cosmo_idx, uint64_t hod_idx, int state)
+{
+    char query_buffer[1024];
+    MYSPRINTF(query_buffer,
+              "UPDATE lightcones SET %s_state='%s' WHERE hod_idx=%lu AND cosmo_idx=%d",
+              name, (state) ? "fail" : "success", hod_idx, cosmo_idx);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    uint64_t num_rows = mysql_affected_rows(p);
+    assert(num_rows==1);
+}
+
+void end_fiducials_summary (MYSQL *p, int version, const char *name, uint64_t running_idx, 
+                            int seed_idx, int lightcone_idx, int state)
+{
+    char query_buffer[1024];
+    MYSPRINTF(query_buffer, 
+              "UPDATE fiducials_lightcones_v%d SET %s_state='%s' "
+              "WHERE running_idx=%lu AND seed_idx=%d AND lightcone_idx=%d",
+              version, name, (state) ? "fail" : "success", running_idx, seed_idx, lightcone_idx);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    uint64_t num_rows = mysql_affected_rows(p);
+    assert(num_rows==1);
+}
+
+int create_plk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
+{
+    return create_summary(p, "plk", hod_idx, hod_hash, NULL);
+}
+
+int create_voids (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
+{
+    return create_summary(p, "voids", hod_idx, hod_hash, NULL);
+}
+
+int create_vgplk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
+{
+    return create_summary(p, "vgplk", hod_idx, hod_hash, "voids");
+}
+
+int create_fiducials_voids (MYSQL *p, int version,
+                            uint64_t *running_idx, int *lightcone_idx, char *hod_hash)
+{
+    return create_fiducials_summary(p, version, "voids", running_idx, lightcone_idx, hod_hash, NULL);
+}
+
+int create_fiducials_vgplk (MYSQL *p, int version,
+                            uint64_t *running_idx, int *lightcone_idx, char *hod_hash)
+{
+    return create_fiducials_summary(p, version, "vgplk", running_idx, lightcone_idx, hod_hash, "voids");
+}
+
+void start_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx)
+{
+    start_summary(p, "plk", cosmo_idx, hod_idx);
+}
+
+void start_voids (MYSQL *p, int cosmo_idx, uint64_t hod_idx)
+{
+    start_summary(p, "voids", cosmo_idx, hod_idx);
+}
+
+void start_vgplk (MYSQL *p, int cosmo_idx, uint64_t hod_idx)
+{
+    start_summary(p, "vgplk", cosmo_idx, hod_idx);
+}
+
+void start_fiducials_voids (MYSQL *p, int version, uint64_t running_idx, int seed_idx, int lightcone_idx)
+{
+    start_fiducials_summary(p, version, "voids", running_idx, seed_idx, lightcone_idx);
+}
+
+void start_fiducials_vgplk (MYSQL *p, int version, uint64_t running_idx, int seed_idx, int lightcone_idx)
+{
+    start_fiducials_summary(p, version, "vgplk", running_idx, seed_idx, lightcone_idx);
+}
+
+void end_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
+{
+    end_summary(p, "plk", cosmo_idx, hod_idx, state);
+}
+
+void end_voids (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
+{
+    end_summary(p, "voids", cosmo_idx, hod_idx, state);
+}
+
+void end_vgplk (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
+{
+    end_summary(p, "vgplk", cosmo_idx, hod_idx, state);
+}
+
+void end_fiducials_voids (MYSQL *p, int version, uint64_t running_idx,
+                          int seed_idx, int lightcone_idx, int state)
+{
+    end_fiducials_summary(p, version, "voids", running_idx, seed_idx, lightcone_idx, state);
+}
+
+void end_fiducials_vgplk (MYSQL *p, int version, uint64_t running_idx,
+                          int seed_idx, int lightcone_idx, int state)
+{
+    end_fiducials_summary(p, version, "vgplk", running_idx, seed_idx, lightcone_idx, state);
 }
 
 void reset_lightcones (MYSQL *p)
@@ -482,6 +721,19 @@ void new_table (MYSQL *p, const char *name, const char *columns)
               name, name, columns);
     SAFE_MYSQL(mysql_query(p, query_buffer));
 
+    // iterate through multi-statement results, we don't actually use them
+    // but otherwise subsequent calls will fail
+    MYSQL_RES *query_res;
+    while (1)
+    {
+        query_res = mysql_store_result(p);
+        if (query_res)
+            mysql_free_result(query_res);
+        int status = mysql_next_result(p);
+        assert(status<=0);
+        if (status) break; // used up all results
+    }
+
     char spec_buffer[1024];
     char *dst = spec_buffer;
     const char *src = columns;
@@ -516,11 +768,60 @@ void new_fiducials (MYSQL *p, int version)
     new_table(p, buffer, fiducials_columns);
 }
 
-int get_run (MYSQL *p, uint64_t hod_idx, char *hod_hash, char *state, char *plk_state)
+void new_fiducials_lightcones (MYSQL *p, int version)
+{
+    static const int max_seed_idx = 100;
+    static const int num_lightcones = 96; // number of augmentations
+
+    char buffer[128];
+    MYSPRINTF(buffer, "fiducials_lightcones_v%d", version);
+    new_table(p, buffer, fiducials_lightcones_columns);
+
+    char query_buffer[1024];
+    char hod_hash[40];
+    MYSQL_RES *query_res;
+
+    for (int seed_idx=0; seed_idx<max_seed_idx; ++seed_idx)
+    {
+        MYSPRINTF(query_buffer,
+                  "SELECT hod_hash FROM fiducials_v%d WHERE seed_idx=%d AND state='success'",
+                  version, seed_idx);
+        SAFE_MYSQL(mysql_query(p, query_buffer));
+        query_res = mysql_store_result(p);
+        uint64_t num_rows = mysql_num_rows(query_res);
+        if (!num_rows)
+        {
+            mysql_free_result(query_res);
+            continue;
+        }
+        assert(num_rows==1);
+        unsigned int num_fields = mysql_num_fields(query_res);
+        assert(num_fields==1);
+        MYSQL_ROW row = mysql_fetch_row(query_res);
+        assert(row);
+        sprintf(hod_hash, "%s", row[0]);
+        mysql_free_result(query_res);
+
+        for (int lightcone_idx=0; lightcone_idx<num_lightcones; ++lightcone_idx)
+        {
+            MYSPRINTF(query_buffer,
+                      "INSERT INTO fiducials_lightcones_v%d (seed_idx, lightcone_idx, hod_hash) "
+                      "VALUES (%d, %d, '%s')",
+                      version, seed_idx, lightcone_idx, hod_hash);
+            SAFE_MYSQL(mysql_query(p, query_buffer));
+            uint64_t running_idx = mysql_insert_id(p);
+            assert(running_idx);
+        }
+    }
+}
+
+int get_run (MYSQL *p, uint64_t hod_idx, char *hod_hash, char *state,
+             char *plk_state, char *voids_state, char *vgplk_state)
 {
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
-              "SELECT cosmo_idx, hod_hash, state, plk_state FROM lightcones "
+              "SELECT cosmo_idx, hod_hash, state, plk_state, voids_state, vgplk_state "
+              "FROM lightcones "
               "WHERE hod_idx=%lu",
               hod_idx);
 
@@ -531,12 +832,13 @@ int get_run (MYSQL *p, uint64_t hod_idx, char *hod_hash, char *state, char *plk_
     if (num_rows==0)
     {
         sprintf(hod_hash, "NONE"); sprintf(state, "NONE"); sprintf(plk_state, "NONE");
+        sprintf(voids_state, "NONE"); sprintf(vgplk_state, "NONE");
         return -1;
     }
     assert(num_rows==1);
 
     unsigned int num_fields = mysql_num_fields(query_res);
-    assert(num_fields==4);
+    assert(num_fields==6);
     MYSQL_ROW row = mysql_fetch_row(query_res);
     int cosmo_idx = atoi(row[0]);
 
@@ -544,6 +846,8 @@ int get_run (MYSQL *p, uint64_t hod_idx, char *hod_hash, char *state, char *plk_
     sprintf(hod_hash, "%s", (row[1]) ? row[1] : "NULL");
     sprintf(state, "%s", (row[2]) ? row[2] : "NULL");
     sprintf(plk_state, "%s", (row[3]) ? row[3] : "NULL");
+    sprintf(voids_state, "%s", (row[4]) ? row[4] : "NULL");
+    sprintf(vgplk_state, "%s", (row[5]) ? row[5] : "NULL");
 
     mysql_free_result(query_res);
 
@@ -560,7 +864,8 @@ int main(int argc, char **argv)
 
     const char *mode = argv[1];
 
-    SAFE_MYSQL(mysql_library_init(0, NULL, NULL));
+    int init_err = mysql_library_init(0, NULL, NULL);
+    assert(!init_err);
 
     MYSQL p;
     mysql_init(&p);
@@ -620,6 +925,36 @@ int main(int argc, char **argv)
     {
         end_plk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]));
     }
+    else if (!strcmp(mode, "create_voids"))
+    {
+        uint64_t hod_idx;
+        char hod_hash[40];
+        int cosmo_idx = create_voids(&p, &hod_idx, hod_hash);
+        fprintf(stdout, "%d %lu %s\n", cosmo_idx, hod_idx, hod_hash);
+    }
+    else if (!strcmp(mode, "start_voids"))
+    {
+        start_voids(&p, atoi(argv[2]), atoll(argv[3]));
+    }
+    else if (!strcmp(mode, "end_voids"))
+    {
+        end_voids(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]));
+    }
+    else if (!strcmp(mode, "create_vgplk"))
+    {
+        uint64_t hod_idx;
+        char hod_hash[40];
+        int cosmo_idx = create_vgplk(&p, &hod_idx, hod_hash);
+        fprintf(stdout, "%d %lu %s\n", cosmo_idx, hod_idx, hod_hash);
+    }
+    else if (!strcmp(mode, "start_vgplk"))
+    {
+        start_vgplk(&p, atoi(argv[2]), atoll(argv[3]));
+    }
+    else if (!strcmp(mode, "end_vgplk"))
+    {
+        end_vgplk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]));
+    }
     else if (!strcmp(mode, "reset_lightcones"))
     {
         reset_lightcones(&p);
@@ -663,9 +998,45 @@ int main(int argc, char **argv)
     }
     else if (!strcmp(mode, "get_run"))
     {
-        char hod_hash[40], state[40], plk_state[40];
-        int cosmo_idx = get_run(&p, atoll(argv[2]), hod_hash, state, plk_state);
-        fprintf(stdout, "%d %s %s %s\n", cosmo_idx, hod_hash, state, plk_state);
+        char hod_hash[40], state[40], plk_state[40], voids_state[40], vgplk_state[40];
+        int cosmo_idx = get_run(&p, atoll(argv[2]), hod_hash, state, plk_state, voids_state, vgplk_state);
+        fprintf(stdout, "%d %s %s %s %s %s\n", cosmo_idx, hod_hash, state, plk_state, voids_state, vgplk_state);
+    }
+    else if (!strcmp(mode, "new_fiducials_lightcones"))
+    {
+        new_fiducials_lightcones(&p, atoi(argv[2]));
+    }
+    else if (!strcmp(mode, "create_fiducials_voids"))
+    {
+        uint64_t running_idx;
+        int lightcone_idx;
+        char hod_hash[40];
+        int seed_idx = create_fiducials_voids(&p, atoi(argv[2]), &running_idx, &lightcone_idx, hod_hash);
+        fprintf(stdout, "%lu %d %d %s\n", running_idx, seed_idx, lightcone_idx, hod_hash);
+    }
+    else if (!strcmp(mode, "start_fiducials_voids"))
+    {
+        start_fiducials_voids(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]));
+    }
+    else if (!strcmp(mode, "end_fiducials_voids"))
+    {
+        end_fiducials_voids(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
+    }
+    else if (!strcmp(mode, "create_fiducials_vgplk"))
+    {
+        uint64_t running_idx;
+        int lightcone_idx;
+        char hod_hash[40];
+        int seed_idx = create_fiducials_vgplk(&p, atoi(argv[2]), &running_idx, &lightcone_idx, hod_hash);
+        fprintf(stdout, "%lu %d %d %s\n", running_idx, seed_idx, lightcone_idx, hod_hash);
+    }
+    else if (!strcmp(mode, "start_fiducials_vgplk"))
+    {
+        start_fiducials_vgplk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]));
+    }
+    else if (!strcmp(mode, "end_fiducials_vgplk"))
+    {
+        end_fiducials_vgplk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
     }
     else
     {

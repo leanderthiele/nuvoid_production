@@ -183,3 +183,5 @@ for x, y, n in validation_loader :
 predictions = np.array(predictions)
 truth = np.array(truth)
 np.savez('vgplk_validation_test.npz', predictions=predictions, truth=truth)
+
+torch.save(model.state_dict(), 'vgplk_mlp.pt')

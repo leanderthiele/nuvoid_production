@@ -2,31 +2,45 @@ from collections import OrderedDict
 from multiprocessing import Pool, cpu_count
 
 import numpy as np
-from scipy.special import gammaln, xlogy
-from scipy.spatial import Delaunay
 
 import torch
 import torch.nn as nn
 
 import emcee
 
+# needs to be consistent!
+RMIN = 40
+USE_QUADRUPOLE = False
+
 # whether we do not allow points outside the convex hull
 # around our 5-D LCDM samples
 # If we set this to False the LCDM posterior gets unreasonably wide
 CONSTRAIN_CONVEX_HULL = True
 
-MCMC_STEPS = 100000
+MCMC_STEPS = 10000
 
-with np.load('vsf_mlp_norm.npz') as f :
+with np.load('/tigress/lthiele/cov_vgplk.npz') as f :
+    cov = f['cov'] # shape [Rmin, ellxk]
+    assert np.allclose(Rmin, f['Rmin'])
+    k_indices = f['k_indices']
+cov = cov[rmin_idx, ...]
+# remove the quadrupole if requested
+if not USE_QUADRUPOLE :
+    cov = cov[:len(k_indices), :len(k_indices)]
+covinv = np.linalg.inv(cov)
+
+with np.load('vgplk_norm.npz') as f :
     norm_avg = f['avg']
     norm_std = f['std']
 
-with np.load('hists.npz') as f :
-    target_hist = f['hist_cmass'].flatten()
+with np.load('/tigress/lthiele/collected_vgplk.npz') as f :
     param_names = list(f['param_names'])
     params = f['params']
-    hists  = f['hists']
-hists = hists.reshape(hists.shape[0], -1)
+
+with np.load('/tigress/lthiele/cmass_vgplk.npz') as f :
+    target = f[f'p0k_Rmin{RMIN}'][k_indices]
+    if USE_QUADRUPOLE :
+        target = np.concatenate([target, f[f'p2k_Rmin{RMIN}'][k_indices]])
 
 # uniform priors for the HOD parameters + mnu
 NCOSMO = 5
@@ -37,15 +51,15 @@ eps = 0.01
 hod_theta_min += eps * delta
 hod_theta_max -= eps * delta
 
+# more complicated prior for the cosmology
+if CONSTRAIN_CONVEX_HULL :
+    del_tess = Delaunay(params[:, :NCOSMO])
+
 # the Gaussian prior on 5-parameter LCDM
 mu_cov_fname = '/tigress/lthiele/mu_cov_plikHM_TTTEEE_lowl_lowE.dat'
 mu_LCDM = np.loadtxt(mu_cov_fname, max_rows=1)
 cov_LCDM = np.loadtxt(mu_cov_fname, skiprows=3)
 covinv_LCDM = np.linalg.inv(cov_LCDM)
-
-# more complicated prior for the cosmology
-if CONSTRAIN_CONVEX_HULL :
-    del_tess = Delaunay(params[:, :NCOSMO])
 
 class MLPLayer(nn.Sequential) :
     def __init__(self, Nin, Nout, activation=nn.LeakyReLU) :
@@ -54,16 +68,17 @@ class MLPLayer(nn.Sequential) :
                                      ]))
 
 class MLP(nn.Sequential) :
-    def __init__(self, Nin, Nout, Nlayers=8, Nhidden=512) :
+    def __init__(self, Nin, Nout, Nlayers=4, Nhidden=512, out_positive=True) :
         # output is manifestly positive so we use ReLU in the final layer
+        self.Nin = Nin
+        self.Nout = Nout
         super().__init__(*[MLPLayer(Nin if ii==0 else Nhidden,
                                     Nout if ii==Nlayers else Nhidden,
-                                    activation=(nn.LeakyReLU if ii!=Nlayers else nn.ReLU))
+                                    activation=(nn.LeakyReLU if (ii!=Nlayers or not out_positive) else nn.ReLU))
                            for ii in range(Nlayers+1)])
 
-model = MLP(params.shape[1], hists.shape[1])
-model.load_state_dict(torch.load('vsf_mlp.pt', map_location='cpu'))
-
+model = MLP(params.shape[-1], (1+USE_QUADRUPOLE)*len(k_indices))
+model.load_state_dict(torch.load('vgplk_mlp.pt', map_location='cpu')
 
 def logprior(theta) :
     
@@ -83,12 +98,11 @@ def logprior(theta) :
     lp_lcdm = -0.5 * np.einsum('i,ij,j->', d, covinv_LCDM, d)
     return lp_lcdm
 
-
 def loglike(theta) :
     theta = (theta - norm_avg) / norm_std
-    mu = model(torch.from_numpy(theta).to(dtype=torch.float32)).detach().cpu().numpy() + 1e-8
-    return np.sum(xlogy(target_hist, mu) - mu - gammaln(1.0+target_hist))
-
+    mu = model(torch.from_numpy(theta).to(dtype=torch.float32)).detach().cpu().numpy()
+    d = target - mu
+    return - 0.5 * np.einsum('i,ij,j->', d, covinv, d)
 
 def logprob(theta) :
     lp = logprior(theta)
@@ -96,7 +110,6 @@ def logprob(theta) :
         return -np.inf
     ll = loglike(theta)
     return lp + ll
-
 
 if __name__ == '__main__' :
 

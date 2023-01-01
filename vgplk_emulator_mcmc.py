@@ -2,6 +2,7 @@ from collections import OrderedDict
 from multiprocessing import Pool, cpu_count
 
 import numpy as np
+from scipy.spatial import Delaunay
 
 import torch
 import torch.nn as nn
@@ -17,12 +18,18 @@ USE_QUADRUPOLE = False
 # If we set this to False the LCDM posterior gets unreasonably wide
 CONSTRAIN_CONVEX_HULL = True
 
-MCMC_STEPS = 10000
+MCMC_STEPS = 100000
+
+with np.load('/tigress/lthiele/collected_vgplk.npz') as f :
+    param_names = list(f['param_names'])
+    params = f['params']
+    Rmin = f['Rmin']
 
 with np.load('/tigress/lthiele/cov_vgplk.npz') as f :
     cov = f['cov'] # shape [Rmin, ellxk]
-    assert np.allclose(Rmin, f['Rmin'])
     k_indices = f['k_indices']
+    assert np.allclose(Rmin, f['Rmin'])
+rmin_idx = np.where(Rmin == RMIN)[0][0]
 cov = cov[rmin_idx, ...]
 # remove the quadrupole if requested
 if not USE_QUADRUPOLE :
@@ -32,10 +39,6 @@ covinv = np.linalg.inv(cov)
 with np.load('vgplk_norm.npz') as f :
     norm_avg = f['avg']
     norm_std = f['std']
-
-with np.load('/tigress/lthiele/collected_vgplk.npz') as f :
-    param_names = list(f['param_names'])
-    params = f['params']
 
 with np.load('/tigress/lthiele/cmass_vgplk.npz') as f :
     target = f[f'p0k_Rmin{RMIN}'][k_indices]
@@ -77,8 +80,8 @@ class MLP(nn.Sequential) :
                                     activation=(nn.LeakyReLU if (ii!=Nlayers or not out_positive) else nn.ReLU))
                            for ii in range(Nlayers+1)])
 
-model = MLP(params.shape[-1], (1+USE_QUADRUPOLE)*len(k_indices))
-model.load_state_dict(torch.load('vgplk_mlp.pt', map_location='cpu')
+model = MLP(params.shape[-1], (1+USE_QUADRUPOLE)*len(k_indices), out_positive=False)
+model.load_state_dict(torch.load('vgplk_mlp.pt', map_location='cpu'))
 
 def logprior(theta) :
     
@@ -125,7 +128,7 @@ if __name__ == '__main__' :
         sampler.run_mcmc(theta_init, MCMC_STEPS, progress=True)
 
         chain = sampler.get_chain(thin=30, discard=MCMC_STEPS//5)
-        np.save('vsf_mcmc_chain.npy', chain)
+        np.save('vgplk_mcmc_chain.npy', chain)
 
         acceptance_rates = sampler.acceptance_fraction
         print(f'acceptance={acceptance_rates}')

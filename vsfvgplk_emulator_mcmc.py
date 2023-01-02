@@ -21,6 +21,20 @@ CONSTRAIN_CONVEX_HULL = True
 
 MCMC_STEPS = 100000
 
+# pairs mean, sigma
+ADD_PRIOR = {'hod_transfP1': (0.0, 0.1),
+             'hod_abias': (0.0, 0.1),
+             'hod_log_Mmin': (12.9, 0.01),
+             'hod_sigma_logM': (0.4, 0.01),
+             'hod_log_M0': (14.4, 0.1),
+             'hod_log_M1': (14.4, 0.1),
+             'hod_alpha': (0.6, 0.01),
+             'hod_transf_eta_cen': (6.0, 0.1),
+             'hod_transf_eta_sat': (-0.5, 0.01),
+             'hod_mu_Mmin': (-5.0, 0.1),
+             'hod_mu_M1': (10.0, 1.0),
+            }
+
 with np.load('/tigress/lthiele/collected_vgplk.npz') as f :
     param_names = list(f['param_names'])
     params = f['params']
@@ -30,7 +44,7 @@ with np.load('hists.npz') as f :
     param_names_ = list(f['param_names'])
     assert all(a==b for a, b in zip(param_names, param_names_))
     hists = f['hists']
-    vsf_shape = hist.reshape(hists.shape[0], -1).shape[-1]
+    vsf_shape = hists.reshape(hists.shape[0], -1).shape[-1]
     target_vsf = f['hist_cmass'].flatten()
 
 with np.load('/tigress/lthiele/cov_vgplk.npz') as f :
@@ -75,6 +89,15 @@ mu_LCDM = np.loadtxt(mu_cov_fname, max_rows=1)
 cov_LCDM = np.loadtxt(mu_cov_fname, skiprows=3)
 covinv_LCDM = np.linalg.inv(cov_LCDM)
 
+# additional prior, only for testing
+mu_add = np.zeros(params.shape[-1])
+varinv_add = np.zeros(params.shape[-1])
+for ii, name in enumerate(param_names) :
+    if name in ADD_PRIOR :
+        mu, sigma = ADD_PRIOR[name]
+        mu_add[ii] = mu
+        varinv_add[ii] = 1.0/sigma**2
+
 class MLPLayer(nn.Sequential) :
     def __init__(self, Nin, Nout, activation=nn.LeakyReLU) :
         super().__init__(OrderedDict([('linear', nn.Linear(Nin, Nout, bias=True)),
@@ -113,12 +136,16 @@ def logprior(theta) :
     # LCDM part
     d = theta[:NCOSMO] - mu_LCDM
     lp_lcdm = -0.5 * np.einsum('i,ij,j->', d, covinv_LCDM, d)
-    return lp_lcdm
+
+    # additional part
+    lp_add = -0.5 * np.sum((theta - mu_add)**2 * varinv_add)
+
+    return lp_lcdm + lp_add
 
 def loglike(theta) :
     theta_vsf = (theta - vsf_norm_avg) / vsf_norm_std
     mu_vsf = model_vsf(torch.from_numpy(theta_vsf).to(dtype=torch.float32)).detach().cpu().numpy()
-    l_vsf = np.sum(xlogy(target_vsf, mu) - mu - gammaln(1.0+target_vsf))
+    l_vsf = np.sum(xlogy(target_vsf, mu_vsf) - mu_vsf - gammaln(1.0+target_vsf))
 
     theta_vgplk = (theta - vgplk_norm_avg) / vgplk_norm_std
     mu_vgplk = model_vgplk(torch.from_numpy(theta_vgplk).to(dtype=torch.float32)).detach().cpu().numpy()

@@ -19,19 +19,19 @@ USE_QUADRUPOLE = False
 # If we set this to False the LCDM posterior gets unreasonably wide
 CONSTRAIN_CONVEX_HULL = True
 
-MCMC_STEPS = 100000
+MCMC_STEPS = 40000
 
 # pairs mean, sigma
 ADD_PRIOR = {'hod_transfP1': (0.0, 0.1),
              'hod_abias': (0.0, 0.1),
-             'hod_log_Mmin': (12.9, 0.01),
-             'hod_sigma_logM': (0.4, 0.01),
+#             'hod_log_Mmin': (12.9, 0.01),
+#             'hod_sigma_logM': (0.4, 0.01),
              'hod_log_M0': (14.4, 0.1),
              'hod_log_M1': (14.4, 0.1),
              'hod_alpha': (0.6, 0.01),
              'hod_transf_eta_cen': (6.0, 0.1),
              'hod_transf_eta_sat': (-0.5, 0.01),
-             'hod_mu_Mmin': (-5.0, 0.1),
+#             'hod_mu_Mmin': (-5.0, 0.1),
              'hod_mu_M1': (10.0, 1.0),
             }
 
@@ -92,6 +92,7 @@ covinv_LCDM = np.linalg.inv(cov_LCDM)
 # additional prior, only for testing
 mu_add = np.zeros(params.shape[-1])
 varinv_add = np.zeros(params.shape[-1])
+assert all(n in param_names for n in ADD_PRIOR.keys())
 for ii, name in enumerate(param_names) :
     if name in ADD_PRIOR :
         mu, sigma = ADD_PRIOR[name]

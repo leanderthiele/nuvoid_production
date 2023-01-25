@@ -1,0 +1,19 @@
+import numpy as np
+
+from compress import Compress
+from cut import Cut
+
+class CutCompress :
+
+    def __init__ (self, dm_dphi, C, is_nuisance, **cut_kwargs) :
+        
+        cut = Cut(**cut_kwargs)
+
+        cut_dm_dphi = cut.cut_vec(dm_dphi)
+        cut_C = cut.cut_mat(C)
+
+        compress = Compress(cut_dm_dphi, cut_C, is_nuisance)
+        self.cut_compression_matrix = cut.expand_vec(compress.compression_matrix, fill_value=0.0)
+
+    def __call__ (self, x) :
+        return np.einsum('ai,...i->...i', self.cut_compression_matrix, x)

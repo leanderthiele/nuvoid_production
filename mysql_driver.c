@@ -138,62 +138,63 @@ possible commands:
 )"""";
 
 // contents of the database
+#define FLT_TYPE "DECIMAL(10,9)"
 const char *cosmologies_columns =
-    "cosmo_idx INT UNSIGNED NOT NULL, "
-    "Om DOUBLE NOT NULL, "
-    "Ob DOUBLE NOT NULL, "
-    "h DOUBLE NOT NULL, "
-    "ns DOUBLE NOT NULL, "
-    "sigma8 DOUBLE NOT NULL, "
-    "S8 DOUBLE NOT NULL, "
-    "Mnu DOUBLE NOT NULL, "
-    "As DOUBLE NOT NULL, "
-    "On DOUBLE NOT NULL, "
-    "Oc DOUBLE NOT NULL, "
-    "Obh2 DOUBLE NOT NULL, "
-    "Och2 DOUBLE NOT NULL, "
-    "theta DOUBLE NOT NULL, "
-    "logA DOUBLE NOT NULL, "
-    "num_lc INT UNSIGNED NOT NULL, "
-    "PRIMARY KEY (cosmo_idx)";
+    "`cosmo_idx` INT UNSIGNED NOT NULL, "
+    "`Om` " FLT_TYPE " NOT NULL, "
+    "`Ob` " FLT_TYPE " NOT NULL, "
+    "`h` " FLT_TYPE " NOT NULL, "
+    "`ns` " FLT_TYPE " NOT NULL, "
+    "`sigma8` " FLT_TYPE " NOT NULL, "
+    "`S8` " FLT_TYPE " NOT NULL, "
+    "`Mnu` " FLT_TYPE " NOT NULL, "
+    "`1e9As` " FLT_TYPE " NOT NULL, "
+    "`On` " FLT_TYPE " NOT NULL, "
+    "`Oc` " FLT_TYPE " NOT NULL, "
+    "`Obh2` " FLT_TYPE " NOT NULL, "
+    "`Och2` " FLT_TYPE " NOT NULL, "
+    "`theta` " FLT_TYPE " NOT NULL, "
+    "`logA` " FLT_TYPE " NOT NULL, "
+    "`num_lc` INT UNSIGNED NOT NULL, "
+    "PRIMARY KEY (`cosmo_idx`)";
 
 const char *fiducials_columns =
-    "seed_idx INT UNSIGNED NOT NULL, "
-    "hod_hash CHAR(40), "
-    "state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
-    "create_time BIGINT, "
-    "plk_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
-    "plk_create_time BIGINT, "
-    "voids_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
-    "voids_create_time BIGINT, "
-    "PRIMARY KEY (seed_idx)";
+    "`seed_idx` INT UNSIGNED NOT NULL, "
+    "`hod_hash` CHAR(40), "
+    "`state` ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "`create_time` BIGINT, "
+    "`plk_state` ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "`plk_create_time` BIGINT, "
+    "`voids_state` ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "`voids_create_time` BIGINT, "
+    "PRIMARY KEY (`seed_idx`)";
 
 const char *lightcones_columns =
-    "hod_idx BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, "
-    "cosmo_idx INT UNSIGNED NOT NULL, "
-    "hod_hash CHAR(40), "
-    "state ENUM('created', 'running', 'fail', 'success', 'timeout') NOT NULL, "
-    "create_time BIGINT NOT NULL, "
-    "plk_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
-    "plk_create_time BIGINT, "
-    "voids_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
-    "voids_create_time BIGINT, "
-    "vgplk_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
-    "vgplk_create_time BIGINT, "
-    "PRIMARY KEY (hod_idx)";
+    "`hod_idx` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, "
+    "`cosmo_idx` INT UNSIGNED NOT NULL, "
+    "`hod_hash` CHAR(40), "
+    "`state` ENUM('created', 'running', 'fail', 'success', 'timeout') NOT NULL, "
+    "`create_time` BIGINT NOT NULL, "
+    "`plk_state` ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "`plk_create_time` BIGINT, "
+    "`voids_state` ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "`voids_create_time` BIGINT, "
+    "`vgplk_state` ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "`vgplk_create_time` BIGINT, "
+    "PRIMARY KEY (`hod_idx`)";
 
 const char *fiducials_lightcones_columns =
-    "running_idx BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, "
-    "seed_idx INT UNSIGNED NOT NULL, "
-    "lightcone_idx INT UNSIGNED NOT NULL, "
-    "hod_hash CHAR(40) NOT NULL, "
-    "plk_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
-    "plk_create_time BIGINT, "
-    "voids_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
-    "voids_create_time BIGINT, "
-    "vgplk_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
-    "vgplk_create_time BIGINT, "
-    "PRIMARY KEY (running_idx)";
+    "`running_idx` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, "
+    "`seed_idx` INT UNSIGNED NOT NULL, "
+    "`lightcone_idx` INT UNSIGNED NOT NULL, "
+    "`hod_hash` CHAR(40) NOT NULL, "
+    "`plk_state` ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "`plk_create_time` BIGINT, "
+    "`voids_state` ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "`voids_create_time` BIGINT, "
+    "`vgplk_state` ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "`vgplk_create_time` BIGINT, "
+    "PRIMARY KEY (`running_idx`)";
 
 // settings for the database
 const char db_hst[] = "tigercpu",
@@ -331,8 +332,8 @@ void set_cosmologies (MYSQL *p)
                            &theta, &logA);
             MYSPRINTF(query_buffer,
                       "INSERT INTO cosmologies VALUES "
-                      "(%d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, 0)",
-                      cosmo_idx, Om, Ob, h, ns, sigma8, S8, Mnu, As, On, Oc, Obh2, Och2, theta, logA);
+                      "(%d, %e, %e, %e, %e, %e, %e, %e, %e, %e, %e, %e, %e, %e, %e, 0)",
+                      cosmo_idx, Om, Ob, h, ns, sigma8, S8, Mnu, 1e9*As, On, Oc, Obh2, Och2, theta, logA);
             SAFE_MYSQL(mysql_query(p, query_buffer));
         }
         else

@@ -49,6 +49,11 @@ possible commands:
 [start_fiducial]
     argv[2] = version index
     argv[3] = seed_idx
+[start_deriv]
+    argv[2] = version index
+    argv[3] = cosmo_idx
+    argv[4] = hod_idx
+    argv[5] = hod_hash
 [end_trial]
     argv[2] = cosmo_idx
     argv[3] = hod_idx
@@ -57,6 +62,11 @@ possible commands:
     argv[2] = version index
     argv[3] = seed_idx
     argv[4] = state
+[end_deriv]
+    argv[2] = version index
+    argv[3] = cosmo_idx
+    argv[4] = hod_idx
+    argv[5] = state
 [create_plk]
     returns cosmo_idx hod_idx hod_hash
     (cosmo_idx will be negative if no work is remaining)
@@ -450,7 +460,7 @@ int get_cosmology (MYSQL *p, const char *seed, const char *table, const char *co
     return cosmo_idx;
 }
 
-uint64_t create_lightcone_trial (MYSQL *p, const char *table, int cosmo_idx)
+uint64_t get_hod_idx (MYSQL *p, const char *table, int cosmo_idx)
 // Generic function to start a new trial.
 // In table, the fields cosmo_idx, state, create_time will be populated and hod_idx will be auto incremented
 // hod_idx is returned
@@ -471,7 +481,7 @@ uint64_t create_lightcone_trial (MYSQL *p, const char *table, int cosmo_idx)
 int create_trial (MYSQL *p, const char *seed, uint64_t *hod_idx)
 {
     int cosmo_idx = get_cosmology(p, seed, "lightcones", NULL);
-    *hod_idx = create_lightcone_trial(p, "lightcones", cosmo_idx);
+    *hod_idx = get_hod_idx(p, "lightcones", cosmo_idx);
 
     return cosmo_idx;
 }
@@ -486,7 +496,7 @@ int create_deriv (MYSQL *p, int version, const char *seed, uint64_t *hod_idx)
     MYSPRINTF(condition, "ABS(Mnu-%.15f)<%.15f", fid_Mnu, max_delta_Mnu);
     
     int cosmo_idx = get_cosmology(p, seed, table, condition);
-    *hod_idx = create_lightcone_trial(p, table, cosmo_idx);
+    *hod_idx = get_hod_idx(p, table, cosmo_idx);
 
     return cosmo_idx;
 }
@@ -538,16 +548,28 @@ int create_fiducial (MYSQL *p, int version, const char *hod_hash)
     return seed_idx;
 }
 
-void start_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, const char *hod_hash)
+void start_lightcones (MYSQL *p, const char *table, int cosmo_idx, uint64_t hod_idx, const char *hod_hash)
 {
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
-              "UPDATE lightcones SET hod_hash='%s', state='running' "
+              "UPDATE %s SET hod_hash='%s', state='running' "
               "WHERE hod_idx=%lu AND cosmo_idx=%d",
-              hod_hash, hod_idx, cosmo_idx);
+              table, hod_hash, hod_idx, cosmo_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);
     assert(num_rows==1);
+}
+
+void start_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, const char *hod_hash)
+{
+    start_lightcones(p, "lightcones", cosmo_idx, hod_idx, hod_hash);
+}
+
+void start_deriv (MYSQL *p, int version, int cosmo_idx, uint64_t hod_idx, const char *hod_hash)
+{
+    char table[128];
+    MYSPRINTF(table, "derivs_v%d", version);
+    start_lightcones(p, table, cosmo_idx, hod_idx, hod_hash);
 }
 
 void start_fiducial (MYSQL *p, int version, int seed_idx)
@@ -562,16 +584,28 @@ void start_fiducial (MYSQL *p, int version, int seed_idx)
     assert(num_rows==1);
 }
 
-void end_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
+void end_lightcones (MYSQL *p, const char *table, int cosmo_idx, uint64_t hod_idx, int state)
 {
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
-              "UPDATE lightcones SET state='%s' "
+              "UPDATE %s SET state='%s' "
               "WHERE hod_idx=%lu AND cosmo_idx=%d",
-              (state) ? "fail" : "success", hod_idx, cosmo_idx);
+              table, (state) ? "fail" : "success", hod_idx, cosmo_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);
     assert(num_rows==1);
+}
+
+void end_trial (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
+{
+    end_lightcones(p, "lightcones", cosmo_idx, hod_idx, state);
+}
+
+void end_deriv (MYSQL *p, int version, int cosmo_idx, uint64_t hod_idx, int state)
+{
+    char table[128];
+    MYSPRINTF(table, "derivs_v%d", version);
+    end_lightcones(p, table, cosmo_idx, hod_idx, state);
 }
 
 void end_fiducial (MYSQL *p, int version, int seed_idx, int state)
@@ -1243,6 +1277,14 @@ int main(int argc, char **argv)
         uint64_t hod_idx;
         int cosmo_idx = create_deriv(&p, atoi(argv[2]), argv[3], &hod_idx);
         fprintf(stdout, "%d %lu\n", cosmo_idx, hod_idx);
+    }
+    else if (!strcmp(mode, "start_deriv"))
+    {
+        start_deriv(&p, atoi(argv[2]), atoi(argv[3]), atoll(argv[4]), argv[5]);
+    }
+    else if (!strcmp(mode, "end_deriv"))
+    {
+        end_deriv(&p, atoi(argv[2]), atoi(argv[3]), atoll(argv[4]), atoi(argv[5]));
     }
     else
     {

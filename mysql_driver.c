@@ -397,8 +397,8 @@ int get_cosmology (MYSQL *p, const char *seed, const char *table, const char *co
               // then we make a table that counts how many times each cosmo_idx occurs
               "CREATE TEMPORARY TABLE counts_table "
               "SELECT cosmo_idx, SUM(hod_idx IS NOT NULL) mycount "
-              "FROM (SELECT cosmologies.cosmo_idx cosmo_idx, %s.hod_idx hod_idx "
-                    "FROM cosmologies LEFT JOIN %s ON cosmologies.cosmo_idx=%s.cosmo_idx) "
+              "FROM (SELECT cosmo_table.cosmo_idx cosmo_idx, %s.hod_idx hod_idx "
+                    "FROM cosmo_table LEFT JOIN %s ON cosmo_table.cosmo_idx=%s.cosmo_idx) AS foo "
               "GROUP BY cosmo_idx; "
               // compute the minimum number of occurences
               "SET @mymin=(SELECT MIN(mycount) FROM counts_table); "

@@ -157,6 +157,7 @@ const char *cosmologies_columns =
     "`logA` " FLT_TYPE " NOT NULL, "
     "`num_lc` INT UNSIGNED NOT NULL, "
     "PRIMARY KEY (`cosmo_idx`)";
+#undef FLT_TYPE
 
 const char *fiducials_columns =
     "`seed_idx` INT UNSIGNED NOT NULL, "
@@ -332,7 +333,8 @@ void set_cosmologies (MYSQL *p)
                            &theta, &logA);
             MYSPRINTF(query_buffer,
                       "INSERT INTO cosmologies VALUES "
-                      "(%d, %e, %e, %e, %e, %e, %e, %e, %e, %e, %e, %e, %e, %e, %e, 0)",
+                      "(%d, %.15f, %.15f, %.15f, %.15f, %.15f, %.15f, %.15f, %.15f, "
+                      " %.15f, %.15f, %.15f, %.15f, %.15f, %.15f, 0)",
                       cosmo_idx, Om, Ob, h, ns, sigma8, S8, Mnu, 1e9*As, On, Oc, Obh2, Och2, theta, logA);
             SAFE_MYSQL(mysql_query(p, query_buffer));
         }

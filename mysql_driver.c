@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <math.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -23,6 +24,7 @@ possible commands:
     argv[2] = version index
 [set_cosmologies]
     checks /scratch for available cosmo_varied cosmologies
+    and extract the cosmological parameters
 [set_fiducials]
     checks /scratch for available cosmo_fiducial runs
     argv[2] = version index
@@ -138,6 +140,20 @@ possible commands:
 // contents of the database
 const char *cosmologies_columns =
     "cosmo_idx INT UNSIGNED NOT NULL, "
+    "Om DOUBLE NOT NULL, "
+    "Ob DOUBLE NOT NULL, "
+    "h DOUBLE NOT NULL, "
+    "ns DOUBLE NOT NULL, "
+    "sigma8 DOUBLE NOT NULL, "
+    "S8 DOUBLE NOT NULL, "
+    "Mnu DOUBLE NOT NULL, "
+    "As DOUBLE NOT NULL, "
+    "On DOUBLE NOT NULL, "
+    "Oc DOUBLE NOT NULL, "
+    "Obh2 DOUBLE NOT NULL, "
+    "Och2 DOUBLE NOT NULL, "
+    "theta DOUBLE NOT NULL, "
+    "logA DOUBLE NOT NULL, "
     "num_lc INT UNSIGNED NOT NULL, "
     "PRIMARY KEY (cosmo_idx)";
 
@@ -178,7 +194,6 @@ const char *fiducials_lightcones_columns =
     "vgplk_state ENUM('created', 'running', 'fail', 'success', 'timeout'), "
     "vgplk_create_time BIGINT, "
     "PRIMARY KEY (running_idx)";
-
 
 // settings for the database
 const char db_hst[] = "tigercpu",
@@ -230,6 +245,64 @@ int get_run_idx (const char *path, const char *pattern)
         } \
     } while (0)
 
+void read_info (const char *fname, const char *ident, double *out)
+{
+    FILE *fp = fopen(fname, "r");
+    assert(fp);
+
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    int found = 0;
+    while ((read = getline(&line, &len, fp)) != -1)
+        if (strstr(line, ident) == line && *(line+strlen(ident)) == '=')
+        {
+            const char *eq = strchr(line, '=');
+            assert(eq);
+            *out = atof(eq+1);
+            found = 1;
+            break;
+        }
+
+    assert(found);
+    fclose(fp);
+}
+
+void read_cosmology (int cosmo_idx,
+                     double *Om, double *Ob, double *h, double *ns, double *sigma8, double *S8,
+                     double *Mnu, double *As, double *On, double *Oc, double *Obh2, double *Och2,
+                     double *theta, double *logA)
+{
+    // the CMB parameterization
+    #define CODEBASE "/home/lthiele/nuvoid_production"
+    const char prior_exe[] = CODEBASE "/sample_prior";
+    const int cmb_dim = 5;
+    const char cmb_prior[] = CODEBASE "/mu_cov_plikHM_TTTEEE_lowl_lowE.dat";
+    const int mnu_dim = 1;
+    const char mnu_prior[] = CODEBASE "/mnu_prior.dat";
+    #undef CODEBASE
+    char cmd_buf[1024];
+    MYSPRINTF(cmd_buf, "%s %d %d %s %d %s", prior_exe, cosmo_idx, cmb_dim, cmb_prior, mnu_dim, mnu_prior);
+    FILE *fp = popen(cmd_buf, "r");
+    assert(fp);
+    int res = fscanf(fp, "%lf,%lf,%lf,%lf,%lf,%lf", Obh2, Och2, theta, logA, ns, Mnu);
+    assert(res==6);
+    pclose(fp);
+
+    // other parameterizations
+    char info_buf[1024];
+    MYSPRINTF(info_buf, "/scratch/gpfs/lthiele/nuvoid_production/cosmo_varied_%d/cosmo.info", cosmo_idx);
+    read_info(info_buf, "Omega_m", Om);
+    read_info(info_buf, "Omega_b", Ob);
+    read_info(info_buf, "h", h);
+    read_info(info_buf, "sigma_8", sigma8);
+    read_info(info_buf, "A_s", As);
+    read_info(info_buf, "Omega_nu", On);
+    read_info(info_buf, "Omega_cdm", Oc);
+    *S8 = *sigma8 * sqrt(*Om / 0.3);
+}
+
 
 void set_cosmologies (MYSQL *p)
 {
@@ -251,7 +324,15 @@ void set_cosmologies (MYSQL *p)
         mysql_free_result(query_res);
         if (!num_rows) // not in the database
         {
-            MYSPRINTF(query_buffer, "INSERT INTO cosmologies VALUES (%d, 0)", cosmo_idx);
+            double Om, Ob, h, ns, sigma8, S8, Mnu, As, On, Oc, Obh2, Och2, theta, logA;
+            read_cosmology(cosmo_idx,
+                           &Om, &Ob, &h, &ns, &sigma8, &S8,
+                           &Mnu, &As, &On, &Oc, &Obh2, &Och2,
+                           &theta, &logA);
+            MYSPRINTF(query_buffer,
+                      "INSERT INTO cosmologies VALUES "
+                      "(%d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, 0)",
+                      cosmo_idx, Om, Ob, h, ns, sigma8, S8, Mnu, As, On, Oc, Obh2, Och2, theta, logA);
             SAFE_MYSQL(mysql_query(p, query_buffer));
         }
         else

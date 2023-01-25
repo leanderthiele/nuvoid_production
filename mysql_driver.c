@@ -22,18 +22,22 @@ possible commands:
 [new_fiducials_lightcones]
     replaces fiducials_lightcones table by newly created one
     argv[2] = version index
+[new_derivs]
+    replaces derivs table by newly created one
+    argv[2] = version index
 [set_cosmologies]
     checks /scratch for available cosmo_varied cosmologies
     and extract the cosmological parameters
 [set_fiducials]
     checks /scratch for available cosmo_fiducial runs
     argv[2] = version index
-[get_cosmology]
-    returns index of a cosmology with smallest number of available lightcones
-    argv[2] = some random string for seeding
 [create_trial]
     returns cosmo_idx hod_idx
     argv[2] = some random string for seeding
+[create_deriv]
+    returns cosmo_idx hod_idx
+    argv[2] = version index
+    argv[3] = some random string for seeding
 [create_fiducial]
     returns seed_idx
     argv[2] = version index
@@ -196,6 +200,14 @@ const char *fiducials_lightcones_columns =
     "`vgplk_state` ENUM('created', 'running', 'fail', 'success', 'timeout'), "
     "`vgplk_create_time` BIGINT, "
     "PRIMARY KEY (`running_idx`)";
+
+const char *derivs_columns =
+    "`hod_idx` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, "
+    "`cosmo_idx` INT UNSIGNED NOT NULL, "
+    "`hod_hash` CHAR(40), "
+    "`state` ENUM('created', 'running', 'fail', 'success', 'timeout') NOT NULL, "
+    "`create_time` BIGINT, "
+    "PRIMARY KEY (`hod_idx`)";
 
 // settings for the database
 const char db_hst[] = "tigercpu",
@@ -371,59 +383,110 @@ void set_fiducials (MYSQL *p, int version)
     }
 }
 
-int get_cosmology (MYSQL *p, const char *seed)
+int get_cosmology (MYSQL *p, const char *seed, const char *table, const char *cosmo_condition)
+// Generic function to return a cosmology that occurs the minimum number of times in table.
+// table must have the fields cosmo_idx and hod_idx.
+// cosmo_condition is anything that can be used after a WHERE, if nullptr all cosmologies are considered
+// This function makes the num_lc stuff obsolete
 {
-    MYSQL_RES *query_res;
-
-    SAFE_MYSQL(mysql_query(p,
-                           "SELECT cosmo_idx FROM cosmologies "
-                           "WHERE num_lc=(SELECT MIN(num_lc) FROM cosmologies)"
-                          ));
-    query_res = mysql_store_result(p);
-    uint64_t num_rows = mysql_num_rows(query_res);
-    assert(num_rows);
-    unsigned int num_fields = mysql_num_fields(query_res);
-    assert(num_fields==1);
+    char query_buffer[1024];
+    MYSPRINTF(query_buffer,
+              // first, we select the cosmologies reasonably close to fiducial
+              "CREATE TEMPORARY TABLE cosmo_table "
+              "SELECT cosmo_idx FROM cosmologies WHERE %s; "
+              // then we make a table that counts how many times each cosmo_idx occurs
+              "CREATE TEMPORARY TABLE counts_table "
+              "SELECT cosmo_idx, SUM(hod_idx IS NOT NULL) mycount "
+              "FROM (SELECT cosmologies.cosmo_idx cosmo_idx, %s.hod_idx hod_idx "
+                    "FROM cosmologies LEFT JOIN %s ON cosmologies.cosmo_idx=%s.cosmo_idx) "
+              "GROUP BY cosmo_idx; "
+              // compute the minimum number of occurences
+              "SET @mymin=(SELECT MIN(mycount) FROM counts_table); "
+              // select the cosmo indices where the number of occurences is minimum
+              "SELECT cosmo_idx FROM counts_table WHERE mycount=@mymin; ",
+              (cosmo_condition) ? cosmo_condition : "TRUE", table, table, table);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
 
     // hash the seed string
     unsigned long hash = 5381;
     int c;
     while ((c = *seed++))
         hash = ((hash << 5) + hash) + c;
-    uint64_t rand_row = hash % num_rows;
 
-    mysql_data_seek(query_res, rand_row);
-    MYSQL_ROW row = mysql_fetch_row(query_res);
-    assert(row);
-    int cosmo_idx = atoi(row[0]);
+    // iterate through the results
+    MYSQL_RES *query_res;
+    int cosmo_idx = -1;
+    while (1)
+    {
+        query_res = mysql_store_result(p);
+        if (query_res)
+        {
+            uint64_t num_rows = mysql_num_rows(query_res);
+            if (!num_rows)
+                goto free_res;
 
-    mysql_free_result(query_res);
+            assert(cosmo_idx<0);
+
+            {
+                unsigned int num_fields = mysql_num_fields(query_res);
+                assert(num_fields==1);
+                uint64_t rand_row = hash % num_rows;
+                mysql_data_seek(query_res, rand_row);
+                MYSQL_ROW row = mysql_fetch_row(query_res);
+                assert(row);
+                cosmo_idx = atoi(row[0]);
+            }
+
+            free_res:
+                mysql_free_result(query_res);
+        }
+        int status = mysql_next_result(p);
+        assert(status<=0);
+        if (status) break;
+    }
+
+    assert(cosmo_idx>=0);
 
     return cosmo_idx;
 }
 
-int create_trial (MYSQL *p, const char *seed, uint64_t *hod_idx)
+uint64_t create_lightcone_trial (MYSQL *p, const char *table, int cosmo_idx)
+// Generic function to start a new trial.
+// In table, the fields cosmo_idx, state, create_time will be populated and hod_idx will be auto incremented
+// hod_idx is returned
 {
-    int cosmo_idx = get_cosmology(p, seed);
-
     time_t now = time(NULL); // 8-byte signed integer
 
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
-              "INSERT INTO lightcones (cosmo_idx, state, create_time) "
-              "VALUES (%d, 'created', %ld)", cosmo_idx, now);
+              "INSERT INTO %s (cosmo_idx, state, create_time) "
+              "VALUES (%d, 'created', %ld)", table, cosmo_idx, now);
     SAFE_MYSQL(mysql_query(p, query_buffer));
-    *hod_idx = mysql_insert_id(p);
-    assert(*hod_idx);
+    uint64_t hod_idx = mysql_insert_id(p);
+    assert(hod_idx);
 
-    // to avoid everyone going to the same cosmology, we make this a bit fuzzy
-    // (so num_lc also has some non-completed trials)
-    MYSPRINTF(query_buffer,
-              "UPDATE cosmologies SET num_lc=num_lc+1 WHERE cosmo_idx=%d",
-              cosmo_idx);
-    SAFE_MYSQL(mysql_query(p, query_buffer));
-    uint64_t num_rows = mysql_affected_rows(p);
-    assert(num_rows==1);
+    return hod_idx;
+}
+
+int create_trial (MYSQL *p, const char *seed, uint64_t *hod_idx)
+{
+    int cosmo_idx = get_cosmology(p, seed, "lightcones", NULL);
+    *hod_idx = create_lightcone_trial(p, "lightcones", cosmo_idx);
+
+    return cosmo_idx;
+}
+
+int create_deriv (MYSQL *p, int version, const char *seed, uint64_t *hod_idx)
+{
+    const double fid_Mnu = 0.1; // fiducial value, hardcoded but whatever
+    const double max_delta_Mnu = 0.1; // maximum scatter around fiducial value
+    char table[128];
+    MYSPRINTF(table, "derivs_v%d", version);
+    char condition[128];
+    MYSPRINTF(condition, "ABS(Mnu-%.15f)<%.15f", fid_Mnu, max_delta_Mnu);
+    
+    int cosmo_idx = get_cosmology(p, seed, table, condition);
+    *hod_idx = create_lightcone_trial(p, table, cosmo_idx);
 
     return cosmo_idx;
 }
@@ -883,6 +946,13 @@ void new_fiducials (MYSQL *p, int version)
     new_table(p, buffer, fiducials_columns);
 }
 
+void new_derivs (MYSQL *p, int version)
+{
+    char buffer[128];
+    MYSPRINTF(buffer, "derivs_v%d", version);
+    new_table(p, buffer, derivs_columns);
+}
+
 void new_fiducials_lightcones (MYSQL *p, int version)
 {
     static const int max_seed_idx = 100;
@@ -1005,11 +1075,6 @@ int main(int argc, char **argv)
     if (!strcmp(mode, "set_cosmologies"))
     {
         set_cosmologies(&p);
-    }
-    else if (!strcmp(mode, "get_cosmology"))
-    {
-        int cosmo_idx = get_cosmology(&p, argv[2]);
-        fprintf(stdout, "%d\n", cosmo_idx);
     }
     else if (!strcmp(mode, "create_trial"))
     {
@@ -1168,6 +1233,16 @@ int main(int argc, char **argv)
     else if (!strcmp(mode, "end_fiducials_vgplk"))
     {
         end_fiducials_vgplk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
+    }
+    else if (!strcmp(mode, "new_derivs"))
+    {
+        new_derivs(&p, atoi(argv[2]));
+    }
+    else if (!strcmp(mode, "create_deriv"))
+    {
+        uint64_t hod_idx;
+        int cosmo_idx = create_deriv(&p, atoi(argv[2]), argv[3], &hod_idx);
+        fprintf(stdout, "%d %lu\n", cosmo_idx, hod_idx);
     }
     else
     {

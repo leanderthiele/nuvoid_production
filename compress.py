@@ -48,7 +48,7 @@ class Compress :
         self.Cinv = np.linalg.inv(self.C)
 
         # reorder the parameters such that the interesting ones come first
-        self.dm_dphi = np.array(dm_dphi)[np.argsort(is_nuisance)]
+        self.dm_dphi = np.array(dm_dphi)[np.argsort(is_nuisance, kind='stable')]
         self.dm_dtheta = self.dm_dphi[:self.dim_theta]
         self.dm_deta = self.dm_dphi[self.dim_theta:]
 

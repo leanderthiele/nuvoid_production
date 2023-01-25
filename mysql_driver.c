@@ -61,6 +61,20 @@ possible commands:
     argv[2] = cosmo_idx
     argv[3] = hod_idx
     argv[4] = state
+[create_fiducials_plk]
+    returns running_idx seed_idx lightcone_idx hod_hash
+    argv[2] = version index
+[start_fiducials_plk]
+    argv[2] = version index
+    argv[3] = running_idx
+    argv[4] = seed_idx
+    argv[5] = lightcone_idx
+[end_fiducials_plk]
+    argv[2] = version index
+    argv[3] = running_idx
+    argv[4] = seed_idx
+    argv[5] = lightcone_idx
+    argv[6] = state
 [create_voids]
     returns cosmo_idx hod_idx hod_hash
     (cosmo_idx will be negative if no work is remaining)
@@ -615,6 +629,12 @@ int create_fiducials_voids (MYSQL *p, int version,
     return create_fiducials_summary(p, version, "voids", running_idx, lightcone_idx, hod_hash, NULL);
 }
 
+int create_fiducials_plk (MYSQL *p, int version,
+                          uint64_t *running_idx, int *lightcone_idx, char *hod_hash)
+{
+    return create_fiducials_summary(p, version, "plk", running_idx, lightcone_idx, hod_hash, NULL);
+}
+
 int create_fiducials_vgplk (MYSQL *p, int version,
                             uint64_t *running_idx, int *lightcone_idx, char *hod_hash)
 {
@@ -641,6 +661,11 @@ void start_fiducials_voids (MYSQL *p, int version, uint64_t running_idx, int see
     start_fiducials_summary(p, version, "voids", running_idx, seed_idx, lightcone_idx);
 }
 
+void start_fiducials_plk (MYSQL *p, int version, uint64_t running_idx, int seed_idx, int lightcone_idx)
+{
+    start_fiducials_summary(p, version, "plk", running_idx, seed_idx, lightcone_idx);
+}
+
 void start_fiducials_vgplk (MYSQL *p, int version, uint64_t running_idx, int seed_idx, int lightcone_idx)
 {
     start_fiducials_summary(p, version, "vgplk", running_idx, seed_idx, lightcone_idx);
@@ -665,6 +690,12 @@ void end_fiducials_voids (MYSQL *p, int version, uint64_t running_idx,
                           int seed_idx, int lightcone_idx, int state)
 {
     end_fiducials_summary(p, version, "voids", running_idx, seed_idx, lightcone_idx, state);
+}
+
+void end_fiducials_plk (MYSQL *p, int version, uint64_t running_idx,
+                        int seed_idx, int lightcone_idx, int state)
+{
+    end_fiducials_summary(p, version, "plk", running_idx, seed_idx, lightcone_idx, state);
 }
 
 void end_fiducials_vgplk (MYSQL *p, int version, uint64_t running_idx,
@@ -1021,6 +1052,22 @@ int main(int argc, char **argv)
     else if (!strcmp(mode, "end_fiducials_voids"))
     {
         end_fiducials_voids(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
+    }
+    else if (!strcmp(mode, "create_fiducials_plk"))
+    {
+        uint64_t running_idx;
+        int lightcone_idx;
+        char hod_hash[40];
+        int seed_idx = create_fiducials_plk(&p, atoi(argv[2]), &running_idx, &lightcone_idx, hod_hash);
+        fprintf(stdout, "%lu %d %d %s\n", running_idx, seed_idx, lightcone_idx, hod_hash);
+    }
+    else if (!strcmp(mode, "start_fiducials_plk"))
+    {
+        start_fiducials_plk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]));
+    }
+    else if (!strcmp(mode, "end_fiducials_plk"))
+    {
+        end_fiducials_plk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
     }
     else if (!strcmp(mode, "create_fiducials_vgplk"))
     {

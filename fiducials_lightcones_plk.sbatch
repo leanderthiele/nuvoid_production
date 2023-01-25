@@ -16,4 +16,4 @@ export CPUS_PER_TASK=3
 codebase="/home/lthiele/nuvoid_production"
 nodelist="$("$codebase/expand_nodelist" "$SLURM_JOB_NODELIST")"
 
-mpirun -n $SLURM_NTASKS -hosts="$nodelist" python fiducials_lightcones_plk.py
+mpirun -n $SLURM_NTASKS -hosts="$nodelist" python fiducials_lightcones_plk.py 0

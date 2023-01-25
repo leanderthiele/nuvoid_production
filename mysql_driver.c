@@ -25,11 +25,17 @@ possible commands:
 [new_derivs]
     replaces derivs table by newly created one
     argv[2] = version index
+[new_derivs_lightcones]
+    replaces derivs_lightcones table by newly created one
+    argv[2] = version index
 [set_cosmologies]
     checks /scratch for available cosmo_varied cosmologies
     and extract the cosmological parameters
 [set_fiducials]
     checks /scratch for available cosmo_fiducial runs
+    argv[2] = version index
+[set_derivs_lightcones]
+    expands derivs into derivs_lightcones
     argv[2] = version index
 [create_trial]
     returns cosmo_idx hod_idx
@@ -218,6 +224,20 @@ const char *derivs_columns =
     "`state` ENUM('created', 'running', 'fail', 'success', 'timeout') NOT NULL, "
     "`create_time` BIGINT, "
     "PRIMARY KEY (`hod_idx`)";
+
+const char *derivs_lightcones_columns =
+    "`running_idx` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, "
+    "`cosmo_idx` INT UNSIGNED NOT NULL, "
+    "`hod_idx` BIGINT UNSIGNED NOT NULL, "
+    "`lightcone_idx` INT UNSIGNED NOT NULL, "
+    "`hod_hash` CHAR(40) NOT NULL, "
+    "`plk_state` ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "`plk_create_time` BIGINT, "
+    "`voids_state` ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "`voids_create_time` BIGINT, "
+    "`vgplk_state` ENUM('created', 'running', 'fail', 'success', 'timeout'), "
+    "`vgplk_create_time` BIGINT, "
+    "PRIMARY KEY (`running_idx`)";
 
 // settings for the database
 const char db_hst[] = "tigercpu",
@@ -1034,6 +1054,78 @@ void new_fiducials_lightcones (MYSQL *p, int version)
     }
 }
 
+void new_derivs_lightcones (MYSQL *p, int version)
+{
+    char buffer[128];
+    MYSPRINTF(buffer, "derivs_lightcones_v%d", version);
+    new_table(p, buffer, derivs_lightcones_columns);
+}
+
+void set_derivs_lightcones (MYSQL *p, int version)
+// copies from derivs_v%d into derivs_lightcones_v%d and expands to individual lightcones
+{
+    static const uint64_t max_hod_idx = 1000;
+    static const int num_lightcones = 96;
+
+    char in_table[128], out_table[128];
+    MYSPRINTF(in_table, "derivs_v%d", version);
+    MYSPRINTF(out_table, "derivs_lightcones_v%d", version);
+
+    char query_buffer[1024];
+    uint64_t num_rows;
+    int cosmo_idx;
+    char hod_hash[40];
+    MYSQL_RES *query_res;
+
+    for (uint64_t hod_idx=0; hod_idx<max_hod_idx; ++hod_idx)
+    {
+        // first check if we have already done this one
+        MYSPRINTF(query_buffer,
+                  "SELECT cosmo_idx FROM %s WHERE hod_idx=%lu",
+                  out_table, hod_idx);
+        SAFE_MYSQL(mysql_query(p, query_buffer));
+        query_res = mysql_store_result(p);
+        num_rows = mysql_num_rows(query_res);
+        if (num_rows)
+        {
+            assert(num_rows==num_lightcones);
+            mysql_free_result(query_res);
+            continue;
+        }
+
+        MYSPRINTF(query_buffer,
+                  "SELECT cosmo_idx, hod_hash FROM %s WHERE hod_idx=%lu AND state='success'",
+                  in_table, hod_idx);
+        SAFE_MYSQL(mysql_query(p, query_buffer));
+        query_res = mysql_store_result(p);
+        num_rows = mysql_num_rows(query_res);
+        if (!num_rows)
+        {
+            mysql_free_result(query_res);
+            continue;
+        }
+        assert(num_rows==1);
+        unsigned int num_fields = mysql_num_fields(query_res);
+        assert(num_fields==2);
+        MYSQL_ROW row = mysql_fetch_row(query_res);
+        assert(row);
+        cosmo_idx = atoi(row[0]);
+        sprintf(hod_hash, "%s", row[1]);
+        mysql_free_result(query_res);
+
+        for (int lightcone_idx=0; lightcone_idx<num_lightcones; ++lightcone_idx)
+        {
+            MYSPRINTF(query_buffer,
+                      "INSERT INTO %s (cosmo_idx, hod_idx, lightcone_idx, hod_hash) "
+                      "VALUES (%d, %lu, %d, %s)",
+                      out_table, cosmo_idx, hod_idx, lightcone_idx, hod_hash);
+            SAFE_MYSQL(mysql_query(p, query_buffer));
+            uint64_t running_idx = mysql_insert_id(p);
+            assert(running_idx);
+        }
+    }
+}
+
 int get_run (MYSQL *p, uint64_t hod_idx, char *hod_hash, char *state,
              char *plk_state, char *voids_state, char *vgplk_state)
 {
@@ -1285,6 +1377,14 @@ int main(int argc, char **argv)
     else if (!strcmp(mode, "end_deriv"))
     {
         end_deriv(&p, atoi(argv[2]), atoi(argv[3]), atoll(argv[4]), atoi(argv[5]));
+    }
+    else if (!strcmp(mode, "new_derivs_lightcones"))
+    {
+        new_derivs_lightcones(&p, atoi(argv[2]));
+    }
+    else if (!strcmp(mode, "set_derivs_lightcones"))
+    {
+        set_derivs_lightcones(&p, atoi(argv[2]));
     }
     else
     {

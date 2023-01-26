@@ -742,7 +742,7 @@ int create_summary (MYSQL *p, const char *name, uint64_t *hod_idx, char *hod_has
 
 int create_individual_summary (MYSQL *p, const char *table, int version, const char *name,
                                uint64_t *running_idx, int *lightcone_idx, char *hod_hash, const char *depends)
-// table can be fiducials or derivatives
+// table can be fiducials or derivs
 {
     time_t now = time(NULL);
 
@@ -752,7 +752,7 @@ int create_individual_summary (MYSQL *p, const char *table, int version, const c
     
     int is_fiducials;
     if (!strcmp(table, "fiducials")) is_fiducials = 1;
-    else if (!strcmp(table, "derivatives")) is_fiducials = 0;
+    else if (!strcmp(table, "derivs")) is_fiducials = 0;
     else assert(0);
 
     char query_buffer[1024];
@@ -820,7 +820,7 @@ int create_fiducials_summary (MYSQL *p, int version, const char *name,
 int create_derivatives_summary (MYSQL *p, int version, const char *name,
                                 uint64_t *running_idx, int *lightcone_idx, char *hod_hash, const char *depends)
 {
-    return create_individual_summary(p, "derivatives", version, name, running_idx, lightcone_idx, hod_hash, depends);
+    return create_individual_summary(p, "derivs", version, name, running_idx, lightcone_idx, hod_hash, depends);
 }
 
 void start_summary (MYSQL *p, const char *name, int cosmo_idx, uint64_t hod_idx)
@@ -840,7 +840,7 @@ void start_individual_summary (MYSQL *p, const char *table, int version, const c
     
     int is_fiducials;
     if (!strcmp(table, "fiducials")) is_fiducials = 1;
-    else if (!strcmp(table, "derivatives")) is_fiducials = 0;
+    else if (!strcmp(table, "derivs")) is_fiducials = 0;
     else assert(0);
 
     char query_buffer[1024];
@@ -862,7 +862,7 @@ void start_fiducials_summary (MYSQL *p, int version, const char *name, uint64_t 
 void start_derivatives_summary (MYSQL *p, int version, const char *name, uint64_t running_idx,
                                 int cosmo_idx, int lightcone_idx)
 {
-    start_individual_summary(p, "derivatives", version, name, running_idx, cosmo_idx, lightcone_idx);
+    start_individual_summary(p, "derivs", version, name, running_idx, cosmo_idx, lightcone_idx);
 }
 
 void end_summary (MYSQL *p, const char *name, int cosmo_idx, uint64_t hod_idx, int state)
@@ -881,7 +881,7 @@ void end_individual_summary (MYSQL *p, const char *table, int version, const cha
 {
     int is_fiducials;
     if (!strcmp(table, "fiducials")) is_fiducials = 1;
-    else if (!strcmp(table, "derivatives")) is_fiducials = 0;
+    else if (!strcmp(table, "derivs")) is_fiducials = 0;
     else assert(0);
 
     char query_buffer[1024];
@@ -904,7 +904,7 @@ void end_fiducials_summary (MYSQL *p, int version, const char *name, uint64_t ru
 void end_derivatives_summary (MYSQL *p, int version, const char *name, uint64_t running_idx,
                               int cosmo_idx, int lightcone_idx, int state)
 {
-    end_individual_summary(p, "derivatives", version, name, running_idx, cosmo_idx, lightcone_idx, state);
+    end_individual_summary(p, "derivs", version, name, running_idx, cosmo_idx, lightcone_idx, state);
 }
 
 int create_plk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)

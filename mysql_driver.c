@@ -97,6 +97,20 @@ possible commands:
     argv[4] = seed_idx
     argv[5] = lightcone_idx
     argv[6] = state
+[create_derivatives_plk]
+    returns running_idx cosmo_idx lightcone_idx hod_hash
+    argv[2] = version index
+[start_derivatives_plk]
+    argv[2] = version index
+    argv[3] = running_idx
+    argv[4] = cosmo_idx
+    argv[5] = lightcone_idx
+[end_derivatives_plk]
+    argv[2] = version index
+    argv[3] = running_idx
+    argv[4] = cosmo_idx
+    argv[5] = lightcone_idx
+    argv[6] = state
 [create_voids]
     returns cosmo_idx hod_idx hod_hash
     (cosmo_idx will be negative if no work is remaining)
@@ -121,6 +135,20 @@ possible commands:
     argv[4] = seed_idx
     argv[5] = lightcone_idx
     argv[6] = state
+[create_derivatives_voids]
+    returns running_idx cosmo_idx lightcone_idx hod_hash
+    argv[2] = version index
+[start_derivatives_voids]
+    argv[2] = version index
+    argv[3] = running_idx
+    argv[4] = cosmo_idx
+    argv[5] = lightcone_idx
+[end_derivatives_voids]
+    argv[2] = version index
+    argv[3] = running_idx
+    argv[4] = cosmo_idx
+    argv[5] = lightcone_idx
+    argv[6] = state
 [create_vgplk]
     returns cosmo_idx hod_idx hod_hash
     (cosmo_idx will be negative if no work is remaining)
@@ -143,6 +171,20 @@ possible commands:
     argv[2] = version index
     argv[3] = running_idx
     argv[4] = seed_idx
+    argv[5] = lightcone_idx
+    argv[6] = state
+[create_derivatives_vgplk]
+    returns running_idx cosmo_idx lightcone_idx hod_hash
+    argv[2] = version index
+[start_derivatives_vgplk]
+    argv[2] = version index
+    argv[3] = running_idx
+    argv[4] = cosmo_idx
+    argv[5] = lightcone_idx
+[end_derivatives_vgplk]
+    argv[2] = version index
+    argv[3] = running_idx
+    argv[4] = cosmo_idx
     argv[5] = lightcone_idx
     argv[6] = state
 [reset_lightcones]
@@ -698,30 +740,38 @@ int create_summary (MYSQL *p, const char *name, uint64_t *hod_idx, char *hod_has
     return cosmo_idx;
 }
 
-int create_fiducials_summary (MYSQL *p, int version, const char *name,
-                              uint64_t *running_idx, int *lightcone_idx, char *hod_hash, const char *depends)
+int create_individual_summary (MYSQL *p, const char *table, int version, const char *name,
+                               uint64_t *running_idx, int *lightcone_idx, char *hod_hash, const char *depends)
+// table can be fiducials or derivatives
 {
     time_t now = time(NULL);
 
     char depends_buffer[256];
     if (depends)
         MYSPRINTF(depends_buffer, "AND %s_state='success'", depends);
+    
+    int is_fiducials;
+    if (!strcmp(table, "fiducials")) is_fiducials = 1;
+    else if (!strcmp(table, "derivatives")) is_fiducials = 0;
+    else assert(0);
 
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
               "SET @updated_running_idx := 0; "
-              "UPDATE fiducials_lightcones_v%d SET %s_state='created', "
+              "UPDATE %s_lightcones_v%d SET %s_state='created', "
               "%s_create_time=%ld, "
               "running_idx=(SELECT @updated_running_idx := running_idx) "
               "WHERE %s_state IS NULL %s LIMIT 1; "
-              "SELECT running_idx, seed_idx, lightcone_idx, hod_hash FROM fiducials_lightcones_v%d "
+              "SELECT running_idx, %s_idx, lightcone_idx, hod_hash FROM %s_lightcones_v%d "
               "WHERE running_idx=@updated_running_idx;",
-              version, name, name, now, name, (depends) ? depends_buffer : "", version);
+              table, version, name, name, now, name, (depends) ? depends_buffer : "",
+              (is_fiducials) ? "seed" : "cosmo", table, version);
     SAFE_MYSQL(mysql_query(p, query_buffer));
 
     MYSQL_RES *query_res;
 
-    int seed_idx = -1;
+    // can be seed_idx or cosmo_idx
+    int sim_idx = -1;
 
     // iterate through multi-statement results
     while (1)
@@ -737,7 +787,7 @@ int create_fiducials_summary (MYSQL *p, int version, const char *name,
                 MYSQL_ROW row = mysql_fetch_row(query_res);
                 assert(row);
                 *running_idx = atoll(row[0]);
-                seed_idx = atoi(row[1]);
+                sim_idx = atoi(row[1]);
                 *lightcone_idx = atoi(row[2]);
                 sprintf(hod_hash, "%s", row[3]);
             }
@@ -748,7 +798,7 @@ int create_fiducials_summary (MYSQL *p, int version, const char *name,
         if (status) break;
     }
 
-    if (seed_idx<0)
+    if (sim_idx<0)
     // nothing left to work on, fill results to avoid UB
     {
         *running_idx = 0;
@@ -757,8 +807,20 @@ int create_fiducials_summary (MYSQL *p, int version, const char *name,
     }
 
     // NOTE that cosmo_idx can be negative, in which case no work is remaining!
-    return seed_idx;
+    return sim_idx;
 
+}
+
+int create_fiducials_summary (MYSQL *p, int version, const char *name,
+                              uint64_t *running_idx, int *lightcone_idx, char *hod_hash, const char *depends)
+{
+    return create_individual_summary(p, "fiducials", version, name, running_idx, lightcone_idx, hod_hash, depends);
+}
+
+int create_derivatives_summary (MYSQL *p, int version, const char *name,
+                                uint64_t *running_idx, int *lightcone_idx, char *hod_hash, const char *depends)
+{
+    return create_individual_summary(p, "derivatives", version, name, running_idx, lightcone_idx, hod_hash, depends);
 }
 
 void start_summary (MYSQL *p, const char *name, int cosmo_idx, uint64_t hod_idx)
@@ -772,17 +834,35 @@ void start_summary (MYSQL *p, const char *name, int cosmo_idx, uint64_t hod_idx)
     assert(num_rows==1);
 }
 
-void start_fiducials_summary (MYSQL *p, int version, const char *name, uint64_t running_idx,
-                              int seed_idx, int lightcone_idx)
+void start_individual_summary (MYSQL *p, const char *table, int version, const char *name, uint64_t running_idx,
+                              int sim_idx, int lightcone_idx)
 {
+    
+    int is_fiducials;
+    if (!strcmp(table, "fiducials")) is_fiducials = 1;
+    else if (!strcmp(table, "derivatives")) is_fiducials = 0;
+    else assert(0);
+
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
-              "UPDATE fiducials_lightcones_v%d SET %s_state='running' "
-              "WHERE running_idx=%lu AND seed_idx=%d AND lightcone_idx=%d",
-              version, name, running_idx, seed_idx, lightcone_idx);
+              "UPDATE %s_lightcones_v%d SET %s_state='running' "
+              "WHERE running_idx=%lu AND %s_idx=%d AND lightcone_idx=%d",
+              table, version, name, running_idx, (is_fiducials) ? "seed" : "cosmo", sim_idx, lightcone_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);
     assert(num_rows==1);
+}
+
+void start_fiducials_summary (MYSQL *p, int version, const char *name, uint64_t running_idx,
+                              int seed_idx, int lightcone_idx)
+{
+    start_individual_summary(p, "fiducials", version, name, running_idx, seed_idx, lightcone_idx);
+}
+
+void start_derivatives_summary (MYSQL *p, int version, const char *name, uint64_t running_idx,
+                                int cosmo_idx, int lightcone_idx)
+{
+    start_individual_summary(p, "derivatives", version, name, running_idx, cosmo_idx, lightcone_idx);
 }
 
 void end_summary (MYSQL *p, const char *name, int cosmo_idx, uint64_t hod_idx, int state)
@@ -796,17 +876,35 @@ void end_summary (MYSQL *p, const char *name, int cosmo_idx, uint64_t hod_idx, i
     assert(num_rows==1);
 }
 
-void end_fiducials_summary (MYSQL *p, int version, const char *name, uint64_t running_idx, 
-                            int seed_idx, int lightcone_idx, int state)
+void end_individual_summary (MYSQL *p, const char *table, int version, const char *name, uint64_t running_idx, 
+                            int sim_idx, int lightcone_idx, int state)
 {
+    int is_fiducials;
+    if (!strcmp(table, "fiducials")) is_fiducials = 1;
+    else if (!strcmp(table, "derivatives")) is_fiducials = 0;
+    else assert(0);
+
     char query_buffer[1024];
     MYSPRINTF(query_buffer, 
-              "UPDATE fiducials_lightcones_v%d SET %s_state='%s' "
-              "WHERE running_idx=%lu AND seed_idx=%d AND lightcone_idx=%d",
-              version, name, (state) ? "fail" : "success", running_idx, seed_idx, lightcone_idx);
+              "UPDATE %s_lightcones_v%d SET %s_state='%s' "
+              "WHERE running_idx=%lu AND %s_idx=%d AND lightcone_idx=%d",
+              table, version, name, (state) ? "fail" : "success", running_idx,
+              (is_fiducials) ? "seed" : "sim", sim_idx, lightcone_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);
     assert(num_rows==1);
+}
+
+void end_fiducials_summary (MYSQL *p, int version, const char *name, uint64_t running_idx,
+                            int seed_idx, int lightcone_idx, int state)
+{
+    end_individual_summary(p, "fiducials", version, name, running_idx, seed_idx, lightcone_idx, state);
+}
+
+void end_derivatives_summary (MYSQL *p, int version, const char *name, uint64_t running_idx,
+                              int cosmo_idx, int lightcone_idx, int state)
+{
+    end_individual_summary(p, "derivatives", version, name, running_idx, cosmo_idx, lightcone_idx, state);
 }
 
 int create_plk (MYSQL *p, uint64_t *hod_idx, char *hod_hash)
@@ -842,6 +940,24 @@ int create_fiducials_vgplk (MYSQL *p, int version,
     return create_fiducials_summary(p, version, "vgplk", running_idx, lightcone_idx, hod_hash, "voids");
 }
 
+int create_derivatives_voids (MYSQL *p, int version,
+                            uint64_t *running_idx, int *lightcone_idx, char *hod_hash)
+{
+    return create_derivatives_summary(p, version, "voids", running_idx, lightcone_idx, hod_hash, NULL);
+}
+
+int create_derivatives_plk (MYSQL *p, int version,
+                            uint64_t *running_idx, int *lightcone_idx, char *hod_hash)
+{
+    return create_derivatives_summary(p, version, "plk", running_idx, lightcone_idx, hod_hash, NULL);
+}
+
+int create_derivatives_vgplk (MYSQL *p, int version,
+                              uint64_t *running_idx, int *lightcone_idx, char *hod_hash)
+{
+    return create_derivatives_summary(p, version, "vgplk", running_idx, lightcone_idx, hod_hash, "voids");
+}
+
 void start_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx)
 {
     start_summary(p, "plk", cosmo_idx, hod_idx);
@@ -870,6 +986,21 @@ void start_fiducials_plk (MYSQL *p, int version, uint64_t running_idx, int seed_
 void start_fiducials_vgplk (MYSQL *p, int version, uint64_t running_idx, int seed_idx, int lightcone_idx)
 {
     start_fiducials_summary(p, version, "vgplk", running_idx, seed_idx, lightcone_idx);
+}
+
+void start_derivatives_voids (MYSQL *p, int version, uint64_t running_idx, int cosmo_idx, int lightcone_idx)
+{
+    start_derivatives_summary(p, version, "voids", running_idx, cosmo_idx, lightcone_idx);
+}
+
+void start_derivatives_plk (MYSQL *p, int version, uint64_t running_idx, int cosmo_idx, int lightcone_idx)
+{
+    start_derivatives_summary(p, version, "plk", running_idx, cosmo_idx, lightcone_idx);
+}
+
+void start_derivatives_vgplk (MYSQL *p, int version, uint64_t running_idx, int cosmo_idx, int lightcone_idx)
+{
+    start_derivatives_summary(p, version, "vgplk", running_idx, cosmo_idx, lightcone_idx);
 }
 
 void end_plk (MYSQL *p, int cosmo_idx, uint64_t hod_idx, int state)
@@ -903,6 +1034,24 @@ void end_fiducials_vgplk (MYSQL *p, int version, uint64_t running_idx,
                           int seed_idx, int lightcone_idx, int state)
 {
     end_fiducials_summary(p, version, "vgplk", running_idx, seed_idx, lightcone_idx, state);
+}
+
+void end_derivatives_voids (MYSQL *p, int version, uint64_t running_idx,
+                            int cosmo_idx, int lightcone_idx, int state)
+{
+    end_derivatives_summary(p, version, "voids", running_idx, cosmo_idx, lightcone_idx, state);
+}
+
+void end_derivatives_plk (MYSQL *p, int version, uint64_t running_idx,
+                          int cosmo_idx, int lightcone_idx, int state)
+{
+    end_derivatives_summary(p, version, "plk", running_idx, cosmo_idx, lightcone_idx, state);
+}
+
+void end_derivatives_vgplk (MYSQL *p, int version, uint64_t running_idx,
+                            int cosmo_idx, int lightcone_idx, int state)
+{
+    end_derivatives_summary(p, version, "vgplk", running_idx, cosmo_idx, lightcone_idx, state);
 }
 
 void reset_lightcones (MYSQL *p)
@@ -1385,6 +1534,54 @@ int main(int argc, char **argv)
     else if (!strcmp(mode, "set_derivs_lightcones"))
     {
         set_derivs_lightcones(&p, atoi(argv[2]));
+    }
+    else if (!strcmp(mode, "create_derivatives_voids"))
+    {
+        uint64_t running_idx;
+        int lightcone_idx;
+        char hod_hash[40];
+        int cosmo_idx = create_derivatives_voids(&p, atoi(argv[2]), &running_idx, &lightcone_idx, hod_hash);
+        fprintf(stdout, "%lu %d %d %s\n", running_idx, cosmo_idx, lightcone_idx, hod_hash);
+    }
+    else if (!strcmp(mode, "start_derivatives_voids"))
+    {
+        start_derivatives_voids(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]));
+    }
+    else if (!strcmp(mode, "end_derivatives_voids"))
+    {
+        end_derivatives_voids(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
+    }
+    else if (!strcmp(mode, "create_derivatives_plk"))
+    {
+        uint64_t running_idx;
+        int lightcone_idx;
+        char hod_hash[40];
+        int cosmo_idx = create_derivatives_plk(&p, atoi(argv[2]), &running_idx, &lightcone_idx, hod_hash);
+        fprintf(stdout, "%lu %d %d %s\n", running_idx, cosmo_idx, lightcone_idx, hod_hash);
+    }
+    else if (!strcmp(mode, "start_derivatives_plk"))
+    {
+        start_derivatives_plk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]));
+    }
+    else if (!strcmp(mode, "end_derivatives_plk"))
+    {
+        end_derivatives_plk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
+    }
+    else if (!strcmp(mode, "create_derivatives_vgplk"))
+    {
+        uint64_t running_idx;
+        int lightcone_idx;
+        char hod_hash[40];
+        int cosmo_idx = create_derivatives_vgplk(&p, atoi(argv[2]), &running_idx, &lightcone_idx, hod_hash);
+        fprintf(stdout, "%lu %d %d %s\n", running_idx, cosmo_idx, lightcone_idx, hod_hash);
+    }
+    else if (!strcmp(mode, "start_derivatives_vgplk"))
+    {
+        start_derivatives_vgplk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]));
+    }
+    else if (!strcmp(mode, "end_derivatives_vgplk"))
+    {
+        end_derivatives_vgplk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
     }
     else
     {

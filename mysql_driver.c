@@ -889,7 +889,7 @@ void end_individual_summary (MYSQL *p, const char *table, int version, const cha
               "UPDATE %s_lightcones_v%d SET %s_state='%s' "
               "WHERE running_idx=%lu AND %s_idx=%d AND lightcone_idx=%d",
               table, version, name, (state) ? "fail" : "success", running_idx,
-              (is_fiducials) ? "seed" : "sim", sim_idx, lightcone_idx);
+              (is_fiducials) ? "seed" : "cosmo", sim_idx, lightcone_idx);
     SAFE_MYSQL(mysql_query(p, query_buffer));
     uint64_t num_rows = mysql_affected_rows(p);
     assert(num_rows==1);

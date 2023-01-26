@@ -55,7 +55,7 @@ with NBL.TaskManager(cpus_per_task=CPUS_PER_TASK, use_all_cpus=True) as tm :
                            shell=True, check=True)
 
             # this is where we operate
-            wrk_dir = f'/scratch/gpfs/lthiele/nuvoid_production/cosmo_{"fiducial" if TABLE=="fiducials" else "varied"}_{sim_idx}/{"lightcones" if TABLE=="fiducials" else "derivatives"}/{hod_hash}'
+            wrk_dir = f'/scratch/gpfs/lthiele/nuvoid_production/cosmo_{"fiducial" if TABLE=="fiducials" else "varied"}_{sim_idx}/{"lightcones" if TABLE=="fiducials" else f"derivatives_v{VERSION}"}/{hod_hash}'
 
             lightcone_file = f'{wrk_dir}/lightcone_{lightcone_idx}.bin'
 

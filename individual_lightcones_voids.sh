@@ -13,7 +13,7 @@ if [ $table == "fiducials" ]; then
   lc_dir="lightcones"
 elif [ $table == "derivatives" ]; then
   cosmo_post="varied"
-  lc_dir="derivatives"
+  lc_dir="derivatives_v${version}"
 else
   echo "Invalid table $table"
   exit 1

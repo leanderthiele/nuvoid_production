@@ -1064,7 +1064,7 @@ void new_derivs_lightcones (MYSQL *p, int version)
 void set_derivs_lightcones (MYSQL *p, int version)
 // copies from derivs_v%d into derivs_lightcones_v%d and expands to individual lightcones
 {
-    static const uint64_t max_hod_idx = 1000;
+    static const uint64_t max_hod_idx = 3000;
     static const int num_lightcones = 96;
 
     char in_table[128], out_table[128];
@@ -1117,7 +1117,7 @@ void set_derivs_lightcones (MYSQL *p, int version)
         {
             MYSPRINTF(query_buffer,
                       "INSERT INTO %s (cosmo_idx, hod_idx, lightcone_idx, hod_hash) "
-                      "VALUES (%d, %lu, %d, %s)",
+                      "VALUES (%d, %lu, %d, '%s')",
                       out_table, cosmo_idx, hod_idx, lightcone_idx, hod_hash);
             SAFE_MYSQL(mysql_query(p, query_buffer));
             uint64_t running_idx = mysql_insert_id(p);

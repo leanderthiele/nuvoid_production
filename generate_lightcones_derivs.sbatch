@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SBATCH -n 160
-#SBATCH -c 2
+#SBATCH -n 20
+#SBATCH -c 8
 #SBATCH --mem-per-cpu=4G
 #SBATCH -t 05:00:00
 

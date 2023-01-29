@@ -105,6 +105,15 @@ def get_datavec (path, lc) :
     return out.astype(np.float32)
 
 def handle_dir (d, case, version) :
+    
+    global sim_idx
+    global hod_hi_word
+    global hod_lo_word
+    global lc_idx
+    global data
+    global param_names
+    global params
+
     path = f'{database}/{d}'
 
     hod_hash = re.search('[a-f,0-9]{32}', path)[0]
@@ -166,10 +175,9 @@ if __name__ == '__main__' :
     if version is not None :
         cmd = f'{cmd} {version}'
 
-
-    dirs = subprocess.run(cmd, shell=True, capture_output=True, check=True).stdout.decode().split()
+    dirs = list(subprocess.run(cmd, shell=True, capture_output=True, check=True).stdout.decode().split())
     print(f'Will work on {len(dirs)} directories')
-    for ii, d in tqdm(enumerate(dirs)) :
+    for ii, d in enumerate(tqdm(dirs)) :
         handle_dir(d, case, version)
         if (ii+1) % 1000 == 0 :
             save(outfile)

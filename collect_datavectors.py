@@ -21,7 +21,7 @@ def get_datavec (path, lc) :
     """
 
     voids_fname = f'{path}/voids_{lc}/sky_positions_central_{lc}.out'
-    is not os.path.isfile(voids_fname) :
+    if not os.path.isfile(voids_fname) :
         raise FileNotFoundError
     with open(voids_fname, 'r') as f :
         first_line = f.readline()
@@ -50,7 +50,7 @@ def get_datavec (path, lc) :
 
     # compute VSF
     z, R = np.loadtxt(voids_fname, usecols=(2,3), unpack=True)
-    out = np.histogram2d(z, R, bins=[zedges, Redges])[0].flatten().astype(float)
+    out = np.histogram2d(z, R, bins=[VSF_ZEDGES, VSF_REDGES])[0].flatten().astype(float)
 
     # append VGPLK
     out = np.concatenate([out, *[fvgplk[f'p{ell}k_Rmin{R}'] for R in VGPLK_R for ell in VGPLK_ELL]])

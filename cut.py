@@ -1,5 +1,7 @@
 import numpy as np
 
+from datavector import VSF_ZEDGES, VSF_REDGES, VGPLK_R, VGPLK_ELL, VGPLK_K, PLK_ELL, PLK_K
+
 class Cut :
     """ Data vector cutting. The full data vector has the following layout:
 
@@ -11,14 +13,14 @@ class Cut :
     """
 
     vsf_zbins = [0, 1]
-    vsf_R = np.linspace(30, 80, num=32) # FIXME
+    vsf_R = 0.5 * (VSF_REDGES[1:] + VSF_REDGES[:-1])
 
-    vgplk_Rbins = [30, 40, 50]
-    vgplk_ell = [0, 2]
-    vgplk_k = np.linspace(0.0, 0.2, num=32) # FIXME
+    vgplk_Rbins = VGPLK_R
+    vgplk_ell = VGPLK_ELL
+    vgplk_k = VGPLK_K
 
-    plk_ell = [0, 2]
-    plk_k = np.linspace(0.0, 0.2, num=32) # FIXME
+    plk_ell = PLK_ELL
+    plk_k = PLK_K
 
 
     def __init__ (self, use_vsf=True, use_vgplk=True, use_plk=True,

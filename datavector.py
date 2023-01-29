@@ -1,7 +1,7 @@
 import numpy as np
 
 VSF_ZEDGES = np.array([0.45, 0.53, 0.67])
-VSF_REDGES = np.linspace(30.0, 80.0, num=32)
+VSF_REDGES = np.linspace(30.0, 80.0, num=33)
 
 VGPLK_R = [30, 40, 50, ]
 VGPLK_ELL = [0, 2]

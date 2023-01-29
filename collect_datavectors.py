@@ -7,6 +7,7 @@ import os.path
 import sys
 from sys import argv
 import subprocess
+import re
 
 import numpy as np
 from tqdm import tqdm

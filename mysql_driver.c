@@ -1344,7 +1344,8 @@ void get_successful_trials (MYSQL *p)
     char query_buffer[1024];
     MYSPRINTF(query_buffer,
               "SELECT cosmo_idx, hod_hash FROM lightcones "
-              "WHERE plk_state='success' AND voids_state='success' AND vgplk_state='success'");
+              "WHERE plk_state='success' AND voids_state='success' AND vgplk_state='success' "
+              "ORDER BY cosmo_idx, hod_hash");
     SAFE_MYSQL(mysql_query(p, query_buffer));
     print_successful(p, "cosmo_varied_%d/lightcones/%s");
 }
@@ -1361,8 +1362,9 @@ void get_successful_df (MYSQL *p, const char *table, int version)
     MYSPRINTF(query_buffer,
               "SELECT %s_idx, hod_hash FROM %s_lightcones_v%d "
               "WHERE plk_state='success' AND voids_state='success' AND vgplk_state='success' "
-              "GROUP BY %s_idx, hod_hash",
-              (is_fiducials) ? "seed" : "cosmo", table, version, (is_fiducials) ? "seed" : "cosmo");
+              "GROUP BY %s_idx, hod_hash ORDER BY %s_idx, hod_hash",
+              (is_fiducials) ? "seed" : "cosmo", table, version, (is_fiducials) ? "seed" : "cosmo",
+              (is_fiducials) ? "seed" : "cosmo");
     SAFE_MYSQL(mysql_query(p, query_buffer));
 
     char dir[64];

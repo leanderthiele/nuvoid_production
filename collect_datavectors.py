@@ -64,31 +64,31 @@ def get_datavec (path, lc) :
 
     voids_fname = f'{path}/voids_{lc}/sky_positions_central_{lc}.out'
     if not os.path.isfile(voids_fname) :
-        raise FileNotFoundError
+        raise FileNotFoundError('no voids file')
     with open(voids_fname, 'r') as f :
         first_line = f.readline()
         if first_line[0] != '#' : # indicates corrupted file
-            raise FileNotFoundError
+            raise FileNotFoundError('corrupted voids file')
 
     vgplk_fname = f'{path}/NEW_vgplk_{lc}.npz'
     if not os.path.isfile(vgplk_fname) :
-        raise FileNotFoundError
+        raise FileNotFoundError('no vgplk file')
     try :
         fvgplk = np.load(vgplk_fname)
     except ValueError : # indicates corrupted file
-        raise FileNotFoundError
+        raise FileNotFoundError('corrupted vgplk file')
     if not np.allclose(VGPLK_K, fvgplk['k']) :
-        raise FileNotFoundError
+        raise FileNotFoundError('vgplk k does not match')
 
     plk_fname = f'{path}/NEW_plk_{lc}.npz'
     if not os.path.isfile(plk_fname) :
-        raise FileNotFoundError
+        raise FileNotFoundError('no plk file')
     try :
         fplk = np.load(plk_fname)
     except ValueError : # indicates corrupted file
-        raise FileNotFoundError
+        raise FileNotFoundError('corrupted plk file')
     if not np.allclose(PLK_K, fplk['k']) :
-        raise FileNotFoundError
+        raise FileNotFoundError('plk k does not match')
 
     # compute VSF
     z, R = np.loadtxt(voids_fname, usecols=(2,3), unpack=True)
@@ -135,10 +135,9 @@ def handle_dir (d, case, version) :
     for this_lc_idx in range(96) :
         try :
             this_data = get_datavec(path, this_lc_idx)
-        except FileNotFoundError :
-            continue
         except Exception as e :
-            print(f'Unknown exception for {path}::{this_lc_idx} :\n{e}', file=sys.stderr)
+            with open(f'{database}/errors_{case}_{"" if version is None else f"_v{version}"}.log', 'a') as f :
+                f.write('{path}::{this_lc_idx}\t{e}')
             continue
         sim_idx.append(this_sim_idx)
         hod_hi_word.append(int(hod_hash[:16], base=16))

@@ -205,6 +205,9 @@ possible commands:
 The get_successful_* methods write to stdout
 such that each row is a path (without lead) to the corresponding directory
 which contains the statistics.
+[get_cosmo]
+    argv[2] = cosmo_idx
+    Prints out lines of the form param=value with all the available information.
 )"""";
 
 // contents of the database
@@ -1387,6 +1390,38 @@ void get_successful_derivatives (MYSQL *p, int version)
     get_successful_df(p, "derivs", version);
 }
 
+void get_cosmo (MYSQL *p, int cosmo_idx)
+{
+    static const char fields[][16] =
+        {"Om", "Ob", "h", "ns", "sigma8", "S8", "Mnu", "1e9As", "On", "Oc", "Obh2", "Och2", "theta", "logA", };
+    static const size_t N = sizeof(fields) / sizeof(fields[0]);
+
+    char field_buffer[512];
+    // make sure strlen works
+    field_buffer[0] = '\0';
+    for (size_t ii=0; ii<N; ++ii)
+        sprintf(field_buffer+strlen(field_buffer), "%s%s", fields[ii], (ii==N-1) ? "" : ",");
+
+
+    char query_buffer[1024];
+    MYSPRINTF(query_buffer,
+              "SELECT %s FROM cosmologies WHERE cosmo_idx=%d", field_buffer, cosmo_idx);
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+
+    MYSQL_RES *query_res = mysql_store_result(p);
+    uint64_t num_rows = mysql_num_rows(query_res);
+    assert(num_rows==1);
+    unsigned int num_fields = mysql_num_fields(query_res);
+    assert(num_fields==N);
+
+    MYSQL_ROW row = mysql_fetch_row(query_res);
+    
+    for (size_t ii=0; ii<N; ++ii)
+        printf("%s=%s\n", fields[ii], row[ii]);
+
+    mysql_free_result(query_res);
+}
+
 int main(int argc, char **argv)
 {
     if (argc==1)
@@ -1667,6 +1702,10 @@ int main(int argc, char **argv)
     else if (!strcmp(mode, "get_successful_derivatives"))
     {
         get_successful_derivatives(&p, atoi(argv[2]));
+    }
+    else if (!strcmp(mode, "get_cosmo"))
+    {
+        get_cosmo(&p, atoi(argv[2]));
     }
     else
     {

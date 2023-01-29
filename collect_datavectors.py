@@ -178,7 +178,7 @@ if __name__ == '__main__' :
     print(f'Will work on {len(dirs)} directories')
     for ii, d in enumerate(tqdm(dirs)) :
         handle_dir(d, case, version)
-        if (ii+1) % 1000 == 0 :
+        if (ii+1) % 100 == 0 :
             save(outfile)
     
     # final save

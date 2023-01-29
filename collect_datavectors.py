@@ -38,15 +38,16 @@ def get_setting_from_info(fname, name) :
 
 
 def get_cosmo(cosmo_idx, cache={}) :
-    keys = ['omegabh', 'omegach2', 'theta', 'logA', 'ns', 'Mnu']
     if cosmo_idx not in cache :
-        result = subprocess.run(f'{codebase}/sample_prior {cosmo_idx} '\
-                                f'5 {codebase}/mu_cov_plikHM_TTTEEE_lowl_lowE.dat '\
-                                f'1 {codebase}/mnu_prior.dat',
+        result = subprocess.run(f'{codebase}/mysql_driver get_cosmo {cosmo_idx}',
                                 shell=True, capture_output=True, check=True)
-        cache[cosmo_idx] = dict(zip(keys, map(float, result.stdout.split(b','))))
+        lines = result.stdout.decode().split()
+        out = {}
+        for line in lines :
+            k, v = line.split('=')
+            out[k] = float(v)
+        cache[cosmo_idx] = out
     return cache[cosmo_idx]
-
 
 def get_hod(path) :
     hod_file = f'{path}/hod.info'

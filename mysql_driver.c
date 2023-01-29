@@ -197,6 +197,14 @@ possible commands:
     argv[2] = hod_idx
     returns cosmo_idx hod_hash state plk_state voids_state vgplk_state
     cosmo_idx == -1 if nothing left
+[get_successful_trials]
+[get_successful_fiducials]
+    argv[2] = version
+[get_successful_derivatives]
+    argv[2] = version
+The get_successful_* methods write to stdout
+such that each row is a path (without lead) to the corresponding directory
+which contains the statistics.
 )"""";
 
 // contents of the database
@@ -1314,6 +1322,69 @@ int get_run (MYSQL *p, uint64_t hod_idx, char *hod_hash, char *state,
     return cosmo_idx;
 }
 
+void print_successful (MYSQL *p, const char *pattern)
+// assumes that a query has been made on p with the output fields sim_idx, hod_hash,
+// which can be interpolated into pattern
+{
+    MYSQL_RES *query_res = mysql_store_result(p);
+    assert(query_res);
+    unsigned int num_fields = mysql_num_fields(query_res);
+    assert(num_fields == 2);
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(query_res)))
+    {
+        printf(pattern, atoi(row[0]), row[1]);
+        putchar('\n');
+    }
+    mysql_free_result(query_res);
+}
+
+void get_successful_trials (MYSQL *p)
+{
+    char query_buffer[1024];
+    MYSPRINTF(query_buffer,
+              "SELECT cosmo_idx, hod_hash FROM lightcones "
+              "WHERE plk_state='success' AND voids_state='success' AND vgplk_state='success'");
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+    print_successful(p, "cosmo_varied_%d/lightcones/%s");
+}
+
+void get_successful_df (MYSQL *p, const char *table, int version)
+// works for both derivatives and fiducials as these tables have the same structure
+{
+    int is_fiducials;
+    if (!strcmp(table, "fiducials")) is_fiducials = 1;
+    else if (!strcmp(table, "derivs")) is_fiducials = 0;
+    else assert(0);
+
+    char query_buffer[1024];
+    MYSPRINTF(query_buffer,
+              "SELECT %s_idx, hod_hash FROM %s_lightcones_v%d "
+              "WHERE plk_state='success' AND voids_state='success' AND vgplk_state='success' "
+              "GROUP BY %s_idx, hod_hash",
+              (is_fiducials) ? "seed" : "cosmo", table, version, (is_fiducials) ? "seed" : "cosmo");
+    SAFE_MYSQL(mysql_query(p, query_buffer));
+
+    char dir[64];
+    if (is_fiducials) MYSPRINTF(dir, "lightcones");
+    else MYSPRINTF(dir, "derivatives_v%d", version);
+
+    char fmt[256];
+    MYSPRINTF(fmt, "cosmo_%s_%%d/%s/%%s", (is_fiducials) ? "fiducial" : "varied", dir);
+
+    print_successful(p, fmt);
+}
+
+void get_successful_fiducials (MYSQL *p, int version)
+{
+    get_successful_df(p, "fiducials", version);
+}
+
+void get_successful_derivatives (MYSQL *p, int version)
+{
+    get_successful_df(p, "derivs", version);
+}
+
 int main(int argc, char **argv)
 {
     if (argc==1)
@@ -1582,6 +1653,18 @@ int main(int argc, char **argv)
     else if (!strcmp(mode, "end_derivatives_vgplk"))
     {
         end_derivatives_vgplk(&p, atoi(argv[2]), atoll(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
+    }
+    else if (!strcmp(mode, "get_successful_trials"))
+    {
+        get_successful_trials(&p);
+    }
+    else if (!strcmp(mode, "get_successful_fiducials"))
+    {
+        get_successful_fiducials(&p, atoi(argv[2]));
+    }
+    else if (!strcmp(mode, "get_successful_derivatives"))
+    {
+        get_successful_derivatives(&p, atoi(argv[2]));
     }
     else
     {

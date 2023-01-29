@@ -1400,8 +1400,7 @@ void get_cosmo (MYSQL *p, int cosmo_idx)
     // make sure strlen works
     field_buffer[0] = '\0';
     for (size_t ii=0; ii<N; ++ii)
-        sprintf(field_buffer+strlen(field_buffer), "%s%s", fields[ii], (ii==N-1) ? "" : ",");
-
+        sprintf(field_buffer+strlen(field_buffer), "`%s`%s", fields[ii], (ii==N-1) ? "" : ",");
 
     char query_buffer[1024];
     MYSPRINTF(query_buffer,

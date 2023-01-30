@@ -8,16 +8,25 @@ from derivatives import LinRegress
 version = int(argv[1])
 
 consider_params = [
-                   'Obh2',
-                   'Och2',
-                   'theta',
-                   'logA',
-                   'ns',
+#                   'Obh2',
+#                   'Och2',
+#                   'theta',
+#                   'logA',
+#                   'ns',
                    'Mnu',
-                   'hod_transfP1', 'hod_abias', 'hod_log_Mmin', 'hod_sigma_logM', 'hod_log_M0', 'hod_log_M1',
-                   'hod_alpha', 'hod_transf_eta_cen', 'hod_transf_eta_sat', 'hod_mu_Mmin', 'hod_mu_M1',
+#                   'hod_transfP1',
+#                   'hod_abias',
+                   'hod_log_Mmin',
+                   'hod_sigma_logM',
+#                   'hod_log_M0',
+#                   'hod_log_M1',
+                   'hod_alpha',
+#                   'hod_transf_eta_cen',
+#                   'hod_transf_eta_sat',
+                   'hod_mu_Mmin',
+#                   'hod_mu_M1',
                   ]
-is_nuisance = np.array([x in consider_params for x in LinRegress.use_params])
+is_nuisance = np.array([not (x in consider_params) for x in LinRegress.use_params], dtype=bool)
 
 codebase = '/home/lthiele/nuvoid_production'
 
@@ -43,7 +52,7 @@ hod_sigmas = [
 Cprior = np.zeros((17, 17))
 Cprior[:5, :5] = cmb_prior
 Cprior[5, 5] = mnu_sigma**2
-Cprior[5:, 5:] = np.diagflat(np.array(hod_sigmas)**2)
+Cprior[6:, 6:] = np.diagflat(np.array(hod_sigmas)**2)
 
 linregress = LinRegress(version, cut=None)
 compress = CutCompress(linregress.dm_dphi, linregress.cov, is_nuisance, Cprior=Cprior,
@@ -53,13 +62,14 @@ compress = CutCompress(linregress.dm_dphi, linregress.cov, is_nuisance, Cprior=C
                        plk_ell=[0, 2],
                        kmin=0.02, kmax=0.1)
 
-np.set_printoptions(formatter={'all': lambda x: '%+.2e'%x}, linewidth=150, threshold=1000000)
+np.set_printoptions(formatter={'all': lambda x: '%+.2e'%x}, linewidth=200, threshold=1000000)
 
 F = compress.compress.F_phi
 C = np.linalg.inv(F)
-print(f'parameters={use_params}')
+print(f'parameters={consider_params}')
 print(f'Fisher approximation covariance matrix =\n{C}')
 
 np.savez('compression.npz',
          norm=linregress.fid_mean,
-         m=compress.cut_compression_matrix)
+         m=compress.cut_compression_matrix,
+         fisher_covmat=C)

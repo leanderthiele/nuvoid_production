@@ -10,10 +10,10 @@ class CutCompress :
         self.cut = Cut(**cut_kwargs)
 
         cut_dm_dphi = self.cut.cut_vec(dm_dphi)
-        cut_C = cut.cut_mat(C)
+        cut_C = self.cut.cut_mat(C)
 
         self.compress = Compress(cut_dm_dphi, cut_C, is_nuisance, Cprior)
-        self.cut_compression_matrix = cut.expand_vec(self.compress.compression_matrix, fill_value=0.0)
+        self.cut_compression_matrix = self.cut.expand_vec(self.compress.compression_matrix, fill_value=0.0)
 
     def __call__ (self, x) :
         return np.einsum('ai,...i->...i', self.cut_compression_matrix, x)

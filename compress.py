@@ -48,7 +48,7 @@ class Compress :
         self.C = C
         self.Cinv = np.linalg.inv(self.C)
 
-        # reorder the parameters such that the interesting ones come first
+        self.dm_dphi = dm_dphi
         self.dm_dtheta = self.dm_dphi[~is_nuisance]
         self.dm_deta = self.dm_dphi[is_nuisance]
 

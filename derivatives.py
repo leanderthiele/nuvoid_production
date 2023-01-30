@@ -40,12 +40,15 @@ class LinRegress :
             derivatives_data = f['data']
             derivatives_params = f['params']
             derivatives_nsims = f['nsims'].astype(float)
-            param_names = f['param_names']
+            param_names = list(f['param_names'])
         with np.load(fiducials_fname) as f :
             fiducials_data = f['data']
 
+        self.n_samples = derivatives_data.shape[0]
+
         param_indices = [param_names.index(s) for s in LinRegress.use_params]
-        x = derivatives_params[:, param_indices]
+        self.x = derivatives_params[:, param_indices]
+        self.prior_ranges = [(np.min(x), np.max(x)) for x in self.x.T]
 
         if cut is not None :
             derivatives_data = cut.cut_vec(derivatives_data)
@@ -56,15 +59,16 @@ class LinRegress :
         # divide out the fiducial mean for better interpretability
         y = derivatives_data / self.fid_mean[None, :]
 
-        self.model = LinearRegression(fid_intercept=True)
-        self.model.fit(x, y, sample_weight=derivatives_nsims)
+        self.model = LinearRegression(fit_intercept=True)
+        self.model.fit(self.x, y, sample_weight=derivatives_nsims)
 
         self.dm_dphi = self.model.coef_.T # shape [params, data]
         
-        delta = self.model.predict(x) - y
-        cov = np.cov(fiducials_data/self.fid_mean[None, :], rowvar=False)
-        covinv = np.linalg.inv(cov)
-        self.chisq = np.einsum('s,sa,ab,sb->', derivatives_nsims, delta, covinv, delta) / delta.shape[1]
+        delta = self.model.predict(self.x) - y
+        self.cov = np.cov(fiducials_data/self.fid_mean[None, :], rowvar=False)
+        covinv = np.linalg.inv(self.cov)
+        self.sample_chisq = np.einsum('s,sa,ab,sb->s', derivatives_nsims, delta, covinv, delta) / delta.shape[1]
+        self.chisq = np.mean(self.sample_chisq)
 
     def __call__ (self, x) :
         return self.model.predict(x)
@@ -75,11 +79,21 @@ if __name__ == '__main__' :
     version = int(argv[1])
     cut = Cut()
     linregress = LinRegress(version, cut)
+    print(f'Using {linregress.n_samples} samples')
     print(f'chisq/dof={linregress.chisq}')
 
-    fig, ax = plt.subplots(nrows=2)
+    fig, ax = plt.subplots(nrows=2, figsize=(10,10))
     ax[0].semilogy(np.fabs(linregress.fid_mean))
-    for name, dm in zip(LinRegress.use_params, linregress.dm_dphi) :
-        ax[1].plot(dm, label=name)
-    ax[1].legend()
-    fig.savefig('derivatives.pdf', bbox_inches='tight')
+    for name, dm, p in zip(LinRegress.use_params, linregress.dm_dphi, linregress.prior_ranges) :
+        y = dm/np.sqrt(np.diagonal(linregress.cov)) * (p[1] - p[0])
+        ax[1].plot(y, label=name, linestyle='dashed' if 'hod' in name else 'solid')
+    ax[1].set_yscale('symlog')
+    ax[1].legend(ncol=3)
+    fig.savefig('derivatives1.pdf', bbox_inches='tight')
+
+    fig, ax = plt.subplots(nrows=6, ncols=3, figsize=(10,20))
+    ax = ax.flatten()
+    for ii, name in enumerate(LinRegress.use_params) :
+        ax[ii].scatter(linregress.x[:, ii], linregress.sample_chisq)
+        ax[ii].set_xlabel(name)
+    fig.savefig('derivatives2.pdf', bbox_inches='tight')

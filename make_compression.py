@@ -1,4 +1,5 @@
 from sys import argv
+import hashlib
 
 import numpy as np
 
@@ -7,24 +8,26 @@ from derivatives import LinRegress
 
 version = int(argv[1])
 
+filebase = '/tigress/lthiele/nuvoid_production'
+
 consider_params = [
-#                   'Obh2',
-#                   'Och2',
-#                   'theta',
-#                   'logA',
-#                   'ns',
+                   'Obh2',
+                   'Och2',
+                   'theta',
+                   'logA',
+                   'ns',
                    'Mnu',
-#                   'hod_transfP1',
-#                   'hod_abias',
+                   'hod_transfP1',
+                   'hod_abias',
                    'hod_log_Mmin',
                    'hod_sigma_logM',
-#                   'hod_log_M0',
-#                   'hod_log_M1',
+                   'hod_log_M0',
+                   'hod_log_M1',
                    'hod_alpha',
-#                   'hod_transf_eta_cen',
-#                   'hod_transf_eta_sat',
+                   'hod_transf_eta_cen',
+                   'hod_transf_eta_sat',
                    'hod_mu_Mmin',
-#                   'hod_mu_M1',
+                   'hod_mu_M1',
                   ]
 is_nuisance = np.array([not (x in consider_params) for x in LinRegress.use_params], dtype=bool)
 
@@ -54,13 +57,15 @@ Cprior[:5, :5] = cmb_prior
 Cprior[5, 5] = mnu_sigma**2
 Cprior[6:, 6:] = np.diagflat(np.array(hod_sigmas)**2)
 
+cut_kwargs = dict(use_vsf=True, use_vgplk=True, use_plk=True,
+                  vsf_zbins=[0,1], vsf_Rmin=30, vsf_Rmax=80,
+                  vgplk_Rbins=[30, 40, 50], vgplk_ell=[0, 2],
+                  plk_ell=[0, 2],
+                  kmin=0.02, kmax=0.1)
+
 linregress = LinRegress(version, cut=None)
 compress = CutCompress(linregress.dm_dphi, linregress.cov, is_nuisance, Cprior=Cprior,
-                       use_vsf=True, use_vgplk=True, use_plk=True,
-                       vsf_zbins=[0,1], vsf_Rmin=30, vsf_Rmax=80,
-                       vgplk_Rbins=[30, 40, 50], vgplk_ell=[0, 2],
-                       plk_ell=[0, 2],
-                       kmin=0.02, kmax=0.1)
+                       **cut_kwargs)
 
 np.set_printoptions(formatter={'all': lambda x: '%+.2e'%x}, linewidth=200, threshold=1000000)
 
@@ -69,7 +74,17 @@ C = np.linalg.inv(F)
 print(f'parameters={consider_params}')
 print(f'Fisher approximation covariance matrix =\n{C}')
 
-np.savez('compression.npz',
-         norm=linregress.fid_mean,
-         m=compress.cut_compression_matrix,
-         fisher_covmat=C)
+hash_str = f'{consider_params}{cut_kwargs}'
+settings_hash = hashlib.md5(hash_str.encode('utf-8')).hexdigest()
+outfile = f'{filebase}/compression_{settings_hash}.dat'
+with open(outfile, 'w') as f :
+    f.write(f'# consider_params:\n{consider_params}\n')
+    f.write(f'# cut_kwargs:\n{cut_kwargs}\n')
+    f.write('# prior covariance:\n')
+    np.savetxt(f, Cprior)
+    f.write('# Fisher matrix:\n')
+    np.savetxt(f, F)
+    f.write('# normalization:\n')
+    np.savetxt(f, linregress.fid_mean)
+    f.write('# compression matrix:\n')
+    np.savetxt(f, compress.cut_compression_matrix)

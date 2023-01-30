@@ -32,12 +32,13 @@ class Compress :
         < d[a] d[b] > = 1[a, b]
     """
 
-    def __init__ (self, dm_dphi, C, is_nuisance) :
+    def __init__ (self, dm_dphi, C, is_nuisance, Cprior=None) :
         """ Constructor
         dm_dphi ... model derivatives with respect to all parameters phi,
                     shape is [parameter, data] (can be list in first dimension)
         C ... covariance matrix, shape [data, data]
         is_nuisance ... boolean mask
+        Cprior ... optional Gaussian prior covariance matrix
         """
 
         self.dim_phi = len(dm_dphi) # total dimension
@@ -53,6 +54,8 @@ class Compress :
 
         # compute the fisher matrix
         self.F_phi = np.einsum('ai,ij,bj->ab', self.dm_dphi, self.Cinv, self.dm_dphi)
+        if Cprior is not None :
+            self.F_phi += np.linalg.inv(Cprior)
 
         # the various blocks of the Fisher matrix
         self.F_tt = self.F_phi[~is_nuisance, :][:, ~is_nuisance]

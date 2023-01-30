@@ -48,17 +48,16 @@ class Compress :
         self.Cinv = np.linalg.inv(self.C)
 
         # reorder the parameters such that the interesting ones come first
-        self.dm_dphi = np.array(dm_dphi)[np.argsort(is_nuisance, kind='stable')]
-        self.dm_dtheta = self.dm_dphi[:self.dim_theta]
-        self.dm_deta = self.dm_dphi[self.dim_theta:]
+        self.dm_dtheta = self.dm_dphi[~is_nuisance]
+        self.dm_deta = self.dm_dphi[is_nuisance]
 
         # compute the fisher matrix
         self.F_phi = np.einsum('ai,ij,bj->ab', self.dm_dphi, self.Cinv, self.dm_dphi)
 
         # the various blocks of the Fisher matrix
-        self.F_tt = self.F_phi[:self.dim_theta, :self.dim_theta]
-        self.F_ee = self.F_phi[self.dim_theta:, self.dim_theta:]
-        self.F_te = self.F_phi[:self.dim_theta, self.dim_theta:]
+        self.F_tt = self.F_phi[~is_nuisance, :][:, ~is_nuisance]
+        self.F_ee = self.F_phi[is_nuisance, :][:, is_nuisance]
+        self.F_te = self.F_phi[~is_nuisance, :][:, is_nuisance]
 
         # do the linear algebra
         self.A = self.dm_dtheta - np.einsum('ab,bc,ci->ai', self.F_te, np.linalg.inv(self.F_ee), self.dm_deta)

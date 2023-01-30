@@ -17,6 +17,9 @@ from datavector import VSF_ZEDGES, VSF_REDGES, VGPLK_R, VGPLK_ELL, VGPLK_K, PLK_
 codebase = '/home/lthiele/nuvoid_production'
 database = '/scratch/gpfs/lthiele/nuvoid_production'
 
+# this is where outputs go
+filebase = '/tigress/lthiele/nuvoid_production'
+
 # the output data
 sim_idx = []
 hod_hi_word = []
@@ -68,7 +71,7 @@ def get_datavec (path, lc) :
     with open(voids_fname, 'r') as f :
         first_line = f.readline()
         if first_line[0] != '#' : # indicates corrupted file
-            raise FileNotFoundError('corrupted voids file')
+            raise ValueError('corrupted voids file')
 
     vgplk_fname = f'{path}/NEW_vgplk_{lc}.npz'
     if not os.path.isfile(vgplk_fname) :
@@ -76,9 +79,9 @@ def get_datavec (path, lc) :
     try :
         fvgplk = np.load(vgplk_fname)
     except ValueError : # indicates corrupted file
-        raise FileNotFoundError('corrupted vgplk file')
+        raise ValueError('corrupted vgplk file')
     if not np.allclose(VGPLK_K, fvgplk['k']) :
-        raise FileNotFoundError('vgplk k does not match')
+        raise ValueError('vgplk k does not match')
 
     plk_fname = f'{path}/NEW_plk_{lc}.npz'
     if not os.path.isfile(plk_fname) :
@@ -86,9 +89,9 @@ def get_datavec (path, lc) :
     try :
         fplk = np.load(plk_fname)
     except ValueError : # indicates corrupted file
-        raise FileNotFoundError('corrupted plk file')
+        raise ValueError('corrupted plk file')
     if not np.allclose(PLK_K, fplk['k']) :
-        raise FileNotFoundError('plk k does not match')
+        raise ValueError('plk k does not match')
 
     # compute VSF
     z, R = np.loadtxt(voids_fname, usecols=(2,3), unpack=True)
@@ -136,8 +139,10 @@ def handle_dir (d, case, version) :
         try :
             this_data = get_datavec(path, this_lc_idx)
         except Exception as e :
-            with open(f'{database}/errors_{case}_{"" if version is None else f"_v{version}"}.log', 'a') as f :
-                f.write('{path}::{this_lc_idx}\t{e}')
+            if case != 'trials' or not isinstance(e, FileNotFoundError) :
+                # FileNotFound is expected as we don't have all the lightcones
+                with open(f'{filebase}/errors_{case}{"" if version is None else f"_v{version}"}.log', 'a') as f :
+                    f.write(f'{path}::{this_lc_idx}\t{e}\n')
             continue
         sim_idx.append(this_sim_idx)
         hod_hi_word.append(int(hod_hash[:16], base=16))
@@ -163,7 +168,7 @@ def save (fname) :
 if __name__ == '__main__' :
     
     case = argv[1]
-    outfile = f'{database}/datavectors_{case}.npz'
+    outfile = f'{filebase}/datavectors_{case}.npz'
 
     if case == 'trials' :
         version = None

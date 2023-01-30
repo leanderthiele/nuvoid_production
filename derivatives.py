@@ -11,27 +11,32 @@ class LinRegress :
 
     # these are the independent parameters we use, different choices may lead
     # to better performance
+    # The CMB parameterization works well, keep it in the order of our prior
+    # for convenience
     use_params = [
-                  #'Om',
-                  #'Ob',
-                  #'h',
-                  'ns',
-                  #'sigma8',
-                  #'S8',
-                  'Mnu',
-                  #'1e9As',
-                  #'On',
-                  #'Oc',
                   'Obh2',
                   'Och2',
                   'theta',
                   'logA',
+                  'ns',
+                  #'Om',
+                  #'Ob',
+                  #'h',
+                  #'sigma8',
+                  #'S8',
+                  #'1e9As',
+                  #'On',
+                  #'Oc',
+                  'Mnu',
                   # the following probably shouldn't be touched
                   'hod_transfP1', 'hod_abias', 'hod_log_Mmin', 'hod_sigma_logM', 'hod_log_M0', 'hod_log_M1',
                   'hod_alpha', 'hod_transf_eta_cen', 'hod_transf_eta_sat', 'hod_mu_Mmin', 'hod_mu_M1',
                  ]
 
     def __init__ (self, version, cut=None) :
+        """ the cut argument is only useful for easy diagnostic output,
+            we probably don't want to use it in production
+        """
 
         derivatives_fname = f'{filebase}/avg_datavectors_derivatives_v{version}.npz'
         fiducials_fname = f'{filebase}/datavectors_fiducials_v{version}.npz'

@@ -5,7 +5,7 @@
 #SBATCH --mem-per-cpu=4G
 #SBATCH -t 05:00:00
 
-#SBATCH --array=21-40
+#SBATCH --array=41-80
 
 module load anaconda3/2021.11
 conda activate nbodykit

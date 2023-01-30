@@ -34,7 +34,7 @@ unique_indices = np.unique(indices)
 assert len(unique_indices) == len(counts)
 for ii, c in zip(unique_indices, counts) :
 
-    select = (unique_indices == ii)
+    select = (indices == ii)
 
     select_sim_idx = sim_idx[select]
     assert all(x == select_sim_idx[0] for x in select_sim_idx)
@@ -44,7 +44,7 @@ for ii, c in zip(unique_indices, counts) :
     assert all(x == select_hod_lo_word[0] for x in select_hod_lo_word)
     select_data = data[select]
     select_params = params[select]
-    assert all(np.allclose(x, select_params[0] for x in select_params))
+    assert all(np.allclose(x, select_params[0]) for x in select_params)
 
     sim_idx_avg.append(select_sim_idx[0])
     hod_hi_word_avg.append(select_hod_hi_word[0])

@@ -76,7 +76,7 @@ print(f'Fisher approximation covariance matrix =\n{C}')
 
 hash_str = f'{consider_params}{cut_kwargs}'
 settings_hash = hashlib.md5(hash_str.encode('utf-8')).hexdigest()
-outfile = f'{filebase}/compression_{settings_hash}.dat'
+outfile = f'{filebase}/compression_v{version}_{settings_hash}.dat'
 with open(outfile, 'w') as f :
     f.write(f'# consider_params:\n{consider_params}\n')
     f.write(f'# cut_kwargs:\n{cut_kwargs}\n')

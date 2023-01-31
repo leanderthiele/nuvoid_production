@@ -61,14 +61,14 @@ def get_hod(path) :
 
 def get_datavec_from_fnames (voids_fname, vgplk_fname, plk_fname) :
     if not os.path.isfile(voids_fname) :
-        raise FileNotFoundError('no voids file')
+        raise FileNotFoundError(f'no voids file: {voids_fname}')
     with open(voids_fname, 'r') as f :
         first_line = f.readline()
         if first_line[0] != '#' : # indicates corrupted file
             raise ValueError('corrupted voids file')
 
     if not os.path.isfile(vgplk_fname) :
-        raise FileNotFoundError('no vgplk file')
+        raise FileNotFoundError(f'no vgplk file: {vgplk_fname}')
     try :
         fvgplk = np.load(vgplk_fname)
     except ValueError : # indicates corrupted file
@@ -77,7 +77,7 @@ def get_datavec_from_fnames (voids_fname, vgplk_fname, plk_fname) :
         raise ValueError('vgplk k does not match')
 
     if not os.path.isfile(plk_fname) :
-        raise FileNotFoundError('no plk file')
+        raise FileNotFoundError(f'no plk file: {plk_fname}')
     try :
         fplk = np.load(plk_fname)
     except ValueError : # indicates corrupted file

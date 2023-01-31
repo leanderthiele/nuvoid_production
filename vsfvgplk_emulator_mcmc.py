@@ -19,20 +19,21 @@ USE_QUADRUPOLE = False
 # If we set this to False the LCDM posterior gets unreasonably wide
 CONSTRAIN_CONVEX_HULL = True
 
-MCMC_STEPS = 40000
+MCMC_STEPS = 100000
 
 # pairs mean, sigma
-ADD_PRIOR = {'hod_transfP1': (0.0, 0.1),
-             'hod_abias': (0.0, 0.1),
+ADD_PRIOR = {
+#             'hod_transfP1': (0.0, 0.1),
+#             'hod_abias': (0.0, 0.1),
 #             'hod_log_Mmin': (12.9, 0.01),
 #             'hod_sigma_logM': (0.4, 0.01),
-             'hod_log_M0': (14.4, 0.1),
-             'hod_log_M1': (14.4, 0.1),
-             'hod_alpha': (0.6, 0.01),
-             'hod_transf_eta_cen': (6.0, 0.1),
-             'hod_transf_eta_sat': (-0.5, 0.01),
+#             'hod_log_M0': (14.4, 0.1),
+#             'hod_log_M1': (14.4, 0.1),
+#             'hod_alpha': (0.6, 0.01),
+#             'hod_transf_eta_cen': (6.0, 0.1),
+#             'hod_transf_eta_sat': (-0.5, 0.01),
 #             'hod_mu_Mmin': (-5.0, 0.1),
-             'hod_mu_M1': (10.0, 1.0),
+#             'hod_mu_M1': (10.0, 1.0),
             }
 
 with np.load('/tigress/lthiele/collected_vgplk.npz') as f :
@@ -176,6 +177,12 @@ if __name__ == '__main__' :
 
         chain = sampler.get_chain(thin=30, discard=MCMC_STEPS//5)
         np.save('vsfvgplk_mcmc_chain.npy', chain)
+
+        chain_all = sampler.get_chain()
+        np.save('vsfgplk_mcmc_chain_all.npy', chain_all)
+
+        logprob = sampler.get_log_prob()
+        np.save('vsfvgplk_mcmc_logprob.npy', logprob)
 
         acceptance_rates = sampler.acceptance_fraction
         print(f'acceptance={acceptance_rates}')

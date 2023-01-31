@@ -51,18 +51,18 @@ class TrainData :
         # compress the data
         fid_mean = read_txt(compress_fname, 'normalization:')
         compression_matrix = read_txt(compress_fname, 'compression matrix:')
-        data = np.einsum('ab,ib->ia', compression_matrix, data/fid_mean[None, :])
+        self.data = np.einsum('ab,ib->ia', compression_matrix, data/fid_mean[None, :])
 
         # filter for independent parameters
         param_indices = [param_names.index(s) for s in TrainData.use_params]
-        params = params[:, param_indices]
+        self.params = params[:, param_indices]
 
         # split into training and validation set
         validation_mask = self._get_validation_mask(sim_idx)
-        self.train_params = params[~validation_mask]
-        self.validation_params = params[validation_mask]
-        self.train_y = data[~validation_mask]
-        self.validation_y = data[validation_mask]
+        self.train_params = self.params[~validation_mask]
+        self.validation_params = self.params[validation_mask]
+        self.train_y = self.data[~validation_mask]
+        self.validation_y = self.data[validation_mask]
 
         # normalize the inputs
         self.norm_avg = np.mean(self.train_params, axis=0)

@@ -46,6 +46,7 @@ for epoch in range(EPOCHS) :
         l.backward()
         optimizer.step()
     scheduler.step()
+    print(ltrain)
     ltrain = np.mean(np.array(ltrain))
 
     model.eval()

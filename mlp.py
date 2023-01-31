@@ -6,8 +6,8 @@ import torch.nn as nn
 class MLPLayer(nn.Sequential) :
     
     def __init__ (self, Nin, Nout, activation=nn.LeakyReLU) :
-        super().__init__(OrderedDict([('linear': nn.Linear(Nin, Nout, bias=True)),
-                                      ('activation': activation()),
+        super().__init__(OrderedDict([('linear', nn.Linear(Nin, Nout, bias=True)),
+                                      ('activation', activation()),
                                      ]))
 
 class MLP(nn.Sequential) :

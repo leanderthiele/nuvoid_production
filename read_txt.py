@@ -3,6 +3,7 @@
     Can also read python objects if they can be parsed by eval().
 """
 
+import itertools
 import numpy as np
 
 def read_txt (fname, tag, pyobj=False) :
@@ -24,4 +25,5 @@ def read_txt (fname, tag, pyobj=False) :
         return eval(contents)
     else :
         max_rows = end_row-start_row if end_row is not None else None
-        return np.loadtxt(fname, skiprows=start_row, max_rows=max_rows)
+        with open(fname, 'r') as f :
+            return np.loadtxt(itertools.islice(f, start_row, end_row))

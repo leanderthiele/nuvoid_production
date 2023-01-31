@@ -12,7 +12,7 @@ def read_txt (fname, tag) :
             if line.rstrip() == f'# {tag}' :
                 assert start_row is None
                 start_row = ii
-            if start_row is not None and line[0]=='#' :
+            elif start_row is not None and line[0]=='#' :
                 end_row = ii
     assert start_row is not None
     max_rows = end_row-start_row if end_row is not None else None

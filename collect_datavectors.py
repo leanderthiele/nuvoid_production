@@ -59,13 +59,7 @@ def get_hod(path) :
             'hod_transf_eta_sat', 'hod_mu_Mmin', 'hod_mu_M1', ]
     return {k: get_setting_from_info(hod_file, k) for k in keys}
 
-def get_datavec (path, lc) :
-    """ return the data vector in path for lightcone lc,
-        raises FileNotFoundError if any of the required files
-        does not exist or is corrupted.
-    """
-
-    voids_fname = f'{path}/voids_{lc}/sky_positions_central_{lc}.out'
+def get_datavec_from_fnames (voids_fname, vgplk_fname, plk_fname) :
     if not os.path.isfile(voids_fname) :
         raise FileNotFoundError('no voids file')
     with open(voids_fname, 'r') as f :
@@ -73,7 +67,6 @@ def get_datavec (path, lc) :
         if first_line[0] != '#' : # indicates corrupted file
             raise ValueError('corrupted voids file')
 
-    vgplk_fname = f'{path}/NEW_vgplk_{lc}.npz'
     if not os.path.isfile(vgplk_fname) :
         raise FileNotFoundError('no vgplk file')
     try :
@@ -83,7 +76,6 @@ def get_datavec (path, lc) :
     if not np.allclose(VGPLK_K, fvgplk['k']) :
         raise ValueError('vgplk k does not match')
 
-    plk_fname = f'{path}/NEW_plk_{lc}.npz'
     if not os.path.isfile(plk_fname) :
         raise FileNotFoundError('no plk file')
     try :
@@ -106,6 +98,19 @@ def get_datavec (path, lc) :
     fplk.close()
 
     return out.astype(np.float32)
+
+def get_datavec (path, lc) :
+    """ return the data vector in path for lightcone lc,
+        raises FileNotFoundError if any of the required files
+        does not exist or is corrupted.
+    """
+
+    voids_fname = f'{path}/voids_{lc}/sky_positions_central_{lc}.out'
+    vgplk_fname = f'{path}/NEW_vgplk_{lc}.npz'
+    plk_fname = f'{path}/NEW_plk_{lc}.npz'
+
+    return get_datavec_from_fnames(voids_fname, vgplk_fname, plk_fname)
+
 
 def handle_dir (d, case, version) :
     

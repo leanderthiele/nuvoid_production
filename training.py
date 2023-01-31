@@ -7,9 +7,9 @@ import torch.nn as nn
 from mlp import MLP
 from traindata import TrainData
 
-BATCH_SIZE = 256
+BATCH_SIZE = 32
 EPOCHS = 100
-MAX_LR = 1e-2
+MAX_LR = 1e-3
 CHISQ_CUT = 1e3 # 90% of chisq is <1e3, 96% <1e4, 98% <1e5
 
 class Loss(nn.Module) :
@@ -30,7 +30,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 torch.manual_seed(42)
 
-model = MLP(17, 17, Nlayers=4, Nhidden=512).to(device)
+model = MLP(17, 17, Nlayers=8, Nhidden=1024).to(device)
 traindata = TrainData(version, compression_hash, device, batch_size=BATCH_SIZE)
 loss = Loss(CHISQ_CUT)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
@@ -48,7 +48,6 @@ for epoch in range(EPOCHS) :
         l.backward()
         optimizer.step()
     scheduler.step()
-    print(ltrain)
     ltrain = np.mean(np.array(ltrain))
 
     model.eval()

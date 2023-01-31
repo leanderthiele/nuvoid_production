@@ -62,7 +62,7 @@ class TrainData :
         with np.load(fiducials_fname) as f :
             fid_mean = np.mean(f['data'], axis=0)
         fid_mean = np.einsum('ab,b->a', compression_matrix, fid_mean/normalization)
-        self.chisq = (self.data - fid_mean[None, :])**2
+        self.chisq = np.mean((self.data - fid_mean[None, :])**2, axis=-1)
 
         # split into training and validation set
         validation_mask = self._get_validation_mask(sim_idx)

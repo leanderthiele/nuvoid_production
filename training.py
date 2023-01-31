@@ -59,3 +59,17 @@ for epoch in range(EPOCHS) :
     lvalidation = np.mean(np.array(lvalidation))
 
     print(f'iteration {epoch:4}: {ltrain:16.2f}\t{lvalidation:16.2f}')
+
+model.eval()
+predictions = []
+truth = []
+chisq = []
+for x, y, c in traindata.validation_loader :
+    pred = model(x)
+    predictions.extend(pred.detach().cpu().numpy())
+    truth.extend(y.cpu().numpy())
+    chisq.extend(c.cpu().numpy())
+np.savez(f'validation_v{version}_{compression_hash}.npz',
+         predictions=np.array(predictions),
+         truth=np.array(truth),
+         chisq=np.array(chisq))

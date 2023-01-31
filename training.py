@@ -17,7 +17,7 @@ class Loss(nn.Module) :
     def __init__ (self) :
         super().__init__()
 
-    def forward (self, pred, targ) :
+    def forward (self, pred, targ, chisq) :
         delta = pred - targ
         return torch.mean(torch.square(delta))
 
@@ -38,10 +38,10 @@ for epoch in range(EPOCHS) :
     
     model.train()
     ltrain = []
-    for x, y in traindata.train_loader :
+    for x, y, c in traindata.train_loader :
         optimizer.zero_grad()
         pred = model(x)
-        l = loss(pred, y)
+        l = loss(pred, y, c)
         ltrain.append(l.item())
         l.backward()
         optimizer.step()
@@ -51,9 +51,9 @@ for epoch in range(EPOCHS) :
 
     model.eval()
     lvalidation = []
-    for x, y in traindata.validation_loader :
+    for x, y, c in traindata.validation_loader :
         pred = model(x)
-        l = loss(pred, y)
+        l = loss(pred, y, c)
         lvalidation.append(l.item())
     lvalidation = np.mean(np.array(lvalidation))
 

@@ -36,6 +36,7 @@ class TrainData :
         
         data_fname = f'{filebase}/datavectors_trials.npz'
         compress_fname = f'{filebase}/compression_v{version}_{compression_hash}.dat'
+        fiducials_fname = f'{filebase}/datavectors_fiducials_v{version}.npz'
 
         # these are the settings used in compression
         self.consider_params = read_txt(compress_fname, 'consider_params:', pyobj=True)
@@ -49,13 +50,19 @@ class TrainData :
             params = f['params']
 
         # compress the data
-        fid_mean = read_txt(compress_fname, 'normalization:')
+        normalization = read_txt(compress_fname, 'normalization:')
         compression_matrix = read_txt(compress_fname, 'compression matrix:')
-        self.data = np.einsum('ab,ib->ia', compression_matrix, data/fid_mean[None, :])
+        self.data = np.einsum('ab,ib->ia', compression_matrix, data/normalization[None, :])
 
         # filter for independent parameters
         param_indices = [param_names.index(s) for s in TrainData.use_params]
         self.params = params[:, param_indices]
+
+        # load the fiducials and compute chisq with respect to them
+        with np.load(fiducials_fname) as f :
+            fid_mean = np.mean(f['data'], axis=0)
+        fid_mean = np.einsum('ab,b->a', compression_matrix, fid_mean/normalization)
+        self.chisq = (self.data - fid_mean[None, :])**2
 
         # split into training and validation set
         validation_mask = self._get_validation_mask(sim_idx)
@@ -63,6 +70,8 @@ class TrainData :
         self.validation_params = self.params[validation_mask]
         self.train_y = self.data[~validation_mask]
         self.validation_y = self.data[validation_mask]
+        self.train_chisq = self.chisq[~validation_mask]
+        self.validation_chisq = self.chisq[validation_mask]
 
         # normalize the inputs
         self.norm_avg = np.mean(self.train_params, axis=0)
@@ -73,12 +82,14 @@ class TrainData :
         # move to torch
         self.train_x = torch.from_numpy(self.train_x.astype(np.float32)).to(device=device)
         self.train_y = torch.from_numpy(self.train_y.astype(np.float32)).to(device=device)
+        self.train_chisq = torch.from_numpy(self.train_chisq.astype(np.float32)).to(device=device)
         self.validation_x = torch.from_numpy(self.validation_x.astype(np.float32)).to(device=device)
         self.validation_y = torch.from_numpy(self.validation_y.astype(np.float32)).to(device=device)
+        self.validation_chisq = torch.from_numpy(self.validation_chisq.astype(np.float32)).to(device=device)
 
         # construct sets and loaders
-        self.train_set = TensorDataset(self.train_x, self.train_y)
-        self.validation_set = TensorDataset(self.validation_x, self.validation_y)
+        self.train_set = TensorDataset(self.train_x, self.train_y, self.train_chisq)
+        self.validation_set = TensorDataset(self.validation_x, self.validation_y, self.validation_chisq)
         self.train_loader = DataLoader(self.train_set, shuffle=True, batch_size=batch_size)
         self.validation_loader = DataLoader(self.validation_set, shuffle=False, batch_size=512)
 

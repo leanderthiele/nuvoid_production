@@ -1,12 +1,14 @@
 """ Small utility to read a vector or matrix stored between a `# tag`
-    and another `# anytag` (or EOF)
+    and another `# anytag` (or EOF).
+    Can also read python objects if they can be parsed by eval().
 """
 
 import numpy as np
 
-def read_txt (fname, tag) :
+def read_txt (fname, tag, pyobj=False) :
     start_row = None
     end_row = None
+    contents = ''
     with open(fname, 'r') as f :
         for ii, line in enumerate(f) :
             if line.rstrip() == f'# {tag}' :
@@ -14,6 +16,12 @@ def read_txt (fname, tag) :
                 start_row = ii
             elif start_row is not None and line[0]=='#' :
                 end_row = ii
+                break
+            elif start_row is not None :
+                contents += line
     assert start_row is not None
-    max_rows = end_row-start_row if end_row is not None else None
-    return np.loadtxt(fname, skiprows=start_row, max_rows=max_rows)
+    if pyobj :
+        return eval(contents)
+    else :
+        max_rows = end_row-start_row if end_row is not None else None
+        return np.loadtxt(fname, skiprows=start_row, max_rows=max_rows)

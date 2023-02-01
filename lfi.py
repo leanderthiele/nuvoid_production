@@ -75,6 +75,9 @@ class LFI :
             print(f'Found trained posterior in {self.model_fname}, loading')
             with open(self.model_fname, 'rb') as f :
                 self.posterior = Unpickler(f).load()
+                # fix some stuff
+                self.posterior._device = device
+                self.posterior.potential_fn.device = device
         else :
             print(f'Did not find trained posterior in {self.model_fname}')
             self.posterior = None

@@ -9,6 +9,8 @@ import torch
 from mlp import MLP
 from read_txt import read_txt
 
+MCMC_STEPS = 20000
+
 filebase = '/tigress/lthiele/nuvoid_production'
 
 version = int(argv[1])
@@ -38,7 +40,8 @@ prior_params = ['Obh2', 'Och2', 'theta', 'logA', 'ns', ]
 assert prior_params == input_params[:NCOSMO]
 mu_cov_fname = f'{filebase}/mu_cov_plikHM_TTTEEE_lowl_lowE.dat'
 mu_LCDM = np.loadtxt(mu_cov_fname, max_rows=1)
-covinv_LCDM = np.linalg.inv(np.loadtxt(mu_cov_fname, skiprows=3))
+cov_LCDM = np.loadtxt(mu_cov_fname, skiprows=3)
+covinv_LCDM = np.linalg.inv(cov_LCDM)
 
 # load some information about the points where we have samples
 with np.load(f'{filebase}/avg_datavectors_trials.npz') as f :
@@ -53,6 +56,7 @@ p_HOD = p[:, np.array(['hod' in s for s in input_params], dtype=bool)]
 
 # construct the Delaunay triangulation of LCDM
 del_tess_LCDM = Delaunay(p_LCDM)
+in_tess_LCDM = lambda x: del_tess_LCDM.find_simplex(theta_LCDM).item() != -1
 
 # get the uniform HOD priors
 min_HOD = np.min(p_HOD, axis=0)
@@ -64,7 +68,7 @@ def logprior (theta) :
     theta_HOD = theta[NCOSMO+1:]
     if not np.all((theta_HOD<=max_HOD)*(theta_HOD>=min_HOD)) :
         return -np.inf
-    if del_tess_LCDM.find_simplex(theta_LCDM).item() == -1 :
+    if not in_tess_LCDM(theta_LCDM) :
         return -np.inf
     if Mnu<0 or Mnu>0.6 :
         return -np.inf
@@ -90,7 +94,21 @@ if __name__ == '__main__' :
     NWALKERS = 128
     NDIM = model.Nin
 
-    theta_init = np.load('vsf_mcmc_chain_wconvexhull.npy')[-1]
+    print('Starting constructing starting positions')
+    theta_init = np.empty((NWALKERS, NDIM))
+    rng = np.random.default_rng(42)
+    for ii in range(NWALKERS) :
+        while True :
+            rnd_LCDM = rng.multivariate_normal(mu_LCDM, cov=cov_LCDM)
+            if in_tess_LCDM(rnd_LCDM) :
+                theta_init[ii, :NCOSMO] = rnd_LCDM
+                break
+        rnd_Mnu = rng.uniform(0.0, 0.6)
+        theta_init[ii, NCOSMO] = rnd_Mnu
+        rnd_HOD = rng.uniform(min_HOD, max_HOD)
+        theta_init[ii, NCOSMO+1:] = rnd_HOD
+
+    print('Finished constructing starting positions')
 
     print(f'Running on {cpu_count()} CPUs')
     with Pool() as pool :
@@ -99,7 +117,7 @@ if __name__ == '__main__' :
         sampler.run_mcmc(theta_init, MCMC_STEPS, progress=True)
 
         chain = sampler.get_chain(thin=30, discard=MCMC_STEPS//5)
-        np.save('vgplk_mcmc_chain.npy', chain)
+        np.save(f'{filebase}/mcmc_chain_v{version}_{compression_hash}.npy', chain)
 
         acceptance_rates = sampler.acceptance_fraction
         print(f'acceptance={acceptance_rates}')

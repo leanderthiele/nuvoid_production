@@ -48,7 +48,7 @@ class LFI :
             param_names = list(f['param_names'])
             params = f['params']
 
-        data = np.einsum('ab,ib->a', self.compression_matrix, data/self.normalization[None, :])
+        data = np.einsum('ab,ib->ia', self.compression_matrix, data/self.normalization[None, :])
         param_indices = [param_names.index(s) for s in self.consider_params]
 
         self.theta = torch.from_numpy(params[:, param_indices].astype(np.float32)).to(device=device)
@@ -62,7 +62,7 @@ class LFI :
                                                                 z_score_theta='independent',
                                                                 z_score_x='independent',
                                                                 hidden_features=50)
-        self.inference = SNRE(prior=prior, classifier=self.make_model, device=device, show_progress_bars=True)
+        self.inference = SNRE(prior=self.prior, classifier=self.make_model, device=device, show_progress_bars=True)
         self.inference = self.inference.append_simulations(theta=self.theta, x=self.x)
         self.density_estimator = self.inference.train()
         self.posterior = self.inference.build_posterior(self.density_estimator)
@@ -72,13 +72,13 @@ class LFI :
         """ returns the chain """
         
         if observation == 'cmass' :
-            x = np.loadtxt(f'{filebase}/datavector_CMASS_North.dat'
+            x = np.loadtxt(f'{filebase}/datavector_CMASS_North.dat')
             observation = self.compression_matrix @ (x/self.normalization)
         else :
             raise NotImplementedError
 
         # TODO there are a bunch of options here that we could explore
-        chain = self.posterior.sample(sample_shape=(10000,), x=observation)
+        chain = self.posterior.sample(sample_shape=(2000,), x=observation)
         return chain.cpu().numpy()
 
 

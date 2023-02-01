@@ -5,6 +5,7 @@ import numpy as np
 from scipy.spatial import Delaunay
 
 import torch
+import emcee
 
 from mlp import MLP
 from read_txt import read_txt
@@ -56,7 +57,7 @@ p_HOD = p[:, np.array(['hod' in s for s in input_params], dtype=bool)]
 
 # construct the Delaunay triangulation of LCDM
 del_tess_LCDM = Delaunay(p_LCDM)
-in_tess_LCDM = lambda x: del_tess_LCDM.find_simplex(theta_LCDM).item() != -1
+in_tess_LCDM = lambda x: del_tess_LCDM.find_simplex(x).item() != -1
 
 # get the uniform HOD priors
 min_HOD = np.min(p_HOD, axis=0)

@@ -1,6 +1,7 @@
 from sys import argv
 import os.path
 import pickle
+from multiprocessing import cpu_count
 
 import numpy as np
 
@@ -100,7 +101,8 @@ class LFI :
             raise NotImplementedError
 
         # TODO there are a bunch of options here that we could explore
-        chain = self.posterior.sample(sample_shape=(2000,), x=observation)
+        chain = self.posterior.sample(sample_shape=(2000,), x=observation,
+                                      num_workers=cpu_count(), num_chains=cpu_count())
         return chain.cpu().numpy()
 
 

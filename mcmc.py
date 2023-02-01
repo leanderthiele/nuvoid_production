@@ -118,6 +118,12 @@ if __name__ == '__main__' :
 
         chain = sampler.get_chain(thin=30, discard=MCMC_STEPS//5)
         np.save(f'{filebase}/mcmc_chain_v{version}_{compression_hash}.npy', chain)
+        
+        chain_all = sampler.get_chain()
+        np.save(f'{filebase}/mcmc_chain_all_v{version}_{compression_hash}.npy', chain_all)
+
+        logprob = sampler.get_log_prob()
+        np.save(f'{filebase}/mcmc_logprob_all_v{version}_{compression_hash}.npy', logprob)
 
         acceptance_rates = sampler.acceptance_fraction
         print(f'acceptance={acceptance_rates}')

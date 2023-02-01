@@ -37,7 +37,7 @@ class LFI :
              }
 
     def __init__ (self, consider_params, version, compression_hash,
-                        model='mlp', hidden_features=50) :
+                        model='mlp', hidden_features=128) :
         
         self.consider_params = consider_params
         self.version = version
@@ -102,8 +102,7 @@ class LFI :
             raise NotImplementedError
 
         # TODO there are a bunch of options here that we could explore
-        chain = self.posterior.sample(sample_shape=(2000,), x=observation,
-                                      num_workers=cpu_count(), num_chains=cpu_count())
+        chain = self.posterior.sample(sample_shape=(1000,), x=observation)
         return chain.cpu().numpy()
 
 

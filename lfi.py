@@ -1,8 +1,11 @@
 from sys import argv
+import os.path
+import pickle
 
 import numpy as np
 
 import torch
+from torch.utils.tensorboard import SummaryWriter
 
 from sbi.inference import SNRE
 from sbi import utils as sbi_utils
@@ -31,19 +34,44 @@ class LFI :
               'hod_mu_M1': [-40.0, 40.0]
              }
 
-    def __init__ (self, consider_params, version, compression_hash) :
+    def __init__ (self, consider_params, version, compression_hash,
+                        model='mlp', hidden_features=50) :
         
         self.consider_params = consider_params
         self.version = version
         self.compression_hash = compression_hash
 
-        data_fname = f'{filebase}/datavectors_trials.npz'
-        compress_fname = f'{filebase}/compression_v{version}_{compression_hash}.dat'
+        self.data_fname = f'{filebase}/datavectors_trials.npz'
+        self.compress_fname = f'{filebase}/compression_v{version}_{compression_hash}.dat'
+        self.model_fname = f'{filebase}/lfi_model_v{version}_{compression_hash}_{model}_{hidden_features}.sbi'
+        self.tb_logdir = f'{filebase}/sbi_logs_v{version}_{compression_hash}'
 
         self.normalization = read_txt(compress_fname, 'normalization:')
         self.compression_matrix = read_txt(compress_fname, 'compression matrix:')
 
-        with np.load(data_fname) as f :
+        self.prior = sbi_utils.BoxUniform(low=torch.Tensor([LFI.priors[s][0] for s in self.consider_params]),
+                                          high=torch.Tensor([LFI.priors[s][1] for s in self.consider_params]),
+                                          device=device)
+
+        self.make_model = sbi_utils.get_nn_models.classifier_nn(model=model,
+                                                                z_score_theta='independent',
+                                                                z_score_x='independent',
+                                                                hidden_features=hidden_features)
+        self.inference = SNRE(prior=self.prior, classifier=self.make_model, device=device, show_progress_bars=True,
+                              summary_writer=SummaryWriter(log_dir=self.tb_logdir))
+
+        if os.path.isfile(self.model_fname) :
+            print('Found trained posterior in {self.model_fname}, loading')
+            with open(self.model_fname, 'rb') as f :
+                self.posterior = pickle.load(f)
+        else :
+            print('Did not find trained posterior in {self.model_fname}')
+            self.posterior = None
+
+
+    def train (self) :
+
+        with np.load(self.data_fname) as f :
             data = f['data'].astype(np.float64)
             param_names = list(f['param_names'])
             params = f['params']
@@ -51,24 +79,18 @@ class LFI :
         data = np.einsum('ab,ib->ia', self.compression_matrix, data/self.normalization[None, :])
         param_indices = [param_names.index(s) for s in self.consider_params]
 
-        self.theta = torch.from_numpy(params[:, param_indices].astype(np.float32)).to(device=device)
-        self.x = torch.from_numpy(data.astype(np.float32)).to(device=device)
+        theta = torch.from_numpy(params[:, param_indices].astype(np.float32)).to(device=device)
+        x = torch.from_numpy(data.astype(np.float32)).to(device=device)
 
-        self.prior = sbi_utils.BoxUniform(low=torch.Tensor([LFI.priors[s][0] for s in self.consider_params]),
-                                          high=torch.Tensor([LFI.priors[s][1] for s in self.consider_params]),
-                                          device=device)
+        self.inference = self.inference.append_simulations(theta=theta, x=x)
+        density_estimator = self.inference.train()
+        self.posterior = self.inference.build_posterior(density_estimator)
 
-        self.make_model = sbi_utils.get_nn_models.classifier_nn(model='mlp',
-                                                                z_score_theta='independent',
-                                                                z_score_x='independent',
-                                                                hidden_features=50)
-        self.inference = SNRE(prior=self.prior, classifier=self.make_model, device=device, show_progress_bars=True)
-        self.inference = self.inference.append_simulations(theta=self.theta, x=self.x)
-        self.density_estimator = self.inference.train()
-        self.posterior = self.inference.build_posterior(self.density_estimator)
+        with open(self.model_fname, 'wb') as f :
+            pickle.dump(self.posterior, f)
 
     
-    def __call__ (self, observation) :
+    def run_chain (self, observation) :
         """ returns the chain """
         
         if observation == 'cmass' :
@@ -88,7 +110,9 @@ if __name__ == '__main__' :
     compression_hash = argv[2]
     
     lfi = LFI(['Mnu', 'hod_log_Mmin', 'hod_mu_Mmin', ], version, compression_hash)
-    chain = lfi('cmass')
+    if lfi.posterior is None :
+        lfi.train()
+    chain = lfi.run_chain('cmass')
 
     np.savez(f'{filebase}/lfi_chain_v{version}_{compression_hash}.npz',
              chain=chain, param_names=lfi.consider_params)

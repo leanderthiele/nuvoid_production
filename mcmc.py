@@ -81,7 +81,7 @@ def loglike (theta) :
     torch_theta = torch.from_numpy(theta.copy()).to(dtype=torch.float32)
     torch_theta = (torch_theta - params_avg) / params_std
     mu = model(torch_theta).detach().cpu().numpy()
-    return (mu - target)**2 # covariance should be unity
+    return -0.5 * np.sum((mu - target)**2) # covariance should be unity
 
 def logprob (theta) :
     lp = logprior(theta)

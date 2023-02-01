@@ -2,6 +2,7 @@ from sys import argv
 import os.path
 import pickle
 from multiprocessing import cpu_count
+from datetime import datetime
 
 import numpy as np
 
@@ -45,7 +46,7 @@ class LFI :
         self.data_fname = f'{filebase}/datavectors_trials.npz'
         self.compress_fname = f'{filebase}/compression_v{version}_{compression_hash}.dat'
         self.model_fname = f'{filebase}/lfi_model_v{version}_{compression_hash}_{model}_{hidden_features}.sbi'
-        self.tb_logdir = f'{filebase}/sbi_logs_v{version}_{compression_hash}'
+        self.tb_logdir = f'{filebase}/sbi_logs_v{version}_{compression_hash}/{datetime.now().strftime("%m-%d-%Y_%H-%M-%S")}_{model}_{hidden_features}'
 
         self.normalization = read_txt(self.compress_fname, 'normalization:')
         self.compression_matrix = read_txt(self.compress_fname, 'compression matrix:')

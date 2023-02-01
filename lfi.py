@@ -46,8 +46,8 @@ class LFI :
         self.model_fname = f'{filebase}/lfi_model_v{version}_{compression_hash}_{model}_{hidden_features}.sbi'
         self.tb_logdir = f'{filebase}/sbi_logs_v{version}_{compression_hash}'
 
-        self.normalization = read_txt(compress_fname, 'normalization:')
-        self.compression_matrix = read_txt(compress_fname, 'compression matrix:')
+        self.normalization = read_txt(self.compress_fname, 'normalization:')
+        self.compression_matrix = read_txt(self.compress_fname, 'compression matrix:')
 
         self.prior = sbi_utils.BoxUniform(low=torch.Tensor([LFI.priors[s][0] for s in self.consider_params]),
                                           high=torch.Tensor([LFI.priors[s][1] for s in self.consider_params]),
@@ -61,11 +61,11 @@ class LFI :
                               summary_writer=SummaryWriter(log_dir=self.tb_logdir))
 
         if os.path.isfile(self.model_fname) :
-            print('Found trained posterior in {self.model_fname}, loading')
+            print(f'Found trained posterior in {self.model_fname}, loading')
             with open(self.model_fname, 'rb') as f :
                 self.posterior = pickle.load(f)
         else :
-            print('Did not find trained posterior in {self.model_fname}')
+            print(f'Did not find trained posterior in {self.model_fname}')
             self.posterior = None
 
 

@@ -74,6 +74,9 @@ to_save = dict(model_state=model.state_dict(),
                model_meta={'Nin': model.Nin, 'Nout': model.Nout,
                            'Nlayers': model.Nlayers, 'Nhidden': model.Nhidden,
                            'dropout': model.dropout},
+               input_params=TrainData.use_params,
+               params_avg=torch.from_numpy(traindata.norm_avg.astype(np.float32)),
+               params_std=torch.from_numpy(traindata.norm_std.astype(np.float32)),
               )
 torch.save(f'{filebase}/mlp_v{version}_{compression_hash}.pt',
            to_save)

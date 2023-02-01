@@ -11,7 +11,7 @@ filebase = '/tigress/lthiele/nuvoid_production'
 
 USE_AVG = True # whether we use the realization-averaged data
 BATCH_SIZE = 16
-EPOCHS = 150
+EPOCHS = 100
 MAX_LR = 1e-3
 CHISQ_CUT = 1e3 # 90% of chisq is <1e3, 96% <1e4, 98% <1e5
 NOISE = None

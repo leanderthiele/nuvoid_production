@@ -17,6 +17,9 @@ class MLP(nn.Sequential) :
         
         self.Nin = Nin
         self.Nout = Nout
+        self.Nlayers = Nlayers
+        self.Nhidden = Nhidden
+        self.dropout = dropout
         super().__init__(*[MLPLayer(Nin if ii==0 else Nhidden,
                                     Nout if ii==Nlayers else Nhidden,
                                     activation=nn.LeakyReLU if ii!=Nlayers else nn.Identity,

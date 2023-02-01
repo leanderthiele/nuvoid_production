@@ -7,6 +7,8 @@ import torch.nn as nn
 from mlp import MLP
 from traindata import TrainData
 
+filebase = '/tigress/lthiele/nuvoid_production'
+
 USE_AVG = True # whether we use the realization-averaged data
 BATCH_SIZE = 16
 EPOCHS = 100
@@ -65,6 +67,17 @@ for epoch in range(EPOCHS) :
     lvalidation = np.mean(np.array(lvalidation))
 
     print(f'iteration {epoch:4}: {ltrain:16.2f}\t{lvalidation:16.2f}')
+
+# save the model and relevant information to file
+to_save = dict(model_state=model.state_dict(),
+               # for convenience, this dict can be passed as kwargs to MLP constructor
+               model_meta={'Nin': model.Nin, 'Nout': model.Nout,
+                           'Nlayers': model.Nlayers, 'Nhidden': model.Nhidden,
+                           'dropout': model.dropout},
+              )
+torch.save(f'{filebase}/mlp_v{version}_{compression_hash}.pt',
+           to_save)
+               
 
 model.eval()
 predictions = []

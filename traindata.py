@@ -32,9 +32,9 @@ class TrainData :
 
     validation_frac = 0.2
 
-    def __init__ (self, version, compression_hash, device, batch_size) :
+    def __init__ (self, version, compression_hash, device, batch_size, use_avg) :
         
-        data_fname = f'{filebase}/datavectors_trials.npz'
+        data_fname = f'{filebase}/{"avg_" if use_avg else ""}datavectors_trials.npz'
         compress_fname = f'{filebase}/compression_v{version}_{compression_hash}.dat'
         fiducials_fname = f'{filebase}/datavectors_fiducials_v{version}.npz'
 
@@ -48,6 +48,10 @@ class TrainData :
             data = f['data'].astype(np.float64)
             param_names = list(f['param_names'])
             params = f['params']
+            if use_avg :
+                self.nsims = f['nsims']
+            else :
+                self.nsims = np.ones(len(data))
 
         # compress the data
         normalization = read_txt(compress_fname, 'normalization:')
@@ -72,6 +76,8 @@ class TrainData :
         self.validation_y = self.data[validation_mask]
         self.train_chisq = self.chisq[~validation_mask]
         self.validation_chisq = self.chisq[validation_mask]
+        self.train_nsims = self.nsims[~validation_mask]
+        self.validation_nsims = self.nsims[validation_mask]
 
         # normalize the inputs
         self.norm_avg = np.mean(self.train_params, axis=0)
@@ -83,13 +89,17 @@ class TrainData :
         self.train_x = torch.from_numpy(self.train_x.astype(np.float32)).to(device=device)
         self.train_y = torch.from_numpy(self.train_y.astype(np.float32)).to(device=device)
         self.train_chisq = torch.from_numpy(self.train_chisq.astype(np.float32)).to(device=device)
+        self.train_nsims = torch.from_numpy(self.train_nsims.astype(np.float32)).to(device=device)
         self.validation_x = torch.from_numpy(self.validation_x.astype(np.float32)).to(device=device)
         self.validation_y = torch.from_numpy(self.validation_y.astype(np.float32)).to(device=device)
         self.validation_chisq = torch.from_numpy(self.validation_chisq.astype(np.float32)).to(device=device)
+        self.validation_nsims = torch.from_numpy(self.validation_nsims.astype(np.float32)).to(device=device)
 
         # construct sets and loaders
-        self.train_set = TensorDataset(self.train_x, self.train_y, self.train_chisq)
-        self.validation_set = TensorDataset(self.validation_x, self.validation_y, self.validation_chisq)
+        self.train_set = TensorDataset(self.train_x, self.train_y,
+                                       self.train_chisq, self.train_nsims)
+        self.validation_set = TensorDataset(self.validation_x, self.validation_y,
+                                            self.validation_chisq, self.validation_nsims)
         self.train_loader = DataLoader(self.train_set, shuffle=True, batch_size=batch_size)
         self.validation_loader = DataLoader(self.validation_set, shuffle=False, batch_size=512)
 

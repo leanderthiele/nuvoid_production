@@ -7,10 +7,14 @@ import torch.nn as nn
 from mlp import MLP
 from traindata import TrainData
 
-BATCH_SIZE = 32
+USE_AVG = True # whether we use the realization-averaged data
+BATCH_SIZE = 16
 EPOCHS = 100
 MAX_LR = 1e-3
 CHISQ_CUT = 1e3 # 90% of chisq is <1e3, 96% <1e4, 98% <1e5
+NOISE = None
+WEIGHT_DECAY = 1e-2
+DROPOUT = None
 
 class Loss(nn.Module) :
     """ in the first approximation, we expect the covariance to be the identity """
@@ -19,9 +23,9 @@ class Loss(nn.Module) :
         self.chisq_cut = chisq_cut
         super().__init__()
 
-    def forward (self, pred, targ, chisq) :
+    def forward (self, pred, targ, chisq, nsims) :
         delta = pred - targ
-        return torch.mean(torch.exp(-chisq/self.chisq_cut)[:, None] * torch.square(delta))
+        return torch.mean((nsims * torch.exp(-chisq/self.chisq_cut))[:, None] * torch.square(delta))
 
 version = int(argv[1])
 compression_hash = argv[2]
@@ -30,20 +34,22 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 torch.manual_seed(42)
 
-model = MLP(17, 17, Nlayers=8, Nhidden=1024).to(device)
-traindata = TrainData(version, compression_hash, device, batch_size=BATCH_SIZE)
+model = MLP(17, 17, Nlayers=4, Nhidden=4096, dropout=DROPOUT).to(device)
+traindata = TrainData(version, compression_hash, device, batch_size=BATCH_SIZE, use_avg=USE_AVG)
 loss = Loss(CHISQ_CUT)
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=WEIGHT_DECAY)
 scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=MAX_LR, total_steps=EPOCHS, verbose=True)
 
 for epoch in range(EPOCHS) :
     
     model.train()
     ltrain = []
-    for x, y, c in traindata.train_loader :
+    for x, y, c, n in traindata.train_loader :
+        if NOISE is not None :
+            x += torch.normal(0.0, NOISE, x.shape, device=device)
         optimizer.zero_grad()
         pred = model(x)
-        l = loss(pred, y, c)
+        l = loss(pred, y, c, n)
         ltrain.append(l.item())
         l.backward()
         optimizer.step()
@@ -52,9 +58,9 @@ for epoch in range(EPOCHS) :
 
     model.eval()
     lvalidation = []
-    for x, y, c in traindata.validation_loader :
+    for x, y, c, n in traindata.validation_loader :
         pred = model(x)
-        l = loss(pred, y, c)
+        l = loss(pred, y, c, n)
         lvalidation.append(l.item())
     lvalidation = np.mean(np.array(lvalidation))
 
@@ -64,7 +70,7 @@ model.eval()
 predictions = []
 truth = []
 chisq = []
-for x, y, c in traindata.validation_loader :
+for x, y, c, n in traindata.validation_loader :
     pred = model(x)
     predictions.extend(pred.detach().cpu().numpy())
     truth.extend(y.cpu().numpy())

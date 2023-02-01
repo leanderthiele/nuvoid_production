@@ -11,7 +11,7 @@ filebase = '/tigress/lthiele/nuvoid_production'
 
 USE_AVG = True # whether we use the realization-averaged data
 BATCH_SIZE = 16
-EPOCHS = 100
+EPOCHS = 150
 MAX_LR = 1e-3
 CHISQ_CUT = 1e3 # 90% of chisq is <1e3, 96% <1e4, 98% <1e5
 NOISE = None
@@ -78,8 +78,7 @@ to_save = dict(model_state=model.state_dict(),
                params_avg=torch.from_numpy(traindata.norm_avg.astype(np.float32)),
                params_std=torch.from_numpy(traindata.norm_std.astype(np.float32)),
               )
-torch.save(f'{filebase}/mlp_v{version}_{compression_hash}.pt',
-           to_save)
+torch.save(to_save, f'{filebase}/mlp_v{version}_{compression_hash}.pt')
                
 
 model.eval()

@@ -14,11 +14,16 @@ filebase = '/tigress/lthiele/nuvoid_production'
 version = int(argv[1])
 compression_hash = argv[2]
 mode = argv[3]
+try :
+    extra = argv[4]
+except IndexError :
+    extra = None
+extra_str = f'_{extra}' if extra is not None else ''
 
 if mode != 'mcmc' :
     HAVE_PRIOR = False
 
-chain_fname = f'{filebase}/{mode}_chain_v{version}_{compression_hash}.npz'
+chain_fname = f'{filebase}/{mode}_chain_v{version}_{compression_hash}{extra_str}.npz'
 with np.load(chain_fname) as f :
     chain = f['chain']
     param_names = list(f['param_names'])
@@ -58,4 +63,4 @@ corner.corner(chain, labels=param_names, plot_datapoints=False, fig=fig, color='
 for ii, name in enumerate(param_names) :
     ax[ii, ii].set_title(name)
 
-fig.savefig(f'{filebase}/{mode}_chain_v{version}_{compression_hash}.pdf', bbox_inches='tight')
+fig.savefig(f'{filebase}/{mode}_chain_v{version}_{compression_hash}{extra_str}.pdf', bbox_inches='tight')

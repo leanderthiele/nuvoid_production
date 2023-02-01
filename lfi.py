@@ -10,7 +10,8 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from sbi.inference import SNRE
+import sbi
+import sbi.inference
 from sbi import utils as sbi_utils
 
 from read_txt import read_txt
@@ -46,16 +47,28 @@ class LFI :
              }
 
     def __init__ (self, consider_params, version, compression_hash,
-                        model='mlp', hidden_features=128) :
+                        method='SNRE', model='mlp', hidden_features=128,
+                        **model_kwargs) :
+
+        if 'NRE' in method :
+            arch = 'classifier_nn'
+        elif 'NPE' in method :
+            arch = 'posterior_nn'
+        elif 'NLE' in method :
+            arch = 'likelihood_nn'
         
         self.consider_params = consider_params
         self.version = version
         self.compression_hash = compression_hash
 
+        self.model_ident = f'{method}_{model}_{hidden_features}'
+        for k, v in model_kwargs.items() :
+            self.model_ident = f'{self.model_ident}_{k}{v}'
+
         self.data_fname = f'{filebase}/datavectors_trials.npz'
         self.compress_fname = f'{filebase}/compression_v{version}_{compression_hash}.dat'
-        self.model_fname = f'{filebase}/lfi_model_v{version}_{compression_hash}_{model}_{hidden_features}.sbi'
-        self.tb_logdir = f'{filebase}/sbi_logs_v{version}_{compression_hash}/{datetime.now().strftime("%m-%d-%Y_%H-%M-%S")}_{model}_{hidden_features}'
+        self.model_fname = f'{filebase}/lfi_model_v{version}_{compression_hash}_{self.model_ident}.sbi'
+        self.tb_logdir = f'{filebase}/sbi_logs_v{version}_{compression_hash}/{datetime.now().strftime("%m-%d-%Y_%H-%M-%S")}_{self.model_ident}'
 
         self.normalization = read_txt(self.compress_fname, 'normalization:')
         self.compression_matrix = read_txt(self.compress_fname, 'compression matrix:')
@@ -64,12 +77,12 @@ class LFI :
                                           high=torch.Tensor([LFI.priors[s][1] for s in self.consider_params]),
                                           device=device)
 
-        self.make_model = sbi_utils.get_nn_models.classifier_nn(model=model,
-                                                                z_score_theta='independent',
-                                                                z_score_x='independent',
-                                                                hidden_features=hidden_features)
-        self.inference = SNRE(prior=self.prior, classifier=self.make_model, device=device, show_progress_bars=True,
-                              summary_writer=SummaryWriter(log_dir=self.tb_logdir))
+        self.make_model = getattr(sbi_utils.get_nn_models, arch)(model=model,
+                                                                 z_score_theta='independent',
+                                                                 z_score_x='independent',
+                                                                 hidden_features=hidden_features)
+        self.inference = getattr(sbi.inference, method)(prior=self.prior, classifier=self.make_model, device=device, show_progress_bars=True,
+                                                        summary_writer=SummaryWriter(log_dir=self.tb_logdir))
 
         if os.path.isfile(self.model_fname) :
             print(f'Found trained posterior in {self.model_fname}, loading')
@@ -114,7 +127,8 @@ class LFI :
             raise NotImplementedError
 
         # TODO there are a bunch of options here that we could explore
-        chain = self.posterior.sample(sample_shape=(1000,), x=observation)
+        chain = self.posterior.sample(sample_shape=(10000,), x=observation,
+                                      num_workers=cpu_count(), num_chains=cpu_count())
         return chain.cpu().numpy()
 
 
@@ -123,10 +137,11 @@ if __name__ == '__main__' :
     version = int(argv[1])
     compression_hash = argv[2]
     
-    lfi = LFI(['Mnu', 'hod_log_Mmin', 'hod_mu_Mmin', ], version, compression_hash)
+    lfi = LFI(['Mnu', 'hod_log_Mmin', 'hod_mu_Mmin', ], version, compression_hash,
+              method='BNRE', model='resnet', hidden_features=128)
     if lfi.posterior is None :
         lfi.train()
     chain = lfi.run_chain('cmass')
 
-    np.savez(f'{filebase}/lfi_chain_v{version}_{compression_hash}.npz',
+    np.savez(f'{filebase}/lfi_chain_v{version}_{compression_hash}_{lfi.model_ident}.npz',
              chain=chain, param_names=lfi.consider_params)

@@ -118,10 +118,12 @@ if __name__ == '__main__' :
         sampler.run_mcmc(theta_init, MCMC_STEPS, progress=True)
 
         chain = sampler.get_chain(thin=30, discard=MCMC_STEPS//5)
-        np.save(f'{filebase}/mcmc_chain_v{version}_{compression_hash}.npy', chain)
+        np.savez(f'{filebase}/mcmc_chain_v{version}_{compression_hash}.npz',
+                 chain=chain, param_names=input_params)
         
         chain_all = sampler.get_chain()
-        np.save(f'{filebase}/mcmc_chain_all_v{version}_{compression_hash}.npy', chain_all)
+        np.savez(f'{filebase}/mcmc_chain_all_v{version}_{compression_hash}.npz',
+                 chain=chain_all, param_names=input_params)
 
         logprob = sampler.get_log_prob()
         np.save(f'{filebase}/mcmc_logprob_all_v{version}_{compression_hash}.npy', logprob)

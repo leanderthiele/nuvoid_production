@@ -1,4 +1,5 @@
 from sys import argv
+import io
 import os.path
 import pickle
 from multiprocessing import cpu_count
@@ -17,6 +18,14 @@ from read_txt import read_txt
 filebase = '/tigress/lthiele/nuvoid_production'
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+class Unpickler(pickle.Unpickler) :
+    """ small utility to load cross-device """
+    def find_class (self, module, name) :
+        if module == 'torch.storage' and name == '_load_from_bytes' :
+            return lambda b: torch.load(io.BytesIO(b), map_location=device)
+        else :
+            return super().find_class(module, name)
 
 class LFI :
 
@@ -65,7 +74,7 @@ class LFI :
         if os.path.isfile(self.model_fname) :
             print(f'Found trained posterior in {self.model_fname}, loading')
             with open(self.model_fname, 'rb') as f :
-                self.posterior = pickle.load(f)
+                self.posterior = Unpickler(f).load()
         else :
             print(f'Did not find trained posterior in {self.model_fname}')
             self.posterior = None

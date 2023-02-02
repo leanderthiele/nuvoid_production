@@ -110,7 +110,7 @@ class LFI :
         x = torch.from_numpy(data.astype(np.float32)).to(device=device)
 
         self.inference = self.inference.append_simulations(theta=theta, x=x)
-        density_estimator = self.inference.train()
+        density_estimator = self.inference.train(max_num_epochs=200)
         self.posterior = self.inference.build_posterior(density_estimator)
 
         with open(self.model_fname, 'wb') as f :
@@ -127,7 +127,7 @@ class LFI :
             raise NotImplementedError
 
         # TODO there are a bunch of options here that we could explore
-        chain = self.posterior.sample(sample_shape=(10000,), x=observation,
+        chain = self.posterior.sample(sample_shape=(20000,), x=observation,
                                       num_workers=cpu_count(), num_chains=cpu_count())
         return chain.cpu().numpy()
 
@@ -138,7 +138,7 @@ if __name__ == '__main__' :
     compression_hash = argv[2]
     
     lfi = LFI(['Mnu', 'hod_log_Mmin', 'hod_mu_Mmin', ], version, compression_hash,
-              method='BNRE', model='resnet', hidden_features=128)
+              method='SNRE', model='resnet', hidden_features=128)
     if lfi.posterior is None :
         lfi.train()
     chain = lfi.run_chain('cmass')

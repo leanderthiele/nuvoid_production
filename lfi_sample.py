@@ -29,7 +29,7 @@ version = int(match[1])
 compression_hash = match[2]
 model_ident = match[3]
 
-model_fname = '{filebase}/{model_fname_base}'
+model_fname = f'{filebase}/{model_fname_base}'
 
 class Unpickler(pickle.Unpickler) :
     """ small utility to load cross-device """

@@ -101,5 +101,5 @@ if __name__ == '__main__' :
     add_info = {}
     if lp is not None :
         add_info['log_prob'] = lp
-    np.savez(f'{filebase}/lfi_chain_v{version}_{compression_hash}_{model_ident}.npz',
+    np.savez(f'{filebase}/lfi_chain_v{version}_{compression_hash}_{model_ident}{"_emcee" if USE_EMCEE else ""}.npz',
              chain=chain, param_names=SETTINGS['consider_params'], **add_info)

@@ -15,6 +15,12 @@ from sbi import utils as sbi_utils
 from read_txt import read_txt
 
 SAMPLE_SHAPE = 20000
+NUM_WALKERS = cpu_count()
+
+USE_EMCEE = False
+if USE_EMCEE :
+    import emcee
+    from multiprocessing import Pool
 
 filebase = '/tigress/lthiele/nuvoid_production'
 
@@ -63,8 +69,37 @@ compression_matrix = read_txt(compress_fname, 'compression matrix:')
 observation = np.loadtxt(f'{filebase}/datavector_CMASS_North.dat')
 observation = compression_matrix @ (observation/normalization)
 
-chain = posterior.sample(sample_shape=(SAMPLE_SHAPE,), x=observation,
-                         num_workers=cpu_count(), num_chains=cpu_count()).cpu().numpy()
+# set the posterior to the observation
+posterior = posterior.set_default_x(observation)
 
-np.savez(f'{filebase}/lfi_chain_v{version}_{compression_hash}_{model_ident}.npz',
-         chain=chain, param_names=SETTINGS['consider_params'])
+def logprob (theta) :
+    theta = torch.from_numpy(theta.astype(np.float32)).to(device=device)
+    return posterior.log_prob(theta).cpu().numpy()
+
+if __name__ == '__main__' :
+
+    if not USE_EMCEE :
+        chain = posterior.sample(sample_shape=(SAMPLE_SHAPE,),
+                                 num_workers=cpu_count(), num_chains=NUM_WALKERS).cpu().numpy()
+        lp = None
+    else :
+        theta_lo = np.array([SETTINGS['priors'][s][0] for s in SETTINGS['consider_params']])
+        theta_hi = np.array([SETTINGS['priors'][s][1] for s in SETTINGS['consider_params']])
+        rng = np.random.default_rng(137)
+        theta_init = rng.uniform(theta_lo, theta_hi, (NUM_WALKERS, len(SETTINGS['consider_params'])))
+        with Pool() as pool :
+            sampler = emcee.EnsembleSampler(NUM_WALKERS, len(SETTINGS['consider_params']),
+                                            logprob, pool=pool)
+            sampler.run_mcmc(theta_init, SAMPLE_SHAPE, progress=True)
+            chain = sampler.get_chain()
+            lp = sampler.get_log_prob()
+            acceptance_rates = sampler.acceptance_fraction
+            print(f'acceptance={acceptance_rates}')
+            autocorr_times  = sampler.get_autocorr_time()
+            print(f'autocorr={autocorr_times}')
+
+    add_info = {}
+    if lp is not None :
+        add_info['log_prob'] = lp
+    np.savez(f'{filebase}/lfi_chain_v{version}_{compression_hash}_{model_ident}.npz',
+             chain=chain, param_names=SETTINGS['consider_params'], **add_info)

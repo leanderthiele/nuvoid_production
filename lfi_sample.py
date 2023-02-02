@@ -17,7 +17,7 @@ from read_txt import read_txt
 SAMPLE_SHAPE = 20000
 NUM_WALKERS = cpu_count()
 
-USE_EMCEE = False
+USE_EMCEE = True
 if USE_EMCEE :
     import emcee
     from multiprocessing import Pool

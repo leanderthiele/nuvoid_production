@@ -41,8 +41,8 @@ data.parameters['ln10^{10}A_s'] = [  3.0447,   None, None,      0.015,    1, 'co
 # data.parameters['M_tot'] =     [ 0.06, 0., 0.18,   0.1,  1, 'cosmo']
 
 ### Primordial non-Gaussianity (remember to turn on the 'PNG' switch below if using these)
-# data.parameters['f^{eq}_{NL}']         = [ 0,    None,  None,   0,     1,'nuisance']
-# data.parameters['f^{orth}_{NL}']         = [ 0,    None,  None,   0,     1,'nuisance']
+data.parameters['f^{eq}_{NL}']         = [ 0,    None,  None,   0,     1,'nuisance']
+data.parameters['f^{orth}_{NL}']         = [ 0,    None,  None,   0,     1,'nuisance']
 
 ### Sound horizon rescaling
 data.parameters['alpha_{r_s}'] = [ 1.0,   None, None,  0.0, 1, 'nuisance']
@@ -151,7 +151,7 @@ full_shape_spectra.nz = 1
 full_shape_spectra.inv_nbar = [5000., ]
 
 # Measurements
-full_shape_spectra.data_directory = data.path['data']
+full_shape_spectra.data_directory = '/home/lthiele/full_shape_likelihoods' # TODO data.path['data']
 full_shape_spectra.P_measurements = ['data/boss_pk_ngc_z3.dat', ]
 full_shape_spectra.AP_measurements = ['data/boss_alpha_ngc_z3.dat',]
 full_shape_spectra.B_measurements = ['data/boss_bk_ngc_z3.dat',]

@@ -16,7 +16,12 @@ from read_txt import read_txt
 
 SETTINGS = dict(
                 method='SNRE',
-                model=('resnet', {'hidden_features': 128, 'num_blocks': 2}),
+                model=('resnet', {
+                                  'hidden_features': 128,
+                                  'num_blocks': 2,
+                                  #'dropout_probability': 0.6
+                                 }
+                      ),
                 consider_params=['Mnu', 'hod_log_Mmin', 'hod_mu_Mmin', ],
                 priors = {
                           'Mnu': [0.0, 0.6],

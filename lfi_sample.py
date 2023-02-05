@@ -2,6 +2,7 @@ from sys import argv
 import io
 import pickle
 import re
+import os
 from multiprocessing import cpu_count
 
 import numpy as np
@@ -15,7 +16,15 @@ from sbi import utils as sbi_utils
 from read_txt import read_txt
 
 SAMPLE_SHAPE = 20000
-NUM_WALKERS = cpu_count()
+
+#if os.environ['HOSTNAME'] == 'della-gpu.princeton.edu' :
+# TODO this doesn't work
+#    num_cpu = 4
+#else :
+num_cpu = min((cpu_count(), 32))
+print(f'running on {num_cpu} cpus')
+
+NUM_WALKERS = 2*num_cpu
 
 USE_EMCEE = True
 if USE_EMCEE :
@@ -80,14 +89,14 @@ if __name__ == '__main__' :
 
     if not USE_EMCEE :
         chain = posterior.sample(sample_shape=(SAMPLE_SHAPE,),
-                                 num_workers=cpu_count(), num_chains=NUM_WALKERS).cpu().numpy()
+                                 num_workers=num_cpu, num_chains=NUM_WALKERS).cpu().numpy()
         lp = None
     else :
         theta_lo = np.array([SETTINGS['priors'][s][0] for s in SETTINGS['consider_params']])
         theta_hi = np.array([SETTINGS['priors'][s][1] for s in SETTINGS['consider_params']])
         rng = np.random.default_rng(137)
         theta_init = rng.uniform(theta_lo, theta_hi, (NUM_WALKERS, len(SETTINGS['consider_params'])))
-        with Pool() as pool :
+        with Pool(num_cpu) as pool :
             sampler = emcee.EnsembleSampler(NUM_WALKERS, len(SETTINGS['consider_params']),
                                             logprob, pool=pool)
             sampler.run_mcmc(theta_init, SAMPLE_SHAPE, progress=True)

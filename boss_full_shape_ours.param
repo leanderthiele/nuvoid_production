@@ -50,7 +50,7 @@ data.parameters['n_s']      = [ 0.9644479187402,  0.93, 1.0,  0.01, 1, 'cosmo']
 # data.cosmo_arguments['T_ncdm'] = 0.71611
 
 # Alternatively, we can use three degenerate massive neutrinos
-data.cosmo_arguments['M_tot'] = [ 0.1, 0.0, 0.6, 0.1, 1, 'cosmo' ]
+data.parameters['M_tot'] = [ 0.1, 0.0, 0.6, 0.1, 1, 'cosmo' ]
 data.cosmo_arguments['N_ur'] = 0.00441
 data.cosmo_arguments['N_ncdm'] = 1
 data.cosmo_arguments['deg_ncdm'] = 3
@@ -90,11 +90,11 @@ data.parameters['b^{(4)}_{G_2}']         = [ 7.5104e-01,    None,  None,    0.5,
 # Derived parameters
 
 # data.parameters['z_reio']          = [1, None, None, 0,     1,   'derived']
-data.parameters['Omega_m']    = [1, None, None, 0,     1,   'derived']
+# data.parameters['Omega_m']    = [1, None, None, 0,     1,   'derived']
 # data.parameters['YHe']             = [1, None, None, 0,     1,   'derived']
-data.parameters['H0']              = [0, None, None, 0,     1,   'derived']
+# data.parameters['H0']              = [0, None, None, 0,     1,   'derived']
 # data.parameters['A_s']             = [0, None, None, 0,  1e-9,   'derived']
-data.parameters['sigma8']          = [0, None, None, 0,     1,   'derived']
+# data.parameters['sigma8']          = [0, None, None, 0,     1,   'derived']
 
 # Other cosmo parameters (fixed parameters, precision parameters, etc.)
 
@@ -112,7 +112,7 @@ data.cosmo_arguments['IR resummation'] = ' Yes '
 data.cosmo_arguments['Bias tracers'] = ' Yes '
 data.cosmo_arguments['RSD'] = ' Yes '
 # array of sample redshifts
-data.cosmo_arguments['z_pk'] = '0.38, 0.61'
+data.cosmo_arguments['z_pk'] = '0.61'
 data.cosmo_arguments['AP'] = ' Yes '
 # Whether to include PNG?
 data.cosmo_arguments['PNG'] = 'No'

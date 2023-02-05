@@ -1,6 +1,6 @@
 #------Experiments to test (separated with commas)-----
 
-data.experiments=['full_shape_spectra']
+data.experiments=['full_shape_spectra', 'my_planck_prior', ]
 
 #------ Settings for the over-sampling.
 # The first element will always be set to 1, for it is the sampling of the
@@ -31,30 +31,40 @@ data.experiments=['full_shape_spectra']
 
 data.over_sampling=[1, 3]
 
-### Cosmological parameters list TODO
-# data.parameters['omega_b']      = [ 2.237,   None, None,  4.7471e-02, 0.01, 'cosmo']
-data.parameters['omega_cdm']      = [ 0.11711,   None, None,  0.05, 1, 'cosmo']
-data.parameters['h']      = [ 0.7,   None, None,  0.05, 1, 'cosmo']
-data.parameters['ln10^{10}A_s'] = [  3.0447,   None, None,      0.015,    1, 'cosmo']
-# data.parameters['n_s']      = [ 0.96,   None, None,  0.03, 1, 'cosmo']
-# data.parameters['m_ncdm']      = [ 9.774896e-02,   0.06, 0.18,  0.05, 1, 'cosmo']
-# data.parameters['M_tot'] =     [ 0.06, 0., 0.18,   0.1,  1, 'cosmo']
+### Cosmological parameters list
+data.parameters['omega_b']      = [ 0.0223676892205, 0.020, 0.025,  0.0003, 1, 'cosmo']
+data.parameters['omega_cdm']      = [ 0.1202744738425, 0.10, 0.14,  0.003,  1, 'cosmo']
+
+# TODO deal with theta_MC
+data.parameters['h']      = [ 0.6524865269291,  0.6,  0.72,  0.02, 1, 'cosmo']
+data.parameters['ln10^{10}A_s'] = [  3.0446331579528,  2.9, 3.2, 0.03,  1, 'cosmo']
+data.parameters['n_s']      = [ 0.9644479187402,  0.93, 1.0,  0.01, 1, 'cosmo']
+
+# The base model features two massless
+# and one massive neutrino with m=0.06eV.
+# The settings below ensures that Neff=3.046
+# and m/omega = 93.14 eV
+# data.cosmo_arguments['N_ur'] = 2.0328
+# data.cosmo_arguments['N_ncdm'] = 1
+# data.cosmo_arguments['m_ncdm'] = 0.06
+# data.cosmo_arguments['T_ncdm'] = 0.71611
+
+# Alternatively, we can use three degenerate massive neutrinos
+data.cosmo_arguments['M_tot'] = [ 0.1, 0.0, 0.6, 0.1, 1, 'cosmo' ]
+data.cosmo_arguments['N_ur'] = 0.00441
+data.cosmo_arguments['N_ncdm'] = 1
+data.cosmo_arguments['deg_ncdm'] = 3
+# data.cosmo_arguments['T_ncdm'] = 0.71611
+
 
 ### Primordial non-Gaussianity (remember to turn on the 'PNG' switch below if using these)
 data.parameters['f^{eq}_{NL}']         = [ 0,    None,  None,   0,     1,'nuisance']
 data.parameters['f^{orth}_{NL}']         = [ 0,    None,  None,   0,     1,'nuisance']
 
+# Nuisance parameter list, same call, except the name does not have to be a class name
+
 ### Sound horizon rescaling
 data.parameters['alpha_{r_s}'] = [ 1.0,   None, None,  0.0, 1, 'nuisance']
-
-### Fixed Cosmological Parameters
-# data.cosmo_arguments['A_s'] = 2.1444e-9
-data.cosmo_arguments['omega_b'] = 0.02237
-data.cosmo_arguments['n_s'] = 0.9649
-# data.cosmo_arguments['h'] = 0.7
-# data.cosmo_arguments['omega_cdm'] = 0.11711
-
-# Nuisance parameter list, same call, except the name does not have to be a class name
 
 ### Nuisance parameters for BOSS Pk/Q0/Bk/AP data
 # Nuisance parameters for first data chunk
@@ -107,22 +117,6 @@ data.cosmo_arguments['AP'] = ' Yes '
 # Whether to include PNG?
 data.cosmo_arguments['PNG'] = 'No'
 data.cosmo_arguments['Omfid'] = 0.31
-
-# The base model features two massless
-# and one massive neutrino with m=0.06eV.
-# The settings below ensures that Neff=3.046
-# and m/omega = 93.14 eV
-data.cosmo_arguments['N_ur'] = 2.0328
-data.cosmo_arguments['N_ncdm'] = 1
-data.cosmo_arguments['m_ncdm'] = 0.06
-data.cosmo_arguments['T_ncdm'] = 0.71611
-
-# Alternatively, we can use three degenerate massive neutrinos
-# data.cosmo_arguments['M_tot'] = 0.18
-# data.cosmo_arguments['N_ur'] = 0.00641
-# data.cosmo_arguments['N_ncdm'] = 1
-# data.cosmo_arguments['deg_ncdm'] = 3
-# data.cosmo_arguments['T_ncdm'] = 0.71611
 
 # These two are required to get sigma8 as a derived parameter 
 # (class must compute the P(k) until sufficient k)

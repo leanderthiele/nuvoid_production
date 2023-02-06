@@ -7,4 +7,4 @@ wrkdir='<<<wrkdir>>>'
 
 python -u /home/lthiele/montepython_public/montepython/MontePython.py info \
   --want-covmat \
-  --"$wrkdir"
+  "$wrkdir"

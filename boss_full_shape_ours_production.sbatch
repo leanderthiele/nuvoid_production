@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -n 5
+#SBATCH -n 1
 #SBATCH -c 4
 #SBATCH -t 05:00:00
 
@@ -19,11 +19,12 @@ params_file='<<<params_file>>>'
 wrkdir_trial='<<<wrkdir_trial>>>'
 wrkdir_production='<<<wrkdir_production>>>'
 
-srun -n $SLURM_NTASKS \
-  python -u /home/lthiele/montepython_public/montepython/MontePython.py run \
-    --conf="$conf_file" \
-    --param="$params_file" \
-    --output="$wrkdir_production" \
-    --covmat="$wrkdir_trial/*.covmat" \
-    --bestfit="$wrkdir_trial/*.bestfit" \
-    --N 100000
+sleep $SLURM_ARRAY_TASK_ID
+
+python -u /home/lthiele/montepython_public/montepython/MontePython.py run \
+  --conf="$conf_file" \
+  --param="$params_file" \
+  --output="$wrkdir_production" \
+  --covmat="$wrkdir_trial/$(basename $wrkdir_trial).covmat" \
+  --bestfit="$wrkdir_trial/$(basename $wrkdir_trial).bestfit" \
+  -N 100000

@@ -19,10 +19,11 @@ params_file='<<<params_file>>>'
 wrkdir_trial='<<<wrkdir_trial>>>'
 wrkdir_production='<<<wrkdir_production>>>'
 
-python -u /home/lthiele/montepython_public/montepython/MontePython.py run \
-  --conf="$conf_file" \
-  --param="$params_file" \
-  --output="$wrkdir_production" \
-  --covmat="$wrkdir_trial/*.covmat" \
-  --bestfit="$wrkdir_trial/*.bestfit" \
-  --N 100000
+srun -n $SLURM_NTASKS \
+  python -u /home/lthiele/montepython_public/montepython/MontePython.py run \
+    --conf="$conf_file" \
+    --param="$params_file" \
+    --output="$wrkdir_production" \
+    --covmat="$wrkdir_trial/*.covmat" \
+    --bestfit="$wrkdir_trial/*.bestfit" \
+    --N 100000

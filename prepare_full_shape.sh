@@ -2,9 +2,11 @@
 # Command line arguments:
 #    [1] kmin
 #    [2] kmax
+#    [3] lmax
 
 kmin="$1"
 kmax="$2"
+lmax="$3"
 
 codebase='/home/lthiele/nuvoid_production'
 database='/scratch/gpfs/lthiele/nuvoid_production'
@@ -16,8 +18,8 @@ PRODUCTION_TEMPLATE="$codebase/boss_full_shape_ours_production.sbatch"
 
 source utils.sh
 
-wrkdir_trial="$database/full_shape_trial_kmin${kmin}_kmax${kmax}"
-wrkdir_production="$database/full_shape_production_kmin${kmin}_kmax${kmax}"
+wrkdir_trial="$database/full_shape_trial_kmin${kmin}_kmax${kmax}_lmax${lmax}"
+wrkdir_production="$database/full_shape_production_kmin${kmin}_kmax${kmax}_lmax${lmax}"
 mkdir -p "$wrkdir_trial" "$wrkdir_production"
 
 # set the parameter file
@@ -25,6 +27,7 @@ params_file="$wrkdir_trial/boss_full_shape_ours.param"
 cp $PARAMS_TEMPLATE $params_file
 utils::replace $params_file 'kmin' "$kmin"
 utils::replace $params_file 'kmax' "$kmax"
+utils::replace $params_file 'ellmax' "$lmax"
 
 # the driver files
 trial_file="$codebase/boss_full_shape_ours_trial_kmin${kmin}_kmax${kmax}.sbatch"

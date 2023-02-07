@@ -24,9 +24,10 @@ SETTINGS = dict(
                       ),
                 consider_params=['Mnu', 'hod_log_Mmin', 'hod_mu_Mmin', ],
                 # consider_params=['Mnu', ],
+                # consider_params=['Mnu', 'hod_transfP1', 'hod_sigma_logM', 'hod_transf_eta_cen', ],
                 priors={
                         'Mnu': [0.0, 0.6],
-                        'hod_transf_P1': [-3.0, 3.0],
+                        'hod_transfP1': [-3.0, 3.0],
                         'hod_abias': [-1.0, 1.0],
                         'hod_log_Mmin': [12.5, 13.2],
                         'hod_sigma_logM': [0.1, 0.8],
@@ -39,9 +40,10 @@ SETTINGS = dict(
                         'hod_mu_M1': [-40.0, 40.0]
                        },
                 # bs=256,
-                # lr=1e-3,
+                lr=1e-2,
                 chisq_max=1e4,
                 noise=1e-2, # eV
+                one_cycle=True,
                )
 
 ident = hashlib.md5(f'{SETTINGS}'.encode('utf-8')).hexdigest()
@@ -106,9 +108,14 @@ theta = torch.from_numpy(params.astype(np.float32)).to(device=device)
 x = torch.from_numpy(data.astype(np.float32)).to(device=device)
 
 inference = inference.append_simulations(theta=theta, x=x)
-density_estimator = inference.train(max_num_epochs=200,
+MAX_NUM_EPOCHS = 200
+density_estimator = inference.train(max_num_epochs=MAX_NUM_EPOCHS,
                                     training_batch_size=SETTINGS['bs'] if 'bs' in SETTINGS else 50,
-                                    learning_rate=SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4)
+                                    learning_rate=SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4,
+                                    scheduler_kwargs=None if 'one_cycle' not in SETTINGS or not SETTINGS['one_cycle']
+                                                     else {'max_lr': SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4,
+                                                           'total_steps': MAX_NUM_EPOCHS,
+                                                           'verbose': True})
 prior = sbi_utils.BoxUniform(low=torch.Tensor([SETTINGS['priors'][s][0] for s in SETTINGS['consider_params']]),
                              high=torch.Tensor([SETTINGS['priors'][s][1] for s in SETTINGS['consider_params']]),
                              device=device)

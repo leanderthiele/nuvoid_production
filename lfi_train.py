@@ -38,9 +38,10 @@ SETTINGS = dict(
                         'hod_mu_Mmin': [-20.0, 20.0],
                         'hod_mu_M1': [-40.0, 40.0]
                        },
-                # bs=16,
-                # lr=1e-2,
-                chisq_max=1e3,
+                # bs=256,
+                # lr=1e-3,
+                chisq_max=1e4,
+                noise=1e-2, # eV
                )
 
 ident = hashlib.md5(f'{SETTINGS}'.encode('utf-8')).hexdigest()
@@ -95,6 +96,11 @@ if 'chisq_max' in SETTINGS :
     print(f'After chisq_max cut, retaining {np.count_nonzero(mask)/len(mask)*100:.2f} percent of samples')
     data = data[mask]
     params = params[mask]
+
+if 'noise' in SETTINGS :
+    assert 'Mnu' in SETTINGS['consider_params']
+    rng = np.random.default_rng(137)
+    params[:, SETTINGS['consider_params'].index('Mnu')] += rng.normal(0, SETTINGS['noise'], size=len(params))
 
 theta = torch.from_numpy(params.astype(np.float32)).to(device=device)
 x = torch.from_numpy(data.astype(np.float32)).to(device=device)

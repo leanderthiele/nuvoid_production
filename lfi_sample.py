@@ -36,6 +36,10 @@ filebase = '/tigress/lthiele/nuvoid_production'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 model_fname_base = argv[1]
+try :
+    fiducials_idx = int(argv[2])
+except IndexError :
+    fiducials_idx = None
 
 # extract information from the model file name
 match = re.search('lfi_model_v(\d*)_([a-f,0-9]{32})_([a-f,0-9]{32}).sbi', model_fname_base)
@@ -75,7 +79,14 @@ posterior.potential_fn.device = device
 compress_fname = f'{filebase}/compression_v{version}_{compression_hash}.dat'
 normalization = read_txt(compress_fname, 'normalization:')
 compression_matrix = read_txt(compress_fname, 'compression matrix:')
-observation = np.loadtxt(f'{filebase}/datavector_CMASS_North.dat')
+
+if fiducials_idx is None :
+    # default case, work with real CMASS data
+    observation = np.loadtxt(f'{filebase}/datavector_CMASS_North.dat')
+else :
+    fiducials_fname = f'{filebase}/datavectors_fiducials_v{version}.npz'
+    with np.load(fiducials_fname) as f :
+        observation = f['data'][fiducials_idx]
 observation = compression_matrix @ (observation/normalization)
 
 # set the posterior to the observation
@@ -110,5 +121,6 @@ if __name__ == '__main__' :
     add_info = {}
     if lp is not None :
         add_info['log_prob'] = lp
-    np.savez(f'{filebase}/lfi_chain_v{version}_{compression_hash}_{model_ident}{"_emcee" if USE_EMCEE else ""}.npz',
+    np.savez(f'{filebase}/lfi_chain_v{version}_{compression_hash}_{model_ident}'\
+             f'{f"_fid{fiducials_idx}" if fiducials_idx is not None else ""}{"_emcee" if USE_EMCEE else ""}.npz',
              chain=chain, param_names=SETTINGS['consider_params'], **add_info)

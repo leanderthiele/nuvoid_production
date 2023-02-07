@@ -22,7 +22,6 @@ SETTINGS = dict(
                                   #'dropout_probability': 0.6
                                  }
                       ),
-                # TODO try changing this (keeping Mnu)
                 consider_params=['Mnu', 'hod_log_Mmin', 'hod_mu_Mmin', ],
                 # consider_params=['Mnu', ],
                 priors={
@@ -41,7 +40,7 @@ SETTINGS = dict(
                        },
                 # bs=16,
                 # lr=1e-2,
-                chisq_max=1e4,
+                chisq_max=1e3,
                )
 
 ident = hashlib.md5(f'{SETTINGS}'.encode('utf-8')).hexdigest()
@@ -91,9 +90,9 @@ if 'chisq_max' in SETTINGS :
     with np.load(fiducials_fname) as f :
         fid_mean = np.mean(f['data'], axis=0)
     fid_mean = compression_matrix @ (fid_mean/normalization)
-    chisq = (data - fid_mean)**2
+    chisq = np.sum((data - fid_mean[None, :])**2, axis=-1) / data.shape[-1]
     mask = chisq < SETTINGS['chisq_max']
-    print(f'After chisq_max cut, retaining {np.count_nonzero(mask)/len(mask)*100} percent of samples')
+    print(f'After chisq_max cut, retaining {np.count_nonzero(mask)/len(mask)*100:.2f} percent of samples')
     data = data[mask]
     params = params[mask]
 

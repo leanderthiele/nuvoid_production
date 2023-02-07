@@ -46,6 +46,7 @@ SETTINGS = dict(
                 noise=1e-2, # eV
                 one_cycle=True,
                 optimizer_kwargs={'weight_decay': 1e-4, },
+                # sim_budget=85, # how many simulations we choose randomly
                )
 
 ident = hashlib.md5(f'{SETTINGS}'.encode('utf-8')).hexdigest()
@@ -87,9 +88,19 @@ with np.load(data_fname) as f :
     data = f['data'].astype(np.float64)
     param_names = list(f['param_names'])
     params = f['params']
+    sim_idx = f['sim_idx']
 data = np.einsum('ab,ib->ia', compression_matrix, data/normalization[None, :])
 param_indices = [param_names.index(s) for s in SETTINGS['consider_params']]
 params = params[:, param_indices]
+
+if 'sim_budget' in SETTINGS :
+    uniq_indices = np.unique(sim_idx)
+    assert SETTINGS['sim_budget'] <= len(uniq_indices)
+    rng = np.random.default_rng(137)
+    use_indices = rng.choice(uniq_indices, replace=False, size=SETTINGS['sim_budget'])
+    mask = np.array([idx in use_indices for idx in sim_idx], dtype=bool)
+    data = data[mask]
+    params = params[mask]
 
 if 'chisq_max' in SETTINGS :
     with np.load(fiducials_fname) as f :

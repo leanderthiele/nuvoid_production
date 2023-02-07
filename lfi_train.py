@@ -22,6 +22,7 @@ SETTINGS = dict(
                                   #'dropout_probability': 0.6
                                  }
                       ),
+                # TODO try changing this (keeping Mnu)
                 consider_params=['Mnu', 'hod_log_Mmin', 'hod_mu_Mmin', ],
                 priors = {
                           'Mnu': [0.0, 0.6],
@@ -36,10 +37,13 @@ SETTINGS = dict(
                           'hod_transf_eta_sat': [-1.0, 1.0],
                           'hod_mu_Mmin': [-20.0, 20.0],
                           'hod_mu_M1': [-40.0, 40.0]
-                         }
+                         },
+                # bs=16,
+                lr=1e-2,
                )
 
 ident = hashlib.md5(f'{SETTINGS}'.encode('utf-8')).hexdigest()
+print(f'ident={ident}')
 
 filebase = '/tigress/lthiele/nuvoid_production'
 
@@ -83,7 +87,9 @@ theta = torch.from_numpy(params[:, param_indices].astype(np.float32)).to(device=
 x = torch.from_numpy(data.astype(np.float32)).to(device=device)
 
 inference = inference.append_simulations(theta=theta, x=x)
-density_estimator = inference.train(max_num_epochs=200)
+density_estimator = inference.train(max_num_epochs=200,
+                                    training_batch_size=SETTINGS['bs'] if 'bs' in SETTINGS else 50,
+                                    learning_rate=SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4)
 prior = sbi_utils.BoxUniform(low=torch.Tensor([SETTINGS['priors'][s][0] for s in SETTINGS['consider_params']]),
                              high=torch.Tensor([SETTINGS['priors'][s][1] for s in SETTINGS['consider_params']]),
                              device=device)

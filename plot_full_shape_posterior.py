@@ -8,7 +8,7 @@ import corner
 
 root = argv[1]
 
-discard = 0 # burn in
+discard = 200 # burn in
 
 param_names_files = glob(f'{root}/*.paramnames')
 assert len(param_names_files) == 1
@@ -30,7 +30,7 @@ for txt_file in txt_files :
     neglkl = a[:, 1] # unused
     x_ = a[:, 2:]
     x_ = np.repeat(x_, n.astype(int), axis=0)
-    x_ = x_[:, discard:]
+    x_ = x_[discard:]
     x = np.concatenate((x, x_), axis=0)
 
 fig, ax = plt.subplots(ncols=dim, nrows=dim, figsize=(20,20))

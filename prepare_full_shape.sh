@@ -30,9 +30,9 @@ utils::replace $params_file 'kmax' "$kmax"
 utils::replace $params_file 'ellmax' "$lmax"
 
 # the driver files
-trial_file="$codebase/boss_full_shape_ours_trial_kmin${kmin}_kmax${kmax}.sbatch"
-covmat_file="$codebase/boss_full_shape_ours_covmat_kmin${kmin}_kmax${kmax}.sh"
-production_file="$codebase/boss_full_shape_ours_production_kmin${kmin}_kmax${kmax}.sbatch"
+trial_file="$codebase/boss_full_shape_ours_trial_kmin${kmin}_kmax${kmax}_lmax${lmax}.sbatch"
+covmat_file="$codebase/boss_full_shape_ours_covmat_kmin${kmin}_kmax${kmax}_lmax${lmax}.sh"
+production_file="$codebase/boss_full_shape_ours_production_kmin${kmin}_kmax${kmax}_lmax${lmax}.sbatch"
 
 cp $TRIAL_TEMPLATE $trial_file
 cp $COVMAT_TEMPLATE $covmat_file

@@ -24,6 +24,7 @@ SETTINGS = dict(
                       ),
                 # TODO try changing this (keeping Mnu)
                 consider_params=['Mnu', 'hod_log_Mmin', 'hod_mu_Mmin', ],
+                # consider_params=['Mnu', ],
                 priors = {
                           'Mnu': [0.0, 0.6],
                           'hod_transf_P1': [-3.0, 3.0],
@@ -38,8 +39,8 @@ SETTINGS = dict(
                           'hod_mu_Mmin': [-20.0, 20.0],
                           'hod_mu_M1': [-40.0, 40.0]
                          },
-                # bs=16,
-                lr=1e-2,
+                bs=16,
+                # lr=1e-2,
                )
 
 ident = hashlib.md5(f'{SETTINGS}'.encode('utf-8')).hexdigest()

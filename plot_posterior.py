@@ -55,12 +55,11 @@ if HAVE_PRIOR :
     fake_points = rng.uniform(*fake_limits, size=(LCDM_prior_samples.shape[0], len(fake_limits[0])))
     prior_samples = np.concatenate([LCDM_prior_samples, fake_points], axis=1)
 
-fig, ax = plt.subplots(ncols=DIM, nrows=DIM, figsize=(30, 30))
+fig = corner.corner(chain, labels=param_names, plot_datapoints=False, color='blue')
 if HAVE_PRIOR :
     corner.corner(prior_samples, plot_datapoints=False, fig=fig, color='grey')
-corner.corner(chain, labels=param_names, plot_datapoints=False, fig=fig, color='blue')
 
-for ii, name in enumerate(param_names) :
-    ax[ii, ii].set_title(name)
+# for ii, name in enumerate(param_names) :
+#     ax[ii, ii].set_title(name)
 
 fig.savefig(f'{filebase}/{mode}_chain_v{version}_{compression_hash}{extra_str}.pdf', bbox_inches='tight')

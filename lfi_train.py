@@ -25,22 +25,23 @@ SETTINGS = dict(
                 # TODO try changing this (keeping Mnu)
                 consider_params=['Mnu', 'hod_log_Mmin', 'hod_mu_Mmin', ],
                 # consider_params=['Mnu', ],
-                priors = {
-                          'Mnu': [0.0, 0.6],
-                          'hod_transf_P1': [-3.0, 3.0],
-                          'hod_abias': [-1.0, 1.0],
-                          'hod_log_Mmin': [12.5, 13.2],
-                          'hod_sigma_logM': [0.1, 0.8],
-                          'hod_log_M0': [12.5, 15.5],
-                          'hod_log_M1': [12.5, 15.5],
-                          'hod_alpha': [0.2, 1.5],
-                          'hod_transf_eta_cen': [5.0, 10.0],
-                          'hod_transf_eta_sat': [-1.0, 1.0],
-                          'hod_mu_Mmin': [-20.0, 20.0],
-                          'hod_mu_M1': [-40.0, 40.0]
-                         },
-                bs=16,
+                priors={
+                        'Mnu': [0.0, 0.6],
+                        'hod_transf_P1': [-3.0, 3.0],
+                        'hod_abias': [-1.0, 1.0],
+                        'hod_log_Mmin': [12.5, 13.2],
+                        'hod_sigma_logM': [0.1, 0.8],
+                        'hod_log_M0': [12.5, 15.5],
+                        'hod_log_M1': [12.5, 15.5],
+                        'hod_alpha': [0.2, 1.5],
+                        'hod_transf_eta_cen': [5.0, 10.0],
+                        'hod_transf_eta_sat': [-1.0, 1.0],
+                        'hod_mu_Mmin': [-20.0, 20.0],
+                        'hod_mu_M1': [-40.0, 40.0]
+                       },
+                # bs=16,
                 # lr=1e-2,
+                chisq_max=1e4,
                )
 
 ident = hashlib.md5(f'{SETTINGS}'.encode('utf-8')).hexdigest()
@@ -54,6 +55,7 @@ version = int(argv[1])
 compression_hash = argv[2]
 
 data_fname = f'{filebase}/datavectors_trials.npz'
+fiducials_fname = f'{filebase}/datavectors_fiducials_v0.npz'
 compress_fname = f'{filebase}/compression_v{version}_{compression_hash}.dat'
 model_fname = f'{filebase}/lfi_model_v{version}_{compression_hash}_{ident}.sbi'
 tb_logdir = f'{filebase}/sbi_logs_v{version}_{compression_hash}/{datetime.now().strftime("%m-%d-%Y_%H-%M-%S")}_{ident}'
@@ -83,8 +85,19 @@ with np.load(data_fname) as f :
     params = f['params']
 data = np.einsum('ab,ib->ia', compression_matrix, data/normalization[None, :])
 param_indices = [param_names.index(s) for s in SETTINGS['consider_params']]
+params = params[:, param_indices]
 
-theta = torch.from_numpy(params[:, param_indices].astype(np.float32)).to(device=device)
+if 'chisq_max' in SETTINGS :
+    with np.load(fiducials_fname) as f :
+        fid_mean = np.mean(f['data'], axis=0)
+    fid_mean = compression_matrix @ (fid_mean/normalization)
+    chisq = (data - fid_mean)**2
+    mask = chisq < SETTINGS['chisq_max']
+    print(f'After chisq_max cut, retaining {np.count_nonzero(mask)/len(mask)*100} percent of samples')
+    data = data[mask]
+    params = params[mask]
+
+theta = torch.from_numpy(params.astype(np.float32)).to(device=device)
 x = torch.from_numpy(data.astype(np.float32)).to(device=device)
 
 inference = inference.append_simulations(theta=theta, x=x)

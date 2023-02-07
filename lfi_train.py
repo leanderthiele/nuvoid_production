@@ -25,6 +25,7 @@ SETTINGS = dict(
                 consider_params=['Mnu', 'hod_log_Mmin', 'hod_mu_Mmin', ],
                 # consider_params=['Mnu', ],
                 # consider_params=['Mnu', 'hod_transfP1', 'hod_sigma_logM', 'hod_transf_eta_cen', ],
+                # consider_params=['Mnu', 'hod_abias', 'hod_log_M1', 'hod_alpha', 'hod_transf_eta_sat', ],
                 priors={
                         'Mnu': [0.0, 0.6],
                         'hod_transfP1': [-3.0, 3.0],
@@ -115,7 +116,7 @@ density_estimator = inference.train(max_num_epochs=MAX_NUM_EPOCHS,
                                     learning_rate=SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4,
                                     scheduler_kwargs=None if 'one_cycle' not in SETTINGS or not SETTINGS['one_cycle']
                                                      else {'max_lr': SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4,
-                                                           'total_steps': MAX_NUM_EPOCHS,
+                                                           'total_steps': MAX_NUM_EPOCHS+1,
                                                            'verbose': True},
                                     optimizer_kwargs={} if 'optimizer_kwargs' not in SETTINGS
                                                      else SETTINGS['optimizer_kwargs'],

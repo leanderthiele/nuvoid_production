@@ -19,7 +19,7 @@ def load_posterior (fname, device) :
     """ returns (settings, posterior) """
 
     settings_str = b''
-    with open(model_fname, 'rb') as f :
+    with open(fname, 'rb') as f :
         while True :
             # scan until we reach newline, which indicates start of the pickled model
             c = f.read(1)

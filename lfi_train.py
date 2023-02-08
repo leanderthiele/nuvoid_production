@@ -13,6 +13,7 @@ import sbi.inference
 from sbi import utils as sbi_utils
 
 from read_txt import read_txt
+from lfi_load_posterior import load_posterior
 
 SETTINGS = dict(
                 method='SNRE',
@@ -50,8 +51,8 @@ SETTINGS = dict(
                 # epochs=400,
                )
 
-ident = hashlib.md5(f'{SETTINGS}'.encode('utf-8')).hexdigest()
-print(f'ident={ident}')
+# these are the settings that are taken from a pre-trained model
+arch_settings = ['method', 'model', 'consider_params', 'priors', ]
 
 filebase = '/tigress/lthiele/nuvoid_production'
 
@@ -59,6 +60,24 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 version = int(argv[1])
 compression_hash = argv[2]
+try :
+    pretrained_ident = argv[3]
+except IndexError :
+    pretrained_ident = None
+
+if pretrained_ident is not None :
+    pretrained_fname = f'{filebase}/lfi_model_v{version}_{compression_hash}_{pretrained_ident}.sbi'
+    print(f'Loading pretrained model from {pretrained_fname}')
+    pretrained_settings, pretrained_posterior = load_posterior(pretrained_fname, device)
+    for s in arch_settings :
+        SETTINGS[s] = pretrained_settings[s]
+    # by setting this, we ensure that the new file will have a different hash, and also useful for reference
+    SETTINGS['pretrained_ident'] = pretrained_ident
+else :
+    pretrained_posterior = None
+
+ident = hashlib.md5(f'{SETTINGS}'.encode('utf-8')).hexdigest()
+print(f'ident={ident}')
 
 data_fname = f'{filebase}/datavectors_trials.npz'
 fiducials_fname = f'{filebase}/datavectors_fiducials_v0.npz'
@@ -137,6 +156,9 @@ x = torch.from_numpy(data.astype(np.float32)).to(device=device)
 inference = inference.append_simulations(theta=theta, x=x)
 MAX_NUM_EPOCHS = SETTINGS['epochs'] if 'epochs' in SETTINGS else 200
 
+if pretrained_posterior is not None :
+    # if pretrained, set the neural net
+    inference._neural_net = pretrained_posterior.potential_fn.ratio_estimator
 density_estimator = inference.train(max_num_epochs=MAX_NUM_EPOCHS,
                                     training_batch_size=SETTINGS['bs'] if 'bs' in SETTINGS else 50,
                                     learning_rate=SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4,

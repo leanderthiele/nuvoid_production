@@ -9,7 +9,9 @@
 #SBATCH --output=/dev/null --error=/dev/null
 
 module load anaconda3/2021.11
-conda activate torch-env
+module rm anaconda3/2021.11
+module load anaconda3/2021.11
+conda activate class-pt
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 

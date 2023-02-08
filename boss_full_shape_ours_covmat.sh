@@ -1,7 +1,9 @@
 #!/bin/bash
 
 module load anaconda3/2021.11
-conda activate torch-env
+module rm anaconda3/2021.11
+module load anaconda3/2021.11
+conda activate class-pt
 
 wrkdir='<<<wrkdir>>>'
 

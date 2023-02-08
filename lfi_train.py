@@ -18,7 +18,7 @@ SETTINGS = dict(
                 method='SNRE',
                 model=('resnet', {
                                   'hidden_features': 256,
-                                  'num_blocks': 4,
+                                  'num_blocks': 2,
                                   #'dropout_probability': 0.6
                                  }
                       ),
@@ -47,6 +47,7 @@ SETTINGS = dict(
                 one_cycle=True,
                 optimizer_kwargs={'weight_decay': 1e-4, },
                 # sim_budget=85, # how many simulations we choose randomly
+                # epochs=400,
                )
 
 ident = hashlib.md5(f'{SETTINGS}'.encode('utf-8')).hexdigest()
@@ -121,7 +122,7 @@ theta = torch.from_numpy(params.astype(np.float32)).to(device=device)
 x = torch.from_numpy(data.astype(np.float32)).to(device=device)
 
 inference = inference.append_simulations(theta=theta, x=x)
-MAX_NUM_EPOCHS = 200
+MAX_NUM_EPOCHS = SETTINGS['epochs'] if 'epochs' in SETTINGS else 200
 
 density_estimator = inference.train(max_num_epochs=MAX_NUM_EPOCHS,
                                     training_batch_size=SETTINGS['bs'] if 'bs' in SETTINGS else 50,

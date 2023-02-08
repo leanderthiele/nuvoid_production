@@ -91,6 +91,19 @@ with np.load(data_fname) as f :
     params = f['params']
     sim_idx = f['sim_idx']
 data = np.einsum('ab,ib->ia', compression_matrix, data/normalization[None, :])
+
+
+# restrict to prior
+nbefore = len(params)
+for k, (lo, hi) in SETTINGS['priors'].items() :
+    param_idx = param_names.index(k)
+    mask = (params[:, param_idx]>=lo) * (params[:, param_idx]<=hi)
+    params = params[mask]
+    data = data[mask]
+    sim_idx = sim_idx[mask]
+nafter = len(params)
+print(f'Retaining {nafter/nbefore * 100} percent of samples after prior')
+
 param_indices = [param_names.index(s) for s in SETTINGS['consider_params']]
 params = params[:, param_indices]
 

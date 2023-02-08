@@ -17,8 +17,8 @@ from read_txt import read_txt
 SETTINGS = dict(
                 method='SNRE',
                 model=('resnet', {
-                                  'hidden_features': 128,
-                                  'num_blocks': 2,
+                                  'hidden_features': 256,
+                                  'num_blocks': 4,
                                   #'dropout_probability': 0.6
                                  }
                       ),
@@ -45,7 +45,7 @@ SETTINGS = dict(
                 chisq_max=1e4,
                 noise=1e-2, # eV
                 one_cycle=True,
-                optimizer_kwargs={'weight_decay': 1e-3, },
+                optimizer_kwargs={'weight_decay': 1e-4, },
                 # sim_budget=85, # how many simulations we choose randomly
                )
 
@@ -122,6 +122,7 @@ x = torch.from_numpy(data.astype(np.float32)).to(device=device)
 
 inference = inference.append_simulations(theta=theta, x=x)
 MAX_NUM_EPOCHS = 200
+
 density_estimator = inference.train(max_num_epochs=MAX_NUM_EPOCHS,
                                     training_batch_size=SETTINGS['bs'] if 'bs' in SETTINGS else 50,
                                     learning_rate=SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4,

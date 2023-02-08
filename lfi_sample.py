@@ -115,8 +115,11 @@ if __name__ == '__main__' :
             lp = sampler.get_log_prob()
             acceptance_rates = sampler.acceptance_fraction
             print(f'acceptance={acceptance_rates}')
-            autocorr_times  = sampler.get_autocorr_time()
-            print(f'autocorr={autocorr_times}')
+            try :
+                autocorr_times  = sampler.get_autocorr_time()
+                print(f'autocorr={autocorr_times}')
+            except emcee.autocorr.AutocorrError :
+                print(f'***WARNING: autocorr failed!')
 
     add_info = {}
     if lp is not None :

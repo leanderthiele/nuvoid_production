@@ -45,7 +45,7 @@ SETTINGS = dict(
                 chisq_max=1e4,
                 noise=1e-2, # eV
                 one_cycle=True,
-                optimizer_kwargs={'weight_decay': 1e-4, },
+                optimizer_kwargs={'weight_decay': 1e-3, },
                 # sim_budget=85, # how many simulations we choose randomly
                )
 
@@ -127,7 +127,7 @@ density_estimator = inference.train(max_num_epochs=MAX_NUM_EPOCHS,
                                     learning_rate=SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4,
                                     scheduler_kwargs=None if 'one_cycle' not in SETTINGS or not SETTINGS['one_cycle']
                                                      else {'max_lr': SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4,
-                                                           'total_steps': MAX_NUM_EPOCHS+1,
+                                                           'total_steps': MAX_NUM_EPOCHS+3,
                                                            'verbose': True},
                                     optimizer_kwargs={} if 'optimizer_kwargs' not in SETTINGS
                                                      else SETTINGS['optimizer_kwargs'],

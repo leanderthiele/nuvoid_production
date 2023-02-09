@@ -3,10 +3,12 @@
 #    [1] kmin
 #    [2] kmax
 #    [3] lmax
+#    [4] AP (True or False)
 
 kmin="$1"
 kmax="$2"
 lmax="$3"
+AP="$4"
 
 codebase='/home/lthiele/nuvoid_production'
 database='/scratch/gpfs/lthiele/nuvoid_production'
@@ -18,8 +20,8 @@ PRODUCTION_TEMPLATE="$codebase/boss_full_shape_ours_production.sbatch"
 
 source utils.sh
 
-wrkdir_trial="$database/full_shape_trial_kmin${kmin}_kmax${kmax}_lmax${lmax}"
-wrkdir_production="$database/full_shape_production_kmin${kmin}_kmax${kmax}_lmax${lmax}"
+wrkdir_trial="$database/full_shape_trial_kmin${kmin}_kmax${kmax}_lmax${lmax}_AP${AP}"
+wrkdir_production="$database/full_shape_production_kmin${kmin}_kmax${kmax}_lmax${lmax}_AP${AP}"
 mkdir -p "$wrkdir_trial" "$wrkdir_production"
 
 # set the parameter file
@@ -28,11 +30,12 @@ cp $PARAMS_TEMPLATE $params_file
 utils::replace $params_file 'kmin' "$kmin"
 utils::replace $params_file 'kmax' "$kmax"
 utils::replace $params_file 'ellmax' "$lmax"
+utils::replace $params_file 'have_AP' "$AP"
 
 # the driver files
-trial_file="$codebase/boss_full_shape_ours_trial_kmin${kmin}_kmax${kmax}_lmax${lmax}.sbatch"
-covmat_file="$codebase/boss_full_shape_ours_covmat_kmin${kmin}_kmax${kmax}_lmax${lmax}.sh"
-production_file="$codebase/boss_full_shape_ours_production_kmin${kmin}_kmax${kmax}_lmax${lmax}.sbatch"
+trial_file="$codebase/boss_full_shape_ours_trial_kmin${kmin}_kmax${kmax}_lmax${lmax}_AP${AP}.sbatch"
+covmat_file="$codebase/boss_full_shape_ours_covmat_kmin${kmin}_kmax${kmax}_lmax${lmax}_AP${AP}.sh"
+production_file="$codebase/boss_full_shape_ours_production_kmin${kmin}_kmax${kmax}_lmax${lmax}_AP${AP}.sbatch"
 
 cp $TRIAL_TEMPLATE $trial_file
 cp $COVMAT_TEMPLATE $covmat_file

@@ -133,7 +133,7 @@ data.write_step=5
 full_shape_spectra.use_P = True
 full_shape_spectra.use_Q = False
 full_shape_spectra.use_B = False
-full_shape_spectra.use_AP = True
+full_shape_spectra.use_AP = <<<have_AP>>>
 full_shape_spectra.lmax = <<<ellmax>>>
 
 ## Sample parameters

@@ -54,7 +54,7 @@ SETTINGS = dict(
                 one_cycle=True,
                 optimizer_kwargs={'weight_decay': 1e-4, },
                 # sim_budget=85, # how many simulations we choose randomly
-                epochs=200,
+                # epochs=600,
                )
 
 # these are the settings that are taken from a pre-trained model

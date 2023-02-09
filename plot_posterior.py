@@ -22,6 +22,8 @@ fsruns = [
           'full_shape_production_kmin0.01_kmax0.2_lmax4',
          ]
 
+DISCARD = 1000
+
 chain_fname_base = argv[1]
 chain_fname_base_root, _ = os.path.splitext(chain_fname_base)
 
@@ -33,8 +35,8 @@ with np.load(chain_fname) as f :
 assert param_names[0] == 'Mnu'
 DIM = len(param_names)
 assert chain.shape[-1] == DIM
-chain = chain.reshape(-1, DIM)
-logprob = logprob.flatten()
+chain = chain[DISCARD:, ...].reshape(-1, DIM)
+logprob = logprob[DISCARD:, ...].flatten()
 
 fig = corner.corner(chain, labels=param_names, plot_datapoints=False, color='black')
 

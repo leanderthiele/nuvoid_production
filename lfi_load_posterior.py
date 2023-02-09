@@ -15,7 +15,7 @@ class Unpickler(pickle.Unpickler) :
         else :
             return super().find_class(module, name)
 
-def load_posterior (fname, device) :
+def load_posterior (fname, device, need_posterior=True) :
     """ returns (settings, posterior) """
 
     settings_str = b''
@@ -26,11 +26,15 @@ def load_posterior (fname, device) :
             if c == b'\n' :
                 break
             settings_str += c
-        posterior = Unpickler(device, f).load()
+        if need_posterior :
+            posterior = Unpickler(device, f).load()
+        else :
+            posterior = None
 
-    # fix some stuff
-    posterior._device = device
-    posterior.potential_fn.device = device
+    if need_posterior :
+        # fix some stuff
+        posterior._device = device
+        posterior.potential_fn.device = device
 
     settings = eval(settings_str)
 

@@ -8,6 +8,12 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
+# the main reason to do this is such that SBI always produces the same validation & training
+# sets (it calls torch.randperm).
+# This is especially important for continued training, because otherwise the training data
+# from previous rounds artificially boost the validation loss.
+torch.manual_seed(137)
+
 import sbi
 import sbi.inference
 from sbi import utils as sbi_utils
@@ -19,7 +25,7 @@ SETTINGS = dict(
                 method='SNRE',
                 model=('resnet', {
                                   'hidden_features': 256,
-                                  'num_blocks': 2,
+                                  'num_blocks': 4,
                                   #'dropout_probability': 0.6
                                  }
                       ),
@@ -48,7 +54,7 @@ SETTINGS = dict(
                 one_cycle=True,
                 optimizer_kwargs={'weight_decay': 1e-4, },
                 # sim_budget=85, # how many simulations we choose randomly
-                # epochs=400,
+                epochs=200,
                )
 
 # these are the settings that are taken from a pre-trained model
@@ -160,11 +166,13 @@ if pretrained_posterior is not None :
     # if pretrained, set the neural net
     inference._neural_net = pretrained_posterior.potential_fn.ratio_estimator
 density_estimator = inference.train(max_num_epochs=MAX_NUM_EPOCHS,
+                                    stop_after_epochs=MAX_NUM_EPOCHS // 5, # the default, 20, is pretty short
                                     training_batch_size=SETTINGS['bs'] if 'bs' in SETTINGS else 50,
                                     learning_rate=SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4,
                                     scheduler_kwargs=None if 'one_cycle' not in SETTINGS or not SETTINGS['one_cycle']
                                                      else {'max_lr': SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4,
                                                            'total_steps': MAX_NUM_EPOCHS+3,
+                                                           'final_div_factor': 50, # estimated empirically as better
                                                            'verbose': True},
                                     optimizer_kwargs={} if 'optimizer_kwargs' not in SETTINGS
                                                      else SETTINGS['optimizer_kwargs'],

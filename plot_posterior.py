@@ -18,8 +18,8 @@ HAVE_PROFILE = True
 filebase = '/tigress/lthiele/nuvoid_production'
 fsroot = '/scratch/gpfs/lthiele/nuvoid_production'
 fsruns = [
-          'full_shape_production_kmin0.03_kmax0.15_lmax2',
-          'full_shape_production_kmin0.01_kmax0.15',
+          'full_shape_production_kmin0.01_kmax0.15_lmax4',
+          'full_shape_production_kmin0.01_kmax0.2_lmax4',
          ]
 
 chain_fname_base = argv[1]

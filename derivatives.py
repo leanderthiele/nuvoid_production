@@ -83,17 +83,39 @@ if __name__ == '__main__' :
     from matplotlib import pyplot as plt
     version = int(argv[1])
     cut = Cut()
-    linregress = LinRegress(version, cut)
+    linregress = LinRegress(version, cut=None)
+
+    xindices = np.arange(len(cut.mask))
+    vlines = [-0.5, ]
+    part_desc = []
+    for zbin in Cut.vsf_zbins :
+        vlines.append(vlines[-1] + len(Cut.vsf_R))
+        part_desc.append(f'vsf z{zbin}')
+    for Rmin in Cut.vgplk_Rbins :
+        for ell in Cut.vgplk_ell :
+            vlines.append(vlines[-1] + len(Cut.vgplk_k))
+            part_desc.append(f'$P_{ell}^{{vg}}$ $R_{{\\sf min}}={Rmin}$')
+    for ell in Cut.plk_ell :
+        vlines.append(vlines[-1] + len(Cut.plk_k))
+        part_desc.append(f'$P_{ell}^{{gg}}$')
+
     print(f'Using {linregress.n_samples} samples')
     print(f'chisq/dof={linregress.chisq}')
 
-    fig, ax = plt.subplots(nrows=2, figsize=(10,10))
+    fig, ax = plt.subplots(nrows=2, figsize=(15,15))
     ax[0].semilogy(np.fabs(linregress.fid_mean))
     for name, dm, p in zip(LinRegress.use_params, linregress.dm_dphi, linregress.prior_ranges) :
         y = dm/np.sqrt(np.diagonal(linregress.cov)) * (p[1] - p[0])
-        ax[1].plot(y, label=name, linestyle='dashed' if 'hod' in name else 'solid')
+        label = name if 'hod' not in name else name[4:]
+        ax[1].plot(y, label=label, linestyle='dashed' if 'hod' in name else 'solid')
     ax[1].set_yscale('symlog')
-    ax[1].legend(ncol=3)
+    ax[1].legend(ncol=4)
+    ymin, _ = ax[1].get_ylim()
+    for vline in vlines :
+        ax[1].axvline(vline, color='grey')
+    for ii, desc in enumerate(part_desc) :
+        ax[1].text(0.5*(vlines[ii]+vlines[ii+1]), ymin, desc,
+                   transform=ax[1].transData, va='bottom', ha='center')
     fig.savefig('derivatives1.pdf', bbox_inches='tight')
 
     fig, ax = plt.subplots(nrows=6, ncols=3, figsize=(10,20))

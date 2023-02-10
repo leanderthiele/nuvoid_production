@@ -24,6 +24,7 @@ fsroot = '/scratch/gpfs/lthiele/nuvoid_production'
 fsruns = [
           'full_shape_production_kmin0.01_kmax0.15_lmax4',
           'full_shape_production_kmin0.01_kmax0.2_lmax4',
+          'full_shape_production_kmin0.01_kmax0.15_lmax2_APFalse',
          ]
 
 DISCARD = 1000
@@ -33,11 +34,14 @@ chain_fname_bases = list(map(os.path.basename, argv[1:]))
 
 # get the first one from corner
 fig = None
+figdummy = None
 a_leg = None
 DIM = None
 param_names = None
+idents = []
 
 color_cycle = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+linestyle_cycle = ['-', '--', ':', '-.', ]
 
 def get_label (fname) :
     """ return a reasonable description of this posterior """
@@ -46,13 +50,15 @@ def get_label (fname) :
     compression_hash = match[2]
     arch_hash = match[3]
 
+    ident = f'{compression_hash[:4]}-{arch_hash[:4]}'
+
     model_fname = f'{filebase}/lfi_model_v{version}_{compression_hash}_{arch_hash}.sbi'
     compression_fname = f'{filebase}/compression_v{version}_{compression_hash}.dat'
 
     model_settings, _ = load_posterior(model_fname, None, need_posterior=False)
     compression_settings = read_txt(compression_fname, 'cut_kwargs:', pyobj=True)
 
-    label = f'$\\tt{{ {compression_hash[:4]}-{arch_hash[:4]} }}$'
+    label = f'$\\tt{{ {ident} }}$'
     label += ', ' + '+'.join(map(lambda s: '$N_v$' if s=='vsf' \
                                       else '$P_\ell^{vg}$' if s=='vgplk' \
                                       else '$P_\ell^{gg}$' if s=='plk' \
@@ -62,7 +68,7 @@ def get_label (fname) :
         label += f', k={compression_settings["kmin"]:.2f}-{compression_settings["kmax"]:.2f}'
     label += f', {model_settings["model"][1]["num_blocks"]}x{model_settings["model"][1]["hidden_features"]}'
 
-    return label
+    return label, ident
 
 
 for chain_idx, chain_fname_base in enumerate(chain_fname_bases) :
@@ -89,19 +95,28 @@ for chain_idx, chain_fname_base in enumerate(chain_fname_bases) :
 
     fig = corner.corner(chain, labels=param_names,
                         plot_datapoints=False, plot_density=False, no_fill_contours=True,
-                        levels=1 - np.exp(-0.5 * np.array([1, 2])**2), # values in array are sigmas
+                        levels=1 - np.exp(-0.5 * np.array([2])**2), # values in array are sigmas
                         color=color_cycle[chain_idx % len(color_cycle)],
+                        smooth1d=0.01, hist_bin_factor=2,
                         fig=fig)
 
+    # to get the patches from which to construct the histograms
+    figdummy = corner.corner(chain, labels=param_names,
+                             plot_datapoints=False, plot_density=False, no_fill_contours=True,
+                             levels=1 - np.exp(-0.5 * np.array([1, 2])**2), # values in array are sigmas
+                             color=color_cycle[chain_idx % len(color_cycle)],
+                             fig=figdummy)
+
     # this is a bit hacky and depends on how corner implements stuff...
-    a = fig.axes[0]
-    p = a.patches[-1] # get the last one
+    p = figdummy.axes[0].patches[-1] # get the last one
     color = p.get_edgecolor()
 
     # this is where we put the legend
     if a_leg is None :
-        a_leg = fig.axes[DIM-1]
-    a_leg.hist(np.random.rand(2), label=get_label(chain_fname_base_root), color=color)
+        a_leg = fig.axes[1]
+    label, ident = get_label(chain_fname_base_root)
+    idents.append(ident)
+    a_leg.hist(np.random.rand(2), label=label, color=color)
 
     if HAVE_PROFILE :
         xedges = p.xy[:, 0][::2]
@@ -116,17 +131,16 @@ for chain_idx, chain_fname_base in enumerate(chain_fname_bases) :
         avg_logprob -= np.max(avg_logprob)
         avg_prob = np.exp(avg_logprob)
         avg_prob *= np.max(yvalues)
-        a.plot(xcenters, avg_prob, linestyle='dotted', color=color)
+        fig.axes[0].plot(xcenters, avg_prob, linestyle='dotted', color=color)
 
 if HAVE_FS :
     # this is a bit hacky and depends on how corner implements stuff...
-    a = fig.axes[0]
-    p = a.patches[-1]
+    p = figdummy.axes[0].patches[-1]
     xedges = p.xy[:, 0][::2]
     yvalues = p.xy[:, 1][1:-1:2]
     N = np.sum(yvalues)
     xcenters = 0.5*(xedges[1:] + xedges[:-1])
-    for fsrun in fsruns :
+    for fsrun_idx, fsrun in enumerate(fsruns) :
         fsbase = f'{fsroot}/{fsrun}'
 
         fs_param_names_files = glob(f'{fsbase}/*.paramnames')
@@ -150,19 +164,20 @@ if HAVE_FS :
         match = re.search('.*(?<=kmin)([0-9,.]*).*(?<=kmax)([0-9,.]*).*', fsrun)
         kmin = float(match[1])
         kmax = float(match[2])
-        l = a.plot(xcenters, h, linestyle='dashed')
+        label = f'EFTofLSS, k={kmin:.2f}-{kmax:.2f}'
+        if 'APFalse' in fsrun :
+            label += ', no AP'
+        l = fig.axes[0].plot(xcenters, h, linestyle=linestyle_cycle[fsrun_idx % len(linestyle_cycle)],
+                             color='grey')
         a_leg.plot(np.random.rand(2), linestyle=l[0].get_linestyle(), color=l[0].get_color(),
-                   label=f'EFTofLSS, k={kmin:.2f}-{kmax:.2f}')
+                   label=label)
 
 # get the legend
 a_leg.set_xlim(10,11)
-a_leg.legend()
+a_leg.legend(frameon=False, fontsize='x-small', loc='upper left')
 
 
 # for ii, name in enumerate(param_names) :
 #     ax[ii, ii].set_title(name)
 
-ident, _ = os.path.splitext(chain_fname_bases[0])
-if len(chain_fname_bases) > 0 :
-    ident = f'{ident}_and{len(chain_fname_bases)-1}'
-fig.savefig(f'{filebase}/{ident}.pdf', bbox_inches='tight')
+fig.savefig(f'{filebase}/posteriors_{"_".join(idents)}.pdf', bbox_inches='tight')

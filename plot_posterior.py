@@ -1,4 +1,7 @@
 from sys import argv
+import os.path
+from glob import glob
+import re
 
 import numpy as np
 from scipy.spatial import Delaunay
@@ -7,60 +10,174 @@ from matplotlib import pyplot as plt
 
 import corner
 
-HAVE_PRIOR = False
+from read_txt import read_txt
+from lfi_load_posterior import load_posterior
+
+# whether we overplot the full-shape posterior from the IAS group
+HAVE_FS = True
+
+# whether we also plot the profile likelihood
+HAVE_PROFILE = False
 
 filebase = '/tigress/lthiele/nuvoid_production'
+fsroot = '/scratch/gpfs/lthiele/nuvoid_production'
+fsruns = [
+          'full_shape_production_kmin0.01_kmax0.15_lmax4',
+          'full_shape_production_kmin0.01_kmax0.2_lmax4',
+          'full_shape_production_kmin0.01_kmax0.15_lmax2_APFalse',
+         ]
 
-version = int(argv[1])
-compression_hash = argv[2]
-mode = argv[3]
-try :
-    extra = argv[4]
-except IndexError :
-    extra = None
-extra_str = f'_{extra}' if extra is not None else ''
+DISCARD = 1000
 
-if mode != 'mcmc' :
-    HAVE_PRIOR = False
+# can pass multiple
+chain_fname_bases = list(map(os.path.basename, argv[1:]))
 
-chain_fname = f'{filebase}/{mode}_chain_v{version}_{compression_hash}{extra_str}.npz'
-with np.load(chain_fname) as f :
-    chain = f['chain']
-    param_names = list(f['param_names'])
-DIM = len(param_names)
-assert chain.shape[-1] == DIM
-chain = chain.reshape(-1, DIM)
+# get the first one from corner
+fig = None
+figdummy = None
+a_leg = None
+DIM = None
+param_names = None
+idents = []
 
-if HAVE_PRIOR :
-    data_fname = f'{filebase}/avg_datavectors_trials.npz'
-    with np.load(data_fname) as f :
-        sim_idx = f['sim_idx']
-        p = f['params']
+color_cycle = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+linestyle_cycle = ['-', '--', ':', '-.', ]
+
+def get_label (fname) :
+    """ return a reasonable description of this posterior """
+    match = re.search('.*v([0-9]*).*([a-f,0-9]{32}).*([a-f,0-9]{32}).*', fname)
+    version = int(match[1])
+    compression_hash = match[2]
+    arch_hash = match[3]
+
+    ident = f'{compression_hash[:4]}-{arch_hash[:4]}'
+
+    model_fname = f'{filebase}/lfi_model_v{version}_{compression_hash}_{arch_hash}.sbi'
+    compression_fname = f'{filebase}/compression_v{version}_{compression_hash}.dat'
+
+    model_settings, _ = load_posterior(model_fname, None, need_posterior=False)
+    compression_settings = read_txt(compression_fname, 'cut_kwargs:', pyobj=True)
+
+    label = f'$\\tt{{ {ident} }}$'
+    label += ', ' + '+'.join(map(lambda s: '$N_v$' if s=='vsf' \
+                                      else '$P_\ell^{vg}$' if s=='vgplk' \
+                                      else '$P_\ell^{gg}$' if s=='plk' \
+                                      else s, \
+                                 filter(lambda s: compression_settings[f'use_{s}'], ['vsf', 'vgplk', 'plk'])))
+    if any(compression_settings[f'use_{s}'] for s in ['vgplk', 'plk', ]) :
+        label += f', k={compression_settings["kmin"]:.2f}-{compression_settings["kmax"]:.2f}'
+    label += f', {model_settings["model"][1]["num_blocks"]}x{model_settings["model"][1]["hidden_features"]}'
+
+    return label, ident
+
+
+for chain_idx, chain_fname_base in enumerate(chain_fname_bases) :
+    chain_fname_base_root, _ = os.path.splitext(chain_fname_base)
+
+    chain_fname = f'{filebase}/{chain_fname_base}'
+    with np.load(chain_fname) as f :
+        chain = f['chain']
+        logprob = f['log_prob']
         param_names_ = list(f['param_names'])
-    param_indices = [param_names_.index(s) for s in param_names]
-    p = p[:, param_indices]
-    _, first_idx = np.unique(sim_idx, return_index=True)
-    NCOSMO = 5
-    p_LCDM = p[first_idx, :][:, :NCOSMO]
-    del_tess_LCDM = Delaunay(p_LCDM)
+    if param_names is None :
+        param_names = param_names_
+    else :
+        assert param_names == param_names_
+    assert param_names[0] == 'Mnu'
+    dim_ = len(param_names)
+    if DIM is None :
+        DIM = dim_
+    else :
+        assert DIM == dim_
+    assert chain.shape[-1] == DIM
+    chain = chain[DISCARD:, ...].reshape(-1, DIM)
+    logprob = logprob[DISCARD:, ...].flatten()
 
-    mu_cov_fname = f'{filebase}/mu_cov_plikHM_TTTEEE_lowl_lowE.dat'
-    mu_LCDM = np.loadtxt(mu_cov_fname, max_rows=1)
-    cov_LCDM = np.loadtxt(mu_cov_fname, skiprows=3)
+    fig = corner.corner(chain, labels=param_names,
+                        plot_datapoints=False, plot_density=False, no_fill_contours=True,
+                        levels=1 - np.exp(-0.5 * np.array([2])**2), # values in array are sigmas
+                        color=color_cycle[chain_idx % len(color_cycle)],
+                        smooth1d=0.01, hist_bin_factor=2,
+                        fig=fig)
 
-    rng = np.random.default_rng(42)
-    LCDM_prior_samples = rng.multivariate_normal(mu_LCDM, cov_LCDM, size=chain.shape[0]*(100000//43440))
-    LCDM_prior_samples = LCDM_prior_samples[del_tess_LCDM.find_simplex(LCDM_prior_samples) != -1]
-    fake_limits = [fct(chain[:, LCDM_prior_samples.shape[1]:], axis=0) for fct in [np.min, np.max]]
-    fake_points = rng.uniform(*fake_limits, size=(LCDM_prior_samples.shape[0], len(fake_limits[0])))
-    prior_samples = np.concatenate([LCDM_prior_samples, fake_points], axis=1)
+    # to get the patches from which to construct the histograms
+    figdummy = corner.corner(chain, labels=param_names,
+                             plot_datapoints=False, plot_density=False, no_fill_contours=True,
+                             levels=1 - np.exp(-0.5 * np.array([1, 2])**2), # values in array are sigmas
+                             color=color_cycle[chain_idx % len(color_cycle)],
+                             fig=figdummy)
 
-fig, ax = plt.subplots(ncols=DIM, nrows=DIM, figsize=(30, 30))
-if HAVE_PRIOR :
-    corner.corner(prior_samples, plot_datapoints=False, fig=fig, color='grey')
-corner.corner(chain, labels=param_names, plot_datapoints=False, fig=fig, color='blue')
+    # this is a bit hacky and depends on how corner implements stuff...
+    p = figdummy.axes[0].patches[-1] # get the last one
+    color = p.get_edgecolor()
 
-for ii, name in enumerate(param_names) :
-    ax[ii, ii].set_title(name)
+    # this is where we put the legend
+    if a_leg is None :
+        a_leg = fig.axes[1]
+    label, ident = get_label(chain_fname_base_root)
+    idents.append(ident)
+    a_leg.hist(np.random.rand(2), label=label, color=color)
 
-fig.savefig(f'{filebase}/{mode}_chain_v{version}_{compression_hash}{extra_str}.pdf', bbox_inches='tight')
+    if HAVE_PROFILE :
+        xedges = p.xy[:, 0][::2]
+        yvalues = p.xy[:, 1][1:-1:2]
+        N = np.sum(yvalues)
+        xcenters = 0.5*(xedges[1:] + xedges[:-1])
+        mnu = chain[:, 0]
+        bin_indices = np.digitize(mnu, xedges) - 1
+        avg_logprob = np.empty(len(xedges)-1)
+        for ii in range(len(xedges)-1) :
+            avg_logprob[ii] = np.mean(logprob[bin_indices==ii])
+        avg_logprob -= np.max(avg_logprob)
+        avg_prob = np.exp(avg_logprob)
+        avg_prob *= np.max(yvalues)
+        fig.axes[0].plot(xcenters, avg_prob, linestyle='dotted', color=color)
+
+if HAVE_FS :
+    # this is a bit hacky and depends on how corner implements stuff...
+    p = figdummy.axes[0].patches[-1]
+    xedges = p.xy[:, 0][::2]
+    yvalues = p.xy[:, 1][1:-1:2]
+    N = np.sum(yvalues)
+    xcenters = 0.5*(xedges[1:] + xedges[:-1])
+    for fsrun_idx, fsrun in enumerate(fsruns) :
+        fsbase = f'{fsroot}/{fsrun}'
+
+        fs_param_names_files = glob(f'{fsbase}/*.paramnames')
+        assert len(fs_param_names_files) == 1
+        Mnu_idx = None
+        with open(fs_param_names_files[0], 'r') as f :
+            for ii, line in enumerate(f) :
+                if line.startswith('M_tot') :
+                    Mnu_idx = ii
+                    break
+        assert Mnu_idx is not None
+        fs_Mnu = np.empty(0)
+
+        fs_txt_files = glob(f'{fsbase}/*.txt')
+        for fs_txt_file in fs_txt_files :
+            repeats, fs_Mnu_ = np.loadtxt(fs_txt_file, usecols=(0, 2+Mnu_idx), unpack=True)
+            fs_Mnu_ = np.repeat(fs_Mnu_, repeats.astype(int))[200:] # discard burn-in
+            fs_Mnu = np.concatenate((fs_Mnu, fs_Mnu_))
+        h, e = np.histogram(fs_Mnu, bins=xedges)
+        h = h.astype(float) * N / np.sum(h)
+        match = re.search('.*(?<=kmin)([0-9,.]*).*(?<=kmax)([0-9,.]*).*', fsrun)
+        kmin = float(match[1])
+        kmax = float(match[2])
+        label = f'EFTofLSS, k={kmin:.2f}-{kmax:.2f}'
+        if 'APFalse' in fsrun :
+            label += ', no AP'
+        l = fig.axes[0].plot(xcenters, h, linestyle=linestyle_cycle[fsrun_idx % len(linestyle_cycle)],
+                             color='grey')
+        a_leg.plot(np.random.rand(2), linestyle=l[0].get_linestyle(), color=l[0].get_color(),
+                   label=label)
+
+# get the legend
+a_leg.set_xlim(10,11)
+a_leg.legend(frameon=False, fontsize='x-small', loc='upper left')
+
+
+# for ii, name in enumerate(param_names) :
+#     ax[ii, ii].set_title(name)
+
+fig.savefig(f'{filebase}/posteriors_{"_".join(idents)}.pdf', bbox_inches='tight')

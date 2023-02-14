@@ -8,12 +8,6 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-# the main reason to do this is such that SBI always produces the same validation & training
-# sets (it calls torch.randperm).
-# This is especially important for continued training, because otherwise the training data
-# from previous rounds artificially boost the validation loss.
-torch.manual_seed(137)
-
 import sbi
 import sbi.inference
 from sbi import utils as sbi_utils
@@ -140,6 +134,7 @@ if 'sim_budget' in SETTINGS :
     mask = np.array([idx in use_indices for idx in sim_idx], dtype=bool)
     data = data[mask]
     params = params[mask]
+    sim_idx = sim_idx[mask]
 
 if 'chisq_max' in SETTINGS :
     with np.load(fiducials_fname) as f :
@@ -150,6 +145,14 @@ if 'chisq_max' in SETTINGS :
     print(f'After chisq_max cut, retaining {np.count_nonzero(mask)/len(mask)*100:.2f} percent of samples')
     data = data[mask]
     params = params[mask]
+    sim_idx = sim_idx[mask]
+
+# split off validation set by cosmology to get truly independent samples
+VAL_FRAC = 0.1
+rng = np.random.default_rng(137)
+uniq_indices = np.unique(sim_idx)
+val_sim_idx = rng.choice(uniq_indices, replace=False, size=int(VAL_FRAC * len(uniq_indices)))
+validation_indices = np.array([idx in val_sim_idx for idx in sim_idx]).nonzero()
 
 if 'noise' in SETTINGS :
     assert 'Mnu' in SETTINGS['consider_params']
@@ -176,6 +179,7 @@ density_estimator = inference.train(max_num_epochs=MAX_NUM_EPOCHS,
                                                            'verbose': True},
                                     optimizer_kwargs={} if 'optimizer_kwargs' not in SETTINGS
                                                      else SETTINGS['optimizer_kwargs'],
+                                    validation_indices=validation_indices,
                                    )
 prior = sbi_utils.BoxUniform(low=torch.Tensor([SETTINGS['priors'][s][0] for s in SETTINGS['consider_params']]),
                              high=torch.Tensor([SETTINGS['priors'][s][1] for s in SETTINGS['consider_params']]),

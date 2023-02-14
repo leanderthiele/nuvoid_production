@@ -61,10 +61,14 @@ cut_kwargs = dict(use_vsf=False, use_vgplk=False, use_plk=True,
                   vsf_zbins=[0,1], vsf_Rmin=30, vsf_Rmax=80,
                   vgplk_Rbins=[30, 40, 50,], vgplk_ell=[0,2],
                   plk_ell=[0,2],
-                  kmin=0.02, kmax=0.15)
+                  kmin=0.02, kmax=0.15,
+                  # have_Cprior=True,
+                 )
 
 linregress = LinRegress(version, cut=None)
-compress = CutCompress(linregress.dm_dphi, linregress.cov, is_nuisance, Cprior=Cprior,
+compress = CutCompress(linregress.dm_dphi, linregress.cov, is_nuisance,
+                       Cprior=Cprior if 'have_Cprior' not in cut_kwargs or cut_kwargs['have_Cprior'] \
+                              else None,
                        **cut_kwargs)
 print(f'{np.count_nonzero(compress.cut.mask)} data vector elements')
 

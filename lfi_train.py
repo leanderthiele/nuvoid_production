@@ -148,10 +148,26 @@ if 'chisq_max' in SETTINGS :
     sim_idx = sim_idx[mask]
 
 # split off validation set by cosmology to get truly independent samples
-VAL_FRAC = 0.1
-rng = np.random.default_rng(137)
-uniq_indices = np.unique(sim_idx)
-val_sim_idx = rng.choice(uniq_indices, replace=False, size=int(VAL_FRAC * len(uniq_indices)))
+#VAL_FRAC = 0.1
+#rng = np.random.default_rng(137)
+#uniq_indices = np.unique(sim_idx)
+#val_sim_idx = rng.choice(uniq_indices, replace=False, size=int(VAL_FRAC * len(uniq_indices)))
+
+# handpick 13 indices for validation, these are well-spaced in Mnu so they make a good validation set
+val_sim_idx = [ 93, # 0.005258850
+                21, # 0.052294624
+                80, # 0.097084754
+                 8, # 0.144120528
+                67, # 0.188910657
+               126, # 0.233700787
+                73, # 0.284991010
+                39, # 0.340535681
+                98, # 0.385325810
+                26, # 0.432361585
+                85, # 0.477151714
+               125, # 0.517687395
+                34, # 0.560468721
+              ]
 validation_indices = np.array([idx in val_sim_idx for idx in sim_idx]).nonzero()
 
 if 'noise' in SETTINGS :

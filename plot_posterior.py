@@ -30,7 +30,20 @@ fsruns = [
 DISCARD = 1000
 
 # can pass multiple
-chain_fname_bases = list(map(os.path.basename, argv[1:]))
+if argv[-1] == 'nofs' :
+    HAVE_FS = False
+    args = argv[1:-1]
+else :
+    args = argv[1:]
+set_colors = []
+for ii, a in enumerate(args) :
+    match = re.search('(.*)\(([a-z]*)\)', a)
+    if match is not None :
+        set_colors.append(match[2])
+        args[ii] = match[1]
+    else :
+        set_colors.append(None)
+chain_fname_bases = list(map(os.path.basename, args))
 
 # get the first one from corner
 fig = None
@@ -50,6 +63,12 @@ def get_label (fname) :
     compression_hash = match[2]
     arch_hash = match[3]
 
+    if 'fid' in fname :
+        match = re.search('.*fid([0-9]*).*', fname)
+        fid_idx = int(match[1])
+    else :
+        fid_idx = None
+
     ident = f'{compression_hash[:4]}-{arch_hash[:4]}'
 
     model_fname = f'{filebase}/lfi_model_v{version}_{compression_hash}_{arch_hash}.sbi'
@@ -67,11 +86,14 @@ def get_label (fname) :
     if any(compression_settings[f'use_{s}'] for s in ['vgplk', 'plk', ]) :
         label += f', k={compression_settings["kmin"]:.2f}-{compression_settings["kmax"]:.2f}'
     label += f', {model_settings["model"][1]["num_blocks"]}x{model_settings["model"][1]["hidden_features"]}'
+    if fid_idx is not None :
+        label += f', fiducial {fid_idx}'
 
     return label, ident
 
 
-for chain_idx, chain_fname_base in enumerate(chain_fname_bases) :
+color_idx = 0
+for chain_fname_base, set_color in zip(chain_fname_bases, set_colors) :
     chain_fname_base_root, _ = os.path.splitext(chain_fname_base)
 
     chain_fname = f'{filebase}/{chain_fname_base}'
@@ -93,10 +115,15 @@ for chain_idx, chain_fname_base in enumerate(chain_fname_bases) :
     chain = chain[DISCARD:, ...].reshape(-1, DIM)
     logprob = logprob[DISCARD:, ...].flatten()
 
+    if set_color is not None :
+        color = set_color
+    else :
+        color = color_cycle[color_idx % len(color_cycle)]
+        color_idx += 1
     fig = corner.corner(chain, labels=param_names,
                         plot_datapoints=False, plot_density=False, no_fill_contours=True,
                         levels=1 - np.exp(-0.5 * np.array([2])**2), # values in array are sigmas
-                        color=color_cycle[chain_idx % len(color_cycle)],
+                        color=color,
                         smooth1d=0.01, hist_bin_factor=2,
                         fig=fig)
 
@@ -104,7 +131,7 @@ for chain_idx, chain_fname_base in enumerate(chain_fname_bases) :
     figdummy = corner.corner(chain, labels=param_names,
                              plot_datapoints=False, plot_density=False, no_fill_contours=True,
                              levels=1 - np.exp(-0.5 * np.array([1, 2])**2), # values in array are sigmas
-                             color=color_cycle[chain_idx % len(color_cycle)],
+                             color=color,
                              fig=figdummy)
 
     # this is a bit hacky and depends on how corner implements stuff...

@@ -37,6 +37,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model_fname_base = argv[1]
 try :
     fiducials_idx = int(argv[2])
+    print(f'***WARNING: Working with fiducial {fiducials_idx} instead of data!')
 except IndexError :
     fiducials_idx = None
 

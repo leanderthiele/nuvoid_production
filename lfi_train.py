@@ -168,7 +168,7 @@ val_sim_idx = [ 93, # 0.005258850
                125, # 0.517687395
                 34, # 0.560468721
               ]
-validation_indices = np.array([idx in val_sim_idx for idx in sim_idx]).nonzero()
+validation_indices = np.array([idx in val_sim_idx for idx in sim_idx]).nonzero()[0]
 
 if 'noise' in SETTINGS :
     assert 'Mnu' in SETTINGS['consider_params']

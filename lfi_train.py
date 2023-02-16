@@ -203,6 +203,9 @@ prior = sbi_utils.BoxUniform(low=torch.Tensor([SETTINGS['priors'][s][0] for s in
                              device=device)
 posterior = inference.build_posterior(density_estimator, prior=prior)
 
+# useful to have this as a record, perhaps for ensembling
+SETTINGS['best_val_log_prob'] = inference._best_val_log_prob
+
 with open(model_fname, 'w') as f :
     f.write(f'{SETTINGS}\n')
 with open(model_fname, 'ab') as f :

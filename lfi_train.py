@@ -19,7 +19,7 @@ SETTINGS = dict(
                 method='SNRE',
                 model=('resnet', {
                                   'hidden_features': 256,
-                                  'num_blocks': 4,
+                                  'num_blocks': 2,
                                   #'dropout_probability': 0.6
                                  }
                       ),
@@ -42,7 +42,7 @@ SETTINGS = dict(
                         'hod_mu_M1': [-40.0, 40.0]
                        },
                 # bs=256,
-                lr=1e-3,
+                lr=3e-3,
                 chisq_max=1e4,
                 noise=1e-2, # eV
                 one_cycle=True,
@@ -168,7 +168,8 @@ val_sim_idx = [ 93, # 0.005258850
                125, # 0.517687395
                 34, # 0.560468721
               ]
-validation_indices = np.array([idx in val_sim_idx for idx in sim_idx]).nonzero()[0]
+validation_mask = np.array([idx in val_sim_idx for idx in sim_idx], dtype=bool)
+validation_indices = validation_mask.nonzero()[0]
 
 if 'noise' in SETTINGS :
     assert 'Mnu' in SETTINGS['consider_params']

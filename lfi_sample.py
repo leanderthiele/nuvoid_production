@@ -32,7 +32,7 @@ if USE_EMCEE :
 
 filebase = '/tigress/lthiele/nuvoid_production'
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cpu' # 'cuda' if torch.cuda.is_available() else 'cpu'
 
 model_fname_base = argv[1]
 try :

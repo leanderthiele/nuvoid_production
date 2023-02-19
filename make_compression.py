@@ -57,18 +57,18 @@ Cprior[:5, :5] = cmb_prior
 Cprior[5, 5] = mnu_sigma**2
 Cprior[6:, 6:] = np.diagflat(np.array(hod_sigmas)**2)
 
-cut_kwargs = dict(use_vsf=False, use_vgplk=False, use_plk=True,
+cut_kwargs = dict(use_vsf=True, use_vgplk=True, use_plk=True,
                   vsf_zbins=[0,1], vsf_Rmin=30, vsf_Rmax=80,
                   vgplk_Rbins=[30, 40, 50,], vgplk_ell=[0,2],
                   plk_ell=[0,2],
-                  kmin=0.02, kmax=0.15,
-                  # have_Cprior=True,
+                  kmin=0.01, kmax=0.15,
+                  have_Cprior=False,
                  )
+hash_str = f'{consider_params}{cut_kwargs}'
+settings_hash = hashlib.md5(hash_str.encode('utf-8')).hexdigest()
 
 linregress = LinRegress(version, cut=None)
-compress = CutCompress(linregress.dm_dphi, linregress.cov, is_nuisance,
-                       Cprior=Cprior if 'have_Cprior' not in cut_kwargs or cut_kwargs['have_Cprior'] \
-                              else None,
+compress = CutCompress(linregress.dm_dphi, linregress.cov, is_nuisance, Cprior=Cprior,
                        **cut_kwargs)
 print(f'{np.count_nonzero(compress.cut.mask)} data vector elements')
 
@@ -79,8 +79,6 @@ C = np.linalg.inv(F)
 print(f'parameters={consider_params}')
 print(f'Fisher approximation covariance matrix =\n{C}')
 
-hash_str = f'{consider_params}{cut_kwargs}'
-settings_hash = hashlib.md5(hash_str.encode('utf-8')).hexdigest()
 print(f'hash={settings_hash}')
 outfile = f'{filebase}/compression_v{version}_{settings_hash}.dat'
 with open(outfile, 'w') as f :

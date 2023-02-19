@@ -25,6 +25,7 @@ fsruns = [
           'full_shape_production_kmin0.01_kmax0.15_lmax4',
           'full_shape_production_kmin0.01_kmax0.2_lmax4',
           'full_shape_production_kmin0.01_kmax0.15_lmax2_APFalse',
+#          'full_shape_production_kmin0.01_kmax0.1_lmax2',
          ]
 
 DISCARD = 1000

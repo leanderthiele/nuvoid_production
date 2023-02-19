@@ -20,7 +20,7 @@ SETTINGS = dict(
                 model=('resnet', {
                                   'hidden_features': 256,
                                   'num_blocks': 2,
-                                  #'dropout_probability': 0.6
+                                  'dropout_probability': 0.2, # this seems to work well, consider playing with it
                                  }
                       ),
                 consider_params=['Mnu', 'hod_log_Mmin', 'hod_mu_Mmin', ],
@@ -42,7 +42,7 @@ SETTINGS = dict(
                         'hod_mu_M1': [-40.0, 40.0]
                        },
                 # bs=256,
-                lr=3e-3,
+                lr=1.5e-3,
                 chisq_max=1e4,
                 noise=1e-2, # eV
                 one_cycle=True,

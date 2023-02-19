@@ -47,12 +47,30 @@ SETTINGS = dict(
                 noise=1e-2, # eV
                 one_cycle=True,
                 optimizer_kwargs={'weight_decay': 1e-4, },
-                # sim_budget=85, # how many simulations we choose randomly
+                # sim_budget=0.66, # fraction of simulations we use (apart from validation set)
                 # epochs=600,
                )
 
 # these are the settings that are taken from a pre-trained model
 arch_settings = ['method', 'model', 'consider_params', 'priors', ]
+
+# handpick 13 indices for validation, these are well-spaced in Mnu so they make a good validation set
+# TODO maybe worth trying to use the contiguous sequence of the first 13 or so simulations, 
+#      as this won't degrade quality for quasi-random sequence even further
+val_sim_idx = [ 93, # 0.005258850
+                21, # 0.052294624
+                80, # 0.097084754
+                 8, # 0.144120528
+                67, # 0.188910657
+               126, # 0.233700787
+                73, # 0.284991010
+                39, # 0.340535681
+                98, # 0.385325810
+                26, # 0.432361585
+                85, # 0.477151714
+               125, # 0.517687395
+                34, # 0.560468721
+              ]
 
 filebase = '/tigress/lthiele/nuvoid_production'
 
@@ -127,10 +145,14 @@ param_indices = [param_names.index(s) for s in SETTINGS['consider_params']]
 params = params[:, param_indices]
 
 if 'sim_budget' in SETTINGS :
-    uniq_indices = np.unique(sim_idx)
-    assert SETTINGS['sim_budget'] <= len(uniq_indices)
+    # these contain only the indices available for training
+    uniq_indices = np.setdiff1d(np.unique(sim_idx), np.array(val_sim_idx))
+    N = int(SETTINGS['sim_budget']*len(uniq_indices))
+    print(f'Simulating budget constraints by using {N} / {len(uniq_indices)} sims for training')
     rng = np.random.default_rng(137)
-    use_indices = rng.choice(uniq_indices, replace=False, size=SETTINGS['sim_budget'])
+    use_indices = rng.choice(uniq_indices, replace=False, size=N)
+    # now add the validation set back
+    use_indices = np.concatenate((use_indices, np.array(val_sim_idx)))
     mask = np.array([idx in use_indices for idx in sim_idx], dtype=bool)
     data = data[mask]
     params = params[mask]
@@ -153,23 +175,11 @@ if 'chisq_max' in SETTINGS :
 #uniq_indices = np.unique(sim_idx)
 #val_sim_idx = rng.choice(uniq_indices, replace=False, size=int(VAL_FRAC * len(uniq_indices)))
 
-# handpick 13 indices for validation, these are well-spaced in Mnu so they make a good validation set
-val_sim_idx = [ 93, # 0.005258850
-                21, # 0.052294624
-                80, # 0.097084754
-                 8, # 0.144120528
-                67, # 0.188910657
-               126, # 0.233700787
-                73, # 0.284991010
-                39, # 0.340535681
-                98, # 0.385325810
-                26, # 0.432361585
-                85, # 0.477151714
-               125, # 0.517687395
-                34, # 0.560468721
-              ]
 validation_mask = np.array([idx in val_sim_idx for idx in sim_idx], dtype=bool)
 validation_indices = validation_mask.nonzero()[0]
+training_indices = (~validation_mask).nonzero()[0]
+print(f'After all the cuts, have {len(training_indices)} training '\
+      f'and {len(validation_indices)} validation samples')
 
 if 'noise' in SETTINGS :
     assert 'Mnu' in SETTINGS['consider_params']

@@ -30,6 +30,10 @@ fsruns = [
 
 DISCARD = 1000
 
+# chains can have different sizes due to different numbers of CPUs used
+# it is most convenient to just subsample them to a common size
+USE_SAMPLES = 16 * 20000
+
 # can pass multiple
 if argv[-1] == 'nofs' :
     HAVE_FS = False
@@ -56,6 +60,7 @@ idents = []
 
 color_cycle = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 linestyle_cycle = ['-', '--', ':', '-.', ]
+rng = np.random.default_rng(42)
 
 def get_label (fname) :
     """ return a reasonable description of this posterior """
@@ -115,6 +120,10 @@ for chain_fname_base, set_color in zip(chain_fname_bases, set_colors) :
     assert chain.shape[-1] == DIM
     chain = chain[DISCARD:, ...].reshape(-1, DIM)
     logprob = logprob[DISCARD:, ...].flatten()
+
+    rnd_indices = rng.choice(len(chain), size=USE_SAMPLES, replace=False)
+    chain = chain[rnd_indices]
+    logprob = logprob[rnd_indices]
 
     if set_color is not None :
         color = set_color

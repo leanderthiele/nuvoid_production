@@ -18,8 +18,8 @@ from lfi_load_posterior import load_posterior
 SETTINGS = dict(
                 method='SNRE',
                 model=('resnet', {
-                                  'hidden_features': 8,
-                                  'num_blocks': 512,
+                                  'hidden_features': 512,
+                                  'num_blocks': 8,
                                   'dropout_probability': 0.7, # this seems to work well, consider playing with it
                                  }
                       ),
@@ -49,29 +49,32 @@ SETTINGS = dict(
                 optimizer_kwargs={'weight_decay': 1e-4, },
                 # sim_budget=0.66, # fraction of simulations we use (apart from validation set)
                 # epochs=600,
+                # val_contiguous=[(0, 10), (127, 128), ] # allow to have contiguous slices for validation, better balancing
+                # one_cycle_kwargs={},
                )
 
 # these are the settings that are taken from a pre-trained model
 arch_settings = ['method', 'model', 'consider_params', 'priors', ]
 
-# handpick 13 indices for validation, these are well-spaced in Mnu so they make a good validation set
-# TODO maybe worth trying to use the contiguous sequence of the first 13 or so simulations, 
-#      as this won't degrade quality for quasi-random sequence even further
-#      looks like the first 11 + the last 2 could also be a good choice to cover Mnu fairly well
-val_sim_idx = [ 93, # 0.005258850
-                21, # 0.052294624
-                80, # 0.097084754
-                 8, # 0.144120528
-                67, # 0.188910657
-               126, # 0.233700787
-                73, # 0.284991010
-                39, # 0.340535681
-                98, # 0.385325810
-                26, # 0.432361585
-                85, # 0.477151714
-               125, # 0.517687395
-                34, # 0.560468721
-              ]
+if 'val_contiguous' in SETTINGS :
+    val_sim_idx = sum((list(range(s, e+1)) for s, e in SETTINGS['val_contiguous']), start=[])
+else :
+    # handpick 13 indices for validation, these are well-spaced in Mnu so they make a good validation set
+    val_sim_idx = [ 93, # 0.005258850
+                    21, # 0.052294624
+                    80, # 0.097084754
+                     8, # 0.144120528
+                    67, # 0.188910657
+                   126, # 0.233700787
+                    73, # 0.284991010
+                    39, # 0.340535681
+                    98, # 0.385325810
+                    26, # 0.432361585
+                    85, # 0.477151714
+                   125, # 0.517687395
+                    34, # 0.560468721
+                  ]
+print(f'Using {len(val_sim_idx)} validation indices: {val_sim_idx}')
 
 filebase = '/tigress/lthiele/nuvoid_production'
 
@@ -204,7 +207,8 @@ density_estimator = inference.train(max_num_epochs=MAX_NUM_EPOCHS,
                                                      else {'max_lr': SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4,
                                                            'total_steps': MAX_NUM_EPOCHS+3,
                                                            'final_div_factor': 50, # estimated empirically as better
-                                                           'verbose': True},
+                                                           'verbose': True,
+                                                           **(SETTINGS['one_cycle_kwargs'] if 'one_cycle_kwargs' in SETTINGS else {})},
                                     optimizer_kwargs={} if 'optimizer_kwargs' not in SETTINGS
                                                      else SETTINGS['optimizer_kwargs'],
                                     validation_indices=validation_indices,

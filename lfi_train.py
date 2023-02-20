@@ -50,6 +50,7 @@ SETTINGS = dict(
                 # sim_budget=0.66, # fraction of simulations we use (apart from validation set)
                 # epochs=600,
                 # val_contiguous=[(0, 10), (127, 128), ] # allow to have contiguous slices for validation, better balancing
+                # one_cycle_kwargs={},
                )
 
 # these are the settings that are taken from a pre-trained model
@@ -206,7 +207,8 @@ density_estimator = inference.train(max_num_epochs=MAX_NUM_EPOCHS,
                                                      else {'max_lr': SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4,
                                                            'total_steps': MAX_NUM_EPOCHS+3,
                                                            'final_div_factor': 50, # estimated empirically as better
-                                                           'verbose': True},
+                                                           'verbose': True,
+                                                           **(SETTINGS['one_cycle_kwargs'] if 'one_cycle_kwargs' in SETTINGS else {})},
                                     optimizer_kwargs={} if 'optimizer_kwargs' not in SETTINGS
                                                      else SETTINGS['optimizer_kwargs'],
                                     validation_indices=validation_indices,

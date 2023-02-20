@@ -18,8 +18,8 @@ from lfi_load_posterior import load_posterior
 SETTINGS = dict(
                 method='SNRE',
                 model=('resnet', {
-                                  'hidden_features': 8,
-                                  'num_blocks': 512,
+                                  'hidden_features': 512,
+                                  'num_blocks': 8,
                                   'dropout_probability': 0.7, # this seems to work well, consider playing with it
                                  }
                       ),

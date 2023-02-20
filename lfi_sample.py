@@ -46,7 +46,7 @@ version = None
 compression_hash = None
 model_ident = None
 model_hashes = []
-for mode_fname_base in model_fname_bases :
+for model_fname_base in model_fname_bases :
     match = re.search('lfi_model_v(\d*)_([a-f,0-9]{32})_([a-f,0-9]{32}).sbi', model_fname_base)
     assert match is not None
     version_ = int(match[1])

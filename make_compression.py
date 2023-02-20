@@ -62,7 +62,8 @@ cut_kwargs = dict(use_vsf=True, use_vgplk=True, use_plk=True,
                   vgplk_Rbins=[30, 40, 50,], vgplk_ell=[0,2],
                   plk_ell=[0,2],
                   kmin=0.01, kmax=0.15,
-                  have_Cprior=False,
+                  # have_Cprior=False,
+                  # do_compression=True,
                  )
 hash_str = f'{consider_params}{cut_kwargs}'
 settings_hash = hashlib.md5(hash_str.encode('utf-8')).hexdigest()

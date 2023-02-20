@@ -18,9 +18,9 @@ from lfi_load_posterior import load_posterior
 SETTINGS = dict(
                 method='SNRE',
                 model=('resnet', {
-                                  'hidden_features': 256,
-                                  'num_blocks': 2,
-                                  'dropout_probability': 0.2, # this seems to work well, consider playing with it
+                                  'hidden_features': 8,
+                                  'num_blocks': 512,
+                                  'dropout_probability': 0.7, # this seems to work well, consider playing with it
                                  }
                       ),
                 consider_params=['Mnu', 'hod_log_Mmin', 'hod_mu_Mmin', ],
@@ -42,7 +42,7 @@ SETTINGS = dict(
                         'hod_mu_M1': [-40.0, 40.0]
                        },
                 # bs=256,
-                lr=1.5e-3,
+                lr=0.8e-3,
                 chisq_max=1e4,
                 noise=1e-2, # eV
                 one_cycle=True,
@@ -57,6 +57,7 @@ arch_settings = ['method', 'model', 'consider_params', 'priors', ]
 # handpick 13 indices for validation, these are well-spaced in Mnu so they make a good validation set
 # TODO maybe worth trying to use the contiguous sequence of the first 13 or so simulations, 
 #      as this won't degrade quality for quasi-random sequence even further
+#      looks like the first 11 + the last 2 could also be a good choice to cover Mnu fairly well
 val_sim_idx = [ 93, # 0.005258850
                 21, # 0.052294624
                 80, # 0.097084754

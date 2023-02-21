@@ -17,7 +17,7 @@ from lfi_load_posterior import load_posterior
 HAVE_FS = True
 
 # whether we also plot the profile likelihood
-HAVE_PROFILE = False
+HAVE_PROFILE = True
 
 filebase = '/tigress/lthiele/nuvoid_production'
 fsroot = '/scratch/gpfs/lthiele/nuvoid_production'
@@ -85,8 +85,8 @@ def get_label (fname) :
 
     label = f'$\\tt{{ {ident} }}$'
     label += ', ' + '+'.join(map(lambda s: '$N_v$' if s=='vsf' \
-                                      else '$P_\ell^{vg}$' if s=='vgplk' \
-                                      else '$P_\ell^{gg}$' if s=='plk' \
+                                        else f'$P_{{{",".join(map(str, sorted(compression_settings["vgplk_ell"])))}}}^{{vg}}$' if s=='vgplk' \
+                                      else f'$P_{{{",".join(map(str, sorted(compression_settings["plk_ell"])))}}}^{{gg}}$' if s=='plk' \
                                       else s, \
                                  filter(lambda s: compression_settings[f'use_{s}'], ['vsf', 'vgplk', 'plk'])))
     if any(compression_settings[f'use_{s}'] for s in ['vgplk', 'plk', ]) :

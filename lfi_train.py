@@ -201,7 +201,7 @@ if pretrained_posterior is not None :
     # if pretrained, set the neural net
     inference._neural_net = pretrained_posterior.potential_fn.ratio_estimator
 density_estimator = inference.train(max_num_epochs=MAX_NUM_EPOCHS,
-                                    stop_after_epochs=MAX_NUM_EPOCHS // 5, # the default, 20, is pretty short
+                                    stop_after_epochs=10000, # don't ever stop, we're doing so well
                                     training_batch_size=SETTINGS['bs'] if 'bs' in SETTINGS else 50,
                                     learning_rate=SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4,
                                     scheduler_kwargs=None if 'one_cycle' not in SETTINGS or not SETTINGS['one_cycle']

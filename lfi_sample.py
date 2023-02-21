@@ -14,7 +14,7 @@ from sbi import utils as sbi_utils
 from read_txt import read_txt
 from lfi_load_posterior import load_posterior
 
-SAMPLE_SHAPE = 20000
+SAMPLE_SHAPE = 10000
 
 #if os.environ['HOSTNAME'] == 'della-gpu.princeton.edu' :
 # TODO this doesn't work

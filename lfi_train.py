@@ -18,9 +18,10 @@ from lfi_load_posterior import load_posterior
 SETTINGS = dict(
                 method='SNRE',
                 model=('resnet', {
-                                  'hidden_features': 512,
+                                  'hidden_features': 1024,
                                   'num_blocks': 8,
                                   'dropout_probability': 0.7, # this seems to work well, consider playing with it
+                                  # 'use_batch_norm': True,
                                  }
                       ),
                 consider_params=['Mnu', 'hod_log_Mmin', 'hod_mu_Mmin', ],
@@ -47,10 +48,10 @@ SETTINGS = dict(
                 noise=1e-2, # eV
                 one_cycle=True,
                 optimizer_kwargs={'weight_decay': 1e-4, },
+                one_cycle_kwargs={'three_phase': True, 'div_factor': 10, 'final_div_factor': 5},
                 # sim_budget=0.66, # fraction of simulations we use (apart from validation set)
                 # epochs=600,
                 # val_contiguous=[(0, 10), (127, 128), ] # allow to have contiguous slices for validation, better balancing
-                # one_cycle_kwargs={},
                )
 
 # these are the settings that are taken from a pre-trained model
@@ -206,7 +207,6 @@ density_estimator = inference.train(max_num_epochs=MAX_NUM_EPOCHS,
                                     scheduler_kwargs=None if 'one_cycle' not in SETTINGS or not SETTINGS['one_cycle']
                                                      else {'max_lr': SETTINGS['lr'] if 'lr' in SETTINGS else 5e-4,
                                                            'total_steps': MAX_NUM_EPOCHS+3,
-                                                           'final_div_factor': 50, # estimated empirically as better
                                                            'verbose': True,
                                                            **(SETTINGS['one_cycle_kwargs'] if 'one_cycle_kwargs' in SETTINGS else {})},
                                     optimizer_kwargs={} if 'optimizer_kwargs' not in SETTINGS

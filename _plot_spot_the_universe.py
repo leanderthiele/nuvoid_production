@@ -61,7 +61,7 @@ for yax, ax in zip(['z', 'DEC', ], [ax_dec, ax_z, ]) :
             if row != nrows - 1 :
                 a.set_xticks([])
             else :
-                a.set_xlabel('RA [degrees]')
+                a.set_xlabel('RA')
             if col != 0 :
                 a.set_yticks([])
             else :
@@ -69,3 +69,12 @@ for yax, ax in zip(['z', 'DEC', ], [ax_dec, ax_z, ]) :
 
 fig_dec.savefig('_plot_spot_the_universe_decslice.pdf', bbox_inches='tight')
 fig_z.savefig('_plot_spot_the_universe_zslice.pdf', bbox_inches='tight')
+
+for a in [ax_dec_f, ax_z_f, ] :
+    for pos in ['top', 'bottom', 'right', 'left', ] :
+        s = a[real_index].spines[pos]
+        plt.setp(s.set(edgecolor='red', linewidth=2)
+
+fig_dec.savefig('_plot_spot_the_universe_revealed_decslice.pdf', bbox_inches='tight')
+fig_z.savefig('_plot_spot_the_universe_revealed_zslice.pdf', bbox_inches='tight')
+

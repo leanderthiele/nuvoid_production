@@ -7,13 +7,17 @@ rng = np.random.default_rng(137)
 
 zmin, zmax = 0.42, 0.70
 
+nrows, ncols = 3, 3
+
 dec0 = 20.0
 delta_dec = 1.0
 
 z0 = 0.6
-delta_z = 0.1
+delta_z = 0.01
 
-fig_kwargs = dict(nrows=3, ncols=3)
+fig_kwargs = dict(nrows=nrows, ncols=ncols, figsize=(10,10),
+                  gridspec_kw=dict(hspace=0, wspace=0))
+scatter_kwargs = dict(s=0.1)
 
 # slices of constant dec
 fig_dec, ax_dec = plt.subplots(**fig_kwargs)
@@ -25,7 +29,7 @@ ax_z_f = ax_z.flatten()
 
 # find the available fiducial lightcones
 fid_lc_files = glob('/scratch/gpfs/lthiele/nuvoid_production/cosmo_fiducial_*/lightcones/c2c93dbc97d64a7c20a043121f7d23d8/lightcone_*.bin')
-print(f'Found {len(fid_lc_files} fiducial lightcones')
+print(f'Found {len(fid_lc_files)} fiducial lightcones')
 
 # choose the lightcones to use
 rnd_indices = rng.choice(len(fid_lc_files), size=len(ax_dec_f)-1, replace=False)
@@ -48,8 +52,20 @@ for lc_file, a_dec, a_z in zip(lc_files, ax_dec_f, ax_z_f) :
     dec_mask = (dec>(dec0-0.5*delta_dec)) * (dec<(dec0+0.5*delta_dec))
     z_mask = (z>(z0-0.5*delta_z)) * (z<(z0+0.5*delta_z))
 
-    a_dec.scatter(ra[dec_mask], z[dec_mask])
-    a_z.scatter(ra[z_mask], dec[z_mask])
+    a_dec.scatter(ra[dec_mask], z[dec_mask], **scatter_kwargs)
+    a_z.scatter(ra[z_mask], dec[z_mask], **scatter_kwargs)
+
+for yax, ax in zip(['z', 'DEC', ], [ax_dec, ax_z, ]) :
+    for row, ax_row in enumerate(ax) :
+        for col, a in enumerate(ax_row) :
+            if row != nrows - 1 :
+                a.set_xticks([])
+            else :
+                a.set_xlabel('RA [degrees]')
+            if col != 0 :
+                a.set_yticks([])
+            else :
+                a.set_ylabel(yax)
 
 fig_dec.savefig('_plot_spot_the_universe_decslice.pdf', bbox_inches='tight')
 fig_z.savefig('_plot_spot_the_universe_zslice.pdf', bbox_inches='tight')

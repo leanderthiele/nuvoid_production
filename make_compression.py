@@ -59,11 +59,11 @@ Cprior[6:, 6:] = np.diagflat(np.array(hod_sigmas)**2)
 
 cut_kwargs = dict(use_vsf=True, use_vgplk=True, use_plk=True,
                   vsf_zbins=[0,1], vsf_Rmin=30, vsf_Rmax=80,
-                  vgplk_Rbins=[30, 40, 50,], vgplk_ell=[0,2],
-                  plk_ell=[0,2],
-                  kmin=0.01, kmax=0.15,
+                  vgplk_Rbins=[30, 40, 50,], vgplk_ell=[0,],
+                  plk_ell=[0,],
+                  kmin=0.01, kmax=0.20,
                   # have_Cprior=False,
-                  # do_compression=True,
+                  # do_compression=False,
                  )
 hash_str = f'{consider_params}{cut_kwargs}'
 settings_hash = hashlib.md5(hash_str.encode('utf-8')).hexdigest()
@@ -75,10 +75,13 @@ print(f'{np.count_nonzero(compress.cut.mask)} data vector elements')
 
 np.set_printoptions(formatter={'all': lambda x: '%+.2e'%x}, linewidth=200, threshold=1000000)
 
-F = compress.compress.F_phi
-C = np.linalg.inv(F)
-print(f'parameters={consider_params}')
-print(f'Fisher approximation covariance matrix =\n{C}')
+if hasattr(compress, 'compress') :
+    F = compress.compress.F_phi
+    C = np.linalg.inv(F)
+    print(f'parameters={consider_params}')
+    print(f'Fisher approximation covariance matrix =\n{C}')
+else :
+    F = None
 
 print(f'hash={settings_hash}')
 outfile = f'{filebase}/compression_v{version}_{settings_hash}.dat'
@@ -87,8 +90,9 @@ with open(outfile, 'w') as f :
     f.write(f'# cut_kwargs:\n{cut_kwargs}\n')
     f.write('# prior covariance:\n')
     np.savetxt(f, Cprior)
-    f.write('# Fisher matrix:\n')
-    np.savetxt(f, F)
+    if F is not None :
+        f.write('# Fisher matrix:\n')
+        np.savetxt(f, F)
     f.write('# normalization:\n')
     np.savetxt(f, linregress.fid_mean)
     f.write('# compression matrix:\n')

@@ -3,7 +3,9 @@ from glob import glob
 import numpy as np
 from matplotlib import pyplot as plt
 
-rng = np.random.default_rng(137)
+plt.style.use('dark_background')
+
+rng = np.random.default_rng(42)
 
 zmin, zmax = 0.42, 0.70
 
@@ -13,11 +15,13 @@ dec0 = 20.0
 delta_dec = 1.0
 
 z0 = 0.6
-delta_z = 0.01
+delta_z = 0.005
 
 fig_kwargs = dict(nrows=nrows, ncols=ncols, figsize=(10,10),
-                  gridspec_kw=dict(hspace=0, wspace=0))
-scatter_kwargs = dict(s=0.1)
+                  gridspec_kw=dict(hspace=0.1, wspace=0.1))
+plot_kwargs = dict(linestyle='none', marker='o', markersize=0.1)
+save_kwargs = dict(bbox_inches='tight', transparent=True)
+fmt = 'png'
 
 # slices of constant dec
 fig_dec, ax_dec = plt.subplots(**fig_kwargs)
@@ -37,7 +41,6 @@ lc_files = [fid_lc_files[ii] for ii in rnd_indices]
 
 # where to insert the real universe
 real_index = rng.integers(len(ax_dec_f))
-print(f'real_index={real_index}')
 
 lc_files.insert(real_index, '/tigress/lthiele/boss_dr12/galaxy_DR12v5_CMASS_North.bin')
 
@@ -52,8 +55,8 @@ for lc_file, a_dec, a_z in zip(lc_files, ax_dec_f, ax_z_f) :
     dec_mask = (dec>(dec0-0.5*delta_dec)) * (dec<(dec0+0.5*delta_dec))
     z_mask = (z>(z0-0.5*delta_z)) * (z<(z0+0.5*delta_z))
 
-    a_dec.scatter(ra[dec_mask], z[dec_mask], **scatter_kwargs)
-    a_z.scatter(ra[z_mask], dec[z_mask], **scatter_kwargs)
+    a_dec.plot(ra[dec_mask], z[dec_mask], **plot_kwargs)
+    a_z.plot(ra[z_mask], dec[z_mask], **plot_kwargs)
 
 for yax, ax in zip(['z', 'DEC', ], [ax_dec, ax_z, ]) :
     for row, ax_row in enumerate(ax) :
@@ -66,15 +69,16 @@ for yax, ax in zip(['z', 'DEC', ], [ax_dec, ax_z, ]) :
                 a.set_yticks([])
             else :
                 a.set_ylabel(yax)
+            for pos in ['top', 'bottom', 'right', 'left', ] :
+                a.spines[pos].set(edgecolor='none')
 
-fig_dec.savefig('_plot_spot_the_universe_decslice.pdf', bbox_inches='tight')
-fig_z.savefig('_plot_spot_the_universe_zslice.pdf', bbox_inches='tight')
+for s, f in zip(['dec', 'z', ], [fig_dec, fig_z, ]) :
+    f.savefig(f'_plot_spot_the_universe_{s}slice.{fmt}', **save_kwargs)
 
 for a in [ax_dec_f, ax_z_f, ] :
     for pos in ['top', 'bottom', 'right', 'left', ] :
         s = a[real_index].spines[pos]
-        plt.setp(s.set(edgecolor='red', linewidth=2)
+        s.set(edgecolor='green', linewidth=4)
 
-fig_dec.savefig('_plot_spot_the_universe_revealed_decslice.pdf', bbox_inches='tight')
-fig_z.savefig('_plot_spot_the_universe_revealed_zslice.pdf', bbox_inches='tight')
-
+for s, f in zip(['dec', 'z', ], [fig_dec, fig_z, ]) :
+    f.savefig(f'_plot_spot_the_universe_revealed_{s}slice.{fmt}', **save_kwargs)

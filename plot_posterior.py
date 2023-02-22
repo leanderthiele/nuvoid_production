@@ -25,6 +25,7 @@ fsruns = [
           'full_shape_production_kmin0.01_kmax0.15_lmax4',
           'full_shape_production_kmin0.01_kmax0.2_lmax4',
           'full_shape_production_kmin0.01_kmax0.15_lmax2_APFalse',
+          'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
 #          'full_shape_production_kmin0.01_kmax0.1_lmax2',
          ]
 
@@ -167,7 +168,7 @@ for chain_fname_base, set_color in zip(chain_fname_bases, set_colors) :
             avg_logprob[ii] = np.mean(logprob[bin_indices==ii])
         avg_logprob -= np.max(avg_logprob)
         avg_prob = np.exp(avg_logprob)
-        avg_prob *= np.max(yvalues)
+        avg_prob *= np.sum(yvalues)/np.sum(avg_prob)
         fig.axes[0].plot(xcenters, avg_prob, linestyle='dotted', color=color)
 
 if HAVE_FS :

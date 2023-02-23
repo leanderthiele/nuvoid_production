@@ -8,6 +8,7 @@ plt.style.use('dark_background')
 
 filebase = '/tigress/lthiele/nuvoid_production'
 target_data = np.loadtxt(f'{filebase}/datavector_CMASS_North.dat')
+xindices = np.arange(len(target_data))
 figsize = (12, 4)
 
 def plot_datavec (ax=None, pretty_ax=True, **plot_kwargs) :
@@ -33,7 +34,6 @@ def plot_datavec (ax=None, pretty_ax=True, **plot_kwargs) :
 
     y /= np.max(np.fabs(y))
 
-    xindices = np.arange(len(target_data))
     vlines = [-0.5, ]
     part_desc = []
     for zbin in Cut.vsf_zbins :

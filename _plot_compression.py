@@ -8,7 +8,7 @@ from read_txt import read_txt
 from _plot_labels import plot_labels
 
 compression_hash = argv[1]
-consider_params = argv[2:]
+consider_params = ['Mnu', 'hod_log_Mmin', ]
 
 filebase = '/tigress/lthiele/nuvoid_production'
 version = 0

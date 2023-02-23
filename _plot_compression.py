@@ -1,5 +1,3 @@
-from sys import argv
-
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -7,7 +5,7 @@ from _plot_datavec import plot_datavec, xindices
 from read_txt import read_txt
 from _plot_labels import plot_labels
 
-compression_hash = argv[1]
+compression_hash = 'faae54307696ccaff07aef77d20e1c1f'
 consider_params = ['Mnu', 'hod_log_Mmin', ]
 
 filebase = '/tigress/lthiele/nuvoid_production'

@@ -1,5 +1,3 @@
-from sys import argv
-
 import numpy as np
 from scipy.stats import wishart as wishart_gen
 from matplotlib import pyplot as plt
@@ -10,7 +8,7 @@ from _plot_datavec import plot_datavec, xindices, figsize
 plt.style.use('dark_background')
 
 version = 0
-compression_hash = argv[1]
+compression_hash = 'faae54307696ccaff07aef77d20e1c1f'
 
 filebase = '/tigress/lthiele/nuvoid_production'
 fiducials_fname = f'{filebase}/datavectors_fiducials_v{version}.npz'
@@ -102,7 +100,7 @@ def do_job(x, all_cov, is_compressed) :
         ax_wishart.plot(c, y, label='expected')
         ax_wishart.set_xlabel('$-2\log p_{\sf Wishart}$')
         ax_wishart.set_ylabel('counts')
-        ax_wishart.legend(loc='upper left', frameon=False)
+        ax_wishart.legend(loc='upper right', frameon=False)
     else :
         fig_wishart, ax_wishart = None, None
 
@@ -113,7 +111,7 @@ for x, C, is_cmp, ident in zip([data, cmp_data, ],
                                [False, True, ],
                                ['raw', 'compressed', ]) :
 
-    fs, fw = do_job(x, is_cmp)
+    fs, fw = do_job(x, C, is_cmp)
 
     for f, stat in zip([fs, fw, ], ['sigma', 'wishart', ]) :
         if f is not None :

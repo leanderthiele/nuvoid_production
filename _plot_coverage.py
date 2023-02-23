@@ -21,14 +21,15 @@ def plot_coverage (fname_base, ax, pretty=True) :
     for param_name, x in zip(param_names, oma.T) :
         x = x[x>=0]
         coverage = np.array([np.count_nonzero(x<e) for e in edges]) / len(x)
-        ax.plot(edges, coverage, label=plot_labels[param_name])
+        ax.plot(edges, coverage, label=plot_labels[param_name],
+                marker='o' if param_name=='Mnu' else None)
 
     ax.axline((0, 0), slope=1, color='grey', linestyle='dashed')
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
 
     if pretty :
-        ax.legend(loc='lower right', frameon=False)
+        ax.legend(loc='center right', frameon=False)
         ax.set_xlabel('confidence level')
         ax.set_ylabel('empirical coverage')
         ax.text(0.05, 0.95, 'underconfident', va='top', ha='left', transform=ax.transAxes)

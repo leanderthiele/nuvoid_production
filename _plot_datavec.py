@@ -53,7 +53,7 @@ def plot_datavec (ax=None, pretty_ax=True, **plot_kwargs) :
 
     ax.set_ylim(-1, 1)
     ax.set_xlim(-0.5, len(target_data)-0.5)
-    ax.plot(xindices, y, linestyle='none', marker='o')
+    ax.plot(xindices, y, linestyle='none', marker='o', **plot_kwargs)
 
     _, ymax = ax.get_ylim()
     for ii, desc in enumerate(part_desc) :

@@ -14,7 +14,7 @@ compression_hash = argv[1]
 
 filebase = '/tigress/lthiele/nuvoid_production'
 fiducials_fname = f'{filebase}/datavectors_fiducials_v{version}.npz'
-compress_fname = f'{filebase}/compression_v{version}_{compression_hash}.npz'
+compress_fname = f'{filebase}/compression_v{version}_{compression_hash}.dat'
 
 with np.load(fiducials_fname) as f :
     data = f['data']
@@ -39,22 +39,29 @@ def do_job(x, is_compressed) :
 
     all_cov = np.cov(x, rowvar=False)
     covs_by_sim = [np.cov(x[sim_idx==ii], rowvar=False) for ii in uniq_sim_idx]
-    covs_by_lc = [np.cov(x[lc_idx=ii] for ii in uniq_lc_idx]
+    covs_by_lc = [np.cov(x[lc_idx==ii], rowvar=False) for ii in uniq_lc_idx]
 
     if is_compressed :
         fig_sigma, ax_sigma = plt.subplots(nrows=1, ncols=1, figsize=(5,3))
     else :
-        fig_sigma, _ax_sigma = plot_datavec()
+        fig_sigma, _ax_sigma = plot_datavec(color='grey', alpha=0.3)
         ax_sigma = _ax_sigma.twinx()
-    sigmas_by_sim = [np.sqrt(np.diagonal(c) for c in covs_by_sim]
-    sigmas_by_lc = [np.sqrt(np.diagonal(c) for c in covs_by_lc]
+    sigmas_by_sim = [np.sqrt(np.diagonal(c)) for c in covs_by_sim]
+    sigmas_by_lc = [np.sqrt(np.diagonal(c)) for c in covs_by_lc]
     avg_sigmas_by_sim = np.mean(np.array(sigmas_by_sim), axis=0)
     avg_sigmas_by_lc = np.mean(np.array(sigmas_by_lc), axis=0)
-    ax_sigma.plot(xindices, avg_sigmas_by_sim/avg_sigmas_by_lc,
+    xi = np.arange(x.shape[1]) if is_compressed else xindices
+    y = avg_sigmas_by_sim/avg_sigmas_by_lc
+    ax_sigma.plot(xi, y,
                   linestyle='none', marker='x')
+    ydelta = np.max(np.fabs(y-1)) + 0.1*np.std(y)
+    ax_sigma.set_ylim(1-ydelta, 1+ydelta)
     ax_sigma.set_ylabel('$\sigma({\sf augments})/\sigma({\sf ICs})$')
+    ax_sigma.yaxis.tick_left()
+    ax_sigma.yaxis.set_label_position('left')
     if is_compressed :
         ax_sigma.set_xlabel('compressed data vector index')
+        ax_sigma.axhline(1, color='grey', linestyle='dashed')
 
     if is_compressed :
         # wishart distribution parameters
@@ -83,6 +90,7 @@ def do_job(x, is_compressed) :
         ax_wishart.plot(c, y, label='expected')
         ax_wishart.set_xlabel('$-2\log p_{\sf Wishart}$')
         ax_wishart.set_ylabel('counts')
+        ax_wishart.legend(loc='upper left', frameon=False)
     else :
         fig_wishart, ax_wishart = None, None
 
@@ -94,6 +102,6 @@ for x, is_cmp, ident in zip([data, cmp_data, ],
 
     fs, fw = do_job(x, is_cmp)
 
-    for f, stat in zip([fs, fw, ], [sigma, wishart, ]) :
+    for f, stat in zip([fs, fw, ], ['sigma', 'wishart', ]) :
         if f is not None :
             f.savefig(f'_plot_augments_{stat}_{ident}.png', bbox_inches='tight', transparent=False)

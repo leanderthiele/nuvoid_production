@@ -8,7 +8,6 @@ from lfi_load_posterior import load_posterior
 from read_txt import read_txt
 
 filebase = '/tigress/lthiele/nuvoid_production'
-fsroot = '/scratch/gpfs/lthiele/nuvoid_production'
 
 class ChainContainer :
     def __init__ (self, chain, logprob, param_names, is_fs, stats_str,
@@ -48,7 +47,7 @@ def get_fs (name) :
                  'b^{(1)}_{G_2}': 'eft_bG2',
                 }
 
-    fsbase = f'{fsroot}/{name}'
+    fsbase = f'{filebase}/{name}'
     param_name_files = glob(f'{fsbase}/*.paramnames')
     assert len(param_name_files) == 1
     param_names = []

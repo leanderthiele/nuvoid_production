@@ -57,7 +57,7 @@ Cprior[:5, :5] = cmb_prior
 Cprior[5, 5] = mnu_sigma**2
 Cprior[6:, 6:] = np.diagflat(np.array(hod_sigmas)**2)
 
-cut_kwargs = dict(use_vsf=True, use_vgplk=True, use_plk=True,
+cut_kwargs = dict(use_vsf=False, use_vgplk=True, use_plk=True,
                   vsf_zbins=[0,1], vsf_Rmin=30, vsf_Rmax=80,
                   vgplk_Rbins=[30, 40, 50,], vgplk_ell=[0,],
                   plk_ell=[0,],

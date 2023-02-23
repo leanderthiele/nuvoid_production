@@ -1,0 +1,183 @@
+from itertools import cycle
+
+import numpy as np
+from matplotlib import pyplot as plt
+
+from _plot_get_chain import get_chain
+from _plot_labels import plot_labels
+from _plot_style import *
+
+Nbins = 50
+
+class Formatter :
+    
+    def __init__ (self,
+                  have_hash=True, have_stats=True, have_kmax=True, have_budget=True,
+                  fs_color='grey', fs_lines=["-","--","-.",":"], fid_color='grey') :
+        self.have_hash = have_hash
+        self.have_stats = have_stats
+        self.have_kmax = have_kmax
+        self.have_budget = have_budget
+        self.fs_color = fs_color
+        self.fs_line_cycle = cycle(fs_lines)
+        self.fid_color = fid_color
+        self.used_fid_label = False
+
+    def __call__ (self, chain_container) :
+
+        plot_kwargs = {}
+        info = []
+
+        if chain_container.is_fs :
+            info.append('EFTofLSS')
+            plot_kwargs['color'] = self.fs_color
+            plot_kwargs['linestyle'] = next(self.fs_line_cycle)
+        if self.have_hash :
+            info.append(f'$\\tt{{ {chain_container.quick_hash} }}$'
+        if self.have_stats :
+            info.append(f'{container.stats_str}')
+        if self.have_kmax :
+            info.append(f'$k_{{\sf max}}={container.kmax:.2f}$')
+        if self.have_budget :
+            info.append(f'budget={container.model_settings["sim_budget"]*100:.0f}%')
+        if container.fid_idx is not None :
+            info.append(f'fid{container.fid_idx}')
+            plot_kwargs['color'] = self.fid_color
+
+        if container.fid_idx is None or not self.used_fid_label :
+            plot_kwargs['label'] = ', '.join(info)
+
+        if container.fid_idx is not None :
+            self.used_fid_label = True
+
+        return plot_kwargs
+
+
+def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True) :
+    
+    chain_containers = [get_chain(run) for run in runs]
+    xmin = min(np.min(c.chain[:, c.param_names.index(param_name)]) for c in chain_containers)
+    xmax = max(np.max(c.chain[:, c.param_names.index(param_name)]) for c in chain_containers)
+    edges = np.linspace(xmin, xmax, num=Nbins+1)
+
+    for chain_container in chain_container :
+        x = chain_container.chain[:, chain_container.param_names.index(param_name)]
+        cdf = np.array([np.count_nonzero(x<e) for e in edges]) / len(x)
+        plot_kwargs = formatter(chain_container)
+        ax.plot(x, cdf, **plot_kwargs)
+
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(0, 1)
+
+    if pretty :
+        ax.set_xlabel(plot_labels[param_name])
+        ax.set_ylabel('$P(<)$')
+        ax.legend(loc='lower right', frameon=False)
+        ax.axline((0, 0), slope=1, color='grey', linestyle='dashed')
+        for percentile in [68, 95, ] :
+            y = percentile / 100
+            ax.axhline(y, color='grey', linestyle='dotted')
+            ax.text(xmax, y, f'{percentile}%', ha='right', va='top', transform=ax.transData)
+
+
+def plot_cdfs (runs, name) :
+    # runs is a list of tuples, where [0] = list of runs,
+    # and [optional 1] = dict(formatter, param_name, title)
+    # or it is just a tuple
+
+    if isinstance(runs, tuple) :
+        runs = [runs, ]
+    fig, ax = plt.subplots(nrows=1, ncols=len(runs), figsize=(5*len(runs), 5))
+    ax = ax.flatten()
+
+    for ii, r, a in enumerate(zip(runs, ax)) :
+        kw = {}
+        title = None
+        if len(r) > 1 :
+            assert len(r) == 2
+            for s in ['formatter', 'param_name', ] :
+                if s in r[1] :
+                    kw[s] = r[1][s]
+            if 'title' in r[1] :
+                title = r[1]['title']
+        plot_cdf(r, a, **kw)
+        if ii != 0 :
+            a.set_ylabel(None)
+        if title is not None :
+            a.set_title(title)
+
+    savefig(fig, f'cdfs_{name}')
+
+
+if __name__ == '__main__' :
+    
+    todo = {
+            'statsvoids':
+            ([
+              'lfi_chain_v0_dd916201431a1b9e5b960c075709f418_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_c62bf69edab920b916fbca0a9cd81acd_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_37715c02cbc4c059eaac51410906acd8_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+             ],
+            ),
+            'statswPgg':
+            ([
+              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_6604ce64512d9fb9575ec29edad6d652_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_0b59eb1479fd93eaeb7262ce1a805d63_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+             ],
+            ),
+            'cmpEFT':
+            ([
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'full_shape_production_kmin0.01_kmax0.15_lmax4',
+              'full_shape_production_kmin0.01_kmax0.2_lmax4',
+             ],
+            ),
+            'quadrupole':
+            ([
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_6aad59fa700e94d8cedc0ec994380573_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'full_shape_production_kmin0.01_kmax0.15_lmax4',
+              'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
+             ],
+            ),
+            'budget':
+            ([
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_ce02407fa6db4df6343a60fe19a6f4c7_emcee.npz',
+             ],
+            ),
+            'kmax':
+            ([
+              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+             ],
+            ),
+            'fid':
+            [
+            ([
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              *[f'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_fid{ii}_emceegpu.npz'
+                for ii in [1208, 1260, 1295, 1944, 2261, 2302, 2378, 3389, 346,
+                           4086, 4819, 4844, 5168, 5259, 5832, 808, 97, ]
+               ],
+             ],
+             {'title': '$k_{\sf max}=0.15$', 'formatter': Formatter(have_kmax=False), }
+            ),
+            ([
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              *[f'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_fid{ii}_emceegpu.npz'
+                for ii in [1837, 1998, 2530, 3066, 3195, 3329, 433, 5350, 5458, ]
+               ],
+             ],
+             {'title': '$k_{\sf max}=0.20$', 'formatter': Formatter(have_kmax=False), }
+            )
+            ],
+           }
+    
+    for name, runs in todo.items() :
+        print(name)
+        plot_cdfs(runs, name)

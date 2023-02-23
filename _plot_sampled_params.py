@@ -4,24 +4,10 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 
+from _plot_labels import plot_labels
+
 plt.style.use('dark_background')
 
-labels = {
-          'Mnu': r'$\Sigma m_\nu$',
-          'Om': r'$\Omega_m$',
-          'Ob': r'$\Omega_b$',
-          'h': r'$h$',
-          'ns': r'$n_s$',
-          '1e9As': r'$10^9 A_s$',
-          'sigma8': r'$\sigma_8$',
-          'Oc': r'$\Omega_{\sf cdm}$',
-          'On': r'$\Omega_\nu$',
-          'S8': r'$S_8$',
-          'logA': r'$\log 10^{10} A_s$',
-          'theta': r'$\theta_{\sf MC}$',
-          'Obh2': r'$\Omega_b h^2$',
-          'Och2': r'$\Omega_{\sf cdm} h^2$',
-         }
 
 fid = {'Mnu': 0.1,
        'Om': 0.3219034692307693,
@@ -79,7 +65,7 @@ def make_plot (consider_params, name) :
                                    s=20, c='red', marker='x')
 
     for row in range(1, D) :
-        ax[row-1, 0].set_ylabel(labels[consider_params[row]])
+        ax[row-1, 0].set_ylabel(plot_labels[consider_params[row]])
         for col in range(1, D-1) :
             ax[row-1, col].set_yticklabels([])
     for col in range(D-1) :

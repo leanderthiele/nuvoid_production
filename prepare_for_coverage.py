@@ -65,4 +65,13 @@ data = data[validation_mask]
 params = params[validation_mask]
 sim_idx = sim_idx[validation_mask]
 
+# shuffle for convenience
+rng = np.random.default_rng(137)
+indices = np.arange(len(sim_idx), dtype=int)
+rng.shuffle(indices)
+
+data = data[indices]
+params = params[indices]
+sim_idx = sim_idx[indices]
+
 np.savez(out_fname, data=data, params=params, sim_idx=sim_idx)

@@ -25,4 +25,7 @@ plot_labels = {
                'hod_transf_eta_sat': r'$\eta_{\sf sat}$',
                'hod_mu_Mmin': r'$\mu(M_{\sf min})$',
                'hod_mu_M1': r'$\mu(M_1)$',
+               'eft_b1': r'$b_1$',
+               'eft_b2': r'$b_2$',
+               'eft_bG2': r'$b_{G2}$',
               }

@@ -4,6 +4,7 @@ import re
 import numpy as np
 
 from lfi_load_posterior import load_posterior
+from read_txt import read_txt
 
 filebase = '/tigress/lthiele/nuvoid_production'
 model_fname_base = argv[1]

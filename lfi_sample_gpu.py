@@ -120,4 +120,8 @@ if True :
 
     np.savez(f'{filebase}/lfi_chain_v{version}_{compression_hash}_{model_ident}'\
              f'{f"_fid{fiducials_idx}" if fiducials_idx is not None else ""}_emceegpu.npz',
-             chain=chain, param_names=consider_params, model_hashes=model_hashes, log_prob=lp)
+             chain=chain.astype(np.float32),
+             log_prob=lp.astype(np.float32),
+             param_names=consider_params,
+             model_hashes=model_hashes,
+            )

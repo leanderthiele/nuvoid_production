@@ -13,7 +13,7 @@ class ChainContainer :
     def __init__ (self, chain, logprob, param_names, is_fs, stats_str,
                         fid_idx=None, quick_hash=None, version=None, compression_hash=None,
                         model_hash=None, model_settings=None, compression_settings=None,
-                        kmax=None) :
+                        kmax=None, lmax=None) :
         self.chain = chain
         self.logprob = logprob
         self.param_names = param_names
@@ -27,6 +27,7 @@ class ChainContainer :
         self.model_settings = model_settings
         self.compression_settings = compression_settings
         self.kmax = kmax
+        self.lmax = lmax
 
 
 def get_fs (name) :
@@ -78,20 +79,20 @@ def get_fs (name) :
         logprob = np.concatenate((logprob, np.repeat(a[:, 1], repeats)[discard:]))
         chain = np.concatenate((chain, np.repeat(a[:, 2:], repeats, axis=0)[discard:]), axis=0)
 
-    stats_str = f'P^{{gg}}_{{{",".join(map(str, range(0, full_shape_spectra.lmax+1, 2)))}}}'
+    stats_str = f'$P^{{gg}}_{{{",".join(map(str, range(0, full_shape_spectra.lmax+1, 2)))}}}$'
 
     return ChainContainer(chain, logprob, param_names, True, stats_str,
-                          kmax=full_shape_spectra.kmaxP[0])
+                          kmax=full_shape_spectra.kmaxP[0], lmax=full_shape_spectra.lmax)
 
 
 
-def get_sbi (name) :
+def get_sbi (fname) :
     
     # for the GPU runs, which are generally shorter, we have optimized the stretch parameter
     # so burn-in is less
-    discard = 100 if 'emceegpu' in name else 1000
+    discard = 100 if 'emceegpu' in fname else 1000
 
-    with np.load(f'{filebase}/{name}') as f :
+    with np.load(f'{filebase}/{fname}') as f :
         chain = f['chain']
         logprob = f['log_prob']
         param_names = list(f['param_names'])
@@ -104,7 +105,7 @@ def get_sbi (name) :
     model_hash = match[3]
 
     # for us during debugging
-    quick_hash = f'{compression_hash[:4]}-{arch_hash[:4]}'
+    quick_hash = f'{compression_hash[:4]}-{model_hash[:4]}'
 
     if 'fid' in fname :
         match = re.search('.*fid([0-9]*).*', fname)
@@ -133,6 +134,11 @@ def get_sbi (name) :
     else :
         kmax = None
 
+    if compression_settings['use_plk'] :
+        lmax = max(compression_settings['plk_ell'])
+    else :
+        lmax = None
+
     return ChainContainer(chain, logprob, param_names, False, stats_str,
                           fid_idx=fid_idx, quick_hash=quick_hash, version=version,
                           compression_hash=compression_hash, model_hash=model_hash,
@@ -144,7 +150,7 @@ def get_chain (name, cache={}) :
     # might be called repeatedly for different plots, so cache the results
 
     if name not in cache :
-        if name.startswith('full_shape')
+        if name.startswith('full_shape') :
             cache[name] = get_fs(name)
         else :
             cache[name] = get_sbi(name)

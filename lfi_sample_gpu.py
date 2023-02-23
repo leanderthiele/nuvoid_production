@@ -17,7 +17,6 @@ from read_txt import read_txt
 from lfi_load_posterior import load_posterior
 
 SAMPLE_SHAPE = 1000
-
 NUM_WALKERS = 64
 
 filebase = '/tigress/lthiele/nuvoid_production'

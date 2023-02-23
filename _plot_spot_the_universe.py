@@ -3,7 +3,7 @@ from glob import glob
 import numpy as np
 from matplotlib import pyplot as plt
 
-plt.style.use('dark_background')
+from _plot_style import *
 
 rng = np.random.default_rng(42)
 
@@ -20,8 +20,6 @@ delta_z = 0.005
 fig_kwargs = dict(nrows=nrows, ncols=ncols, figsize=(10,10),
                   gridspec_kw=dict(hspace=0.1, wspace=0.1))
 plot_kwargs = dict(linestyle='none', marker='o', markersize=0.1)
-save_kwargs = dict(bbox_inches='tight', transparent=True)
-fmt = 'png'
 
 # slices of constant dec
 fig_dec, ax_dec = plt.subplots(**fig_kwargs)
@@ -73,7 +71,7 @@ for yax, ax in zip(['z', 'DEC', ], [ax_dec, ax_z, ]) :
                 a.spines[pos].set(edgecolor='none')
 
 for s, f in zip(['dec', 'z', ], [fig_dec, fig_z, ]) :
-    f.savefig(f'_plot_spot_the_universe_{s}slice.{fmt}', **save_kwargs)
+    savefig(f, f'spot_the_universe_{s}slice')
 
 for a in [ax_dec_f, ax_z_f, ] :
     for pos in ['top', 'bottom', 'right', 'left', ] :
@@ -81,4 +79,4 @@ for a in [ax_dec_f, ax_z_f, ] :
         s.set(edgecolor='green', linewidth=4)
 
 for s, f in zip(['dec', 'z', ], [fig_dec, fig_z, ]) :
-    f.savefig(f'_plot_spot_the_universe_revealed_{s}slice.{fmt}', **save_kwargs)
+    savefig(f, f'spot_the_universe_revealed_{s}slice')

@@ -4,8 +4,7 @@ from matplotlib import pyplot as plt
 
 from read_txt import read_txt
 from _plot_datavec import plot_datavec, xindices, figsize
-
-plt.style.use('dark_background')
+from _plot_style import *
 
 version = 0
 compression_hash = 'faae54307696ccaff07aef77d20e1c1f'
@@ -115,4 +114,4 @@ for x, C, is_cmp, ident in zip([data, cmp_data, ],
 
     for f, stat in zip([fs, fw, ], ['sigma', 'wishart', ]) :
         if f is not None :
-            f.savefig(f'_plot_augments_{stat}_{ident}.png', bbox_inches='tight', transparent=False)
+            savefig(f, f'augments_{stat}_{ident}')

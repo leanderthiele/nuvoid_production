@@ -4,6 +4,7 @@ from matplotlib import pyplot as plt
 from _plot_datavec import plot_datavec, xindices
 from read_txt import read_txt
 from _plot_labels import plot_labels
+from _plot_style import *
 
 compression_hash = 'faae54307696ccaff07aef77d20e1c1f'
 consider_params = ['Mnu', 'hod_log_Mmin', ]
@@ -16,7 +17,7 @@ compress_matrix = read_txt(compress_fname, 'compression matrix:')
 compress_params = read_txt(compress_fname, 'consider_params:', pyobj=True)
 compress_kwargs = read_txt(compress_fname, 'cut_kwargs:', pyobj=True)
 
-fig, ax = plot_datavec(pretty_ax=True)
+fig, ax = plot_datavec(color='grey', alpha=0.3)
 
 for p in consider_params :
     y = compress_matrix[compress_params.index(p)]
@@ -25,4 +26,4 @@ for p in consider_params :
 
 ax.legend(loc='lower left', ncol=len(consider_params), frameon=False) 
 
-fig.savefig(f'_plot_compression_{compression_hash}.png', bbox_inches='tight', transparent=False)
+savefig(fig, f'compression_{compression_hash}')

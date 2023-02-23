@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 from read_txt import read_txt
 from cut import Cut, VGPLK_K, PLK_K
 
-plt.style.use('dark_background')
+from _plot_style import *
 
 filebase = '/tigress/lthiele/nuvoid_production'
 target_data = np.loadtxt(f'{filebase}/datavector_CMASS_North.dat')
@@ -71,4 +71,4 @@ def plot_datavec (ax=None, pretty_ax=True, **plot_kwargs) :
 
 if __name__ == '__main__' :
     fig, ax = plot_datavec()
-    fig.savefig('_plot_datavec.png', bbox_inches='tight', transparent=True)
+    savefig(fig, f'datavec')

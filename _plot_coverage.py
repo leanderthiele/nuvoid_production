@@ -2,8 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from _plot_labels import plot_labels
-
-plt.style.use('dark_background')
+from _plot_style import *
 
 filebase = '/tigress/lthiele/nuvoid_production'
 Nbins = 50
@@ -43,4 +42,4 @@ if __name__ == '__main__' :
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5, 5))
     plot_coverage(f, ax, pretty=True)
 
-    fig.savefig('_plot_coverage.png', bbox_inches='tight', transparent=False)
+    savefig(fig, f'coverage')

@@ -5,9 +5,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from _plot_labels import plot_labels
-
-plt.style.use('dark_background')
-
+from _plot_style import *
 
 fid = {'Mnu': 0.1,
        'Om': 0.3219034692307693,
@@ -77,7 +75,7 @@ def make_plot (consider_params, name) :
         if not a.collections :
             a.axis('off')
 
-    fig.savefig(f'_plot_sampled_params_{name}.png', bbox_inches='tight', transparent=True)
+    savefig(fig, f'sampled_params_{name}')
 
 make_plot(['Mnu', 'Och2', 'Obh2', 'logA', 'ns', 'theta', ], 'CMB')
 make_plot(['Mnu', 'Om', 'Ob', 'sigma8', 'ns', 'h', ], 'phys')

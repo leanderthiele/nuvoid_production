@@ -17,15 +17,16 @@ from lfi_load_posterior import load_posterior
 HAVE_FS = True
 
 # whether we also plot the profile likelihood
-HAVE_PROFILE = True
+HAVE_PROFILE = False
 
 filebase = '/tigress/lthiele/nuvoid_production'
 fsroot = '/scratch/gpfs/lthiele/nuvoid_production'
 fsruns = [
           'full_shape_production_kmin0.01_kmax0.15_lmax4',
-          'full_shape_production_kmin0.01_kmax0.2_lmax4',
-          'full_shape_production_kmin0.01_kmax0.15_lmax2_APFalse',
           'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
+          'full_shape_production_kmin0.01_kmax0.2_lmax4',
+#          'full_shape_production_kmin0.01_kmax0.15_lmax2_APFalse',
+          'full_shape_production_kmin0.01_kmax0.2_lmax0_APTrue',
 #          'full_shape_production_kmin0.01_kmax0.1_lmax2',
          ]
 
@@ -199,10 +200,11 @@ if HAVE_FS :
             fs_Mnu = np.concatenate((fs_Mnu, fs_Mnu_))
         h, e = np.histogram(fs_Mnu, bins=xedges)
         h = h.astype(float) * N / np.sum(h)
-        match = re.search('.*(?<=kmin)([0-9,.]*).*(?<=kmax)([0-9,.]*).*', fsrun)
+        match = re.search('.*(?<=kmin)([0-9,.]*).*(?<=kmax)([0-9,.]*).*(?<=lmax)([0-9]).*', fsrun)
         kmin = float(match[1])
         kmax = float(match[2])
-        label = f'EFTofLSS, k={kmin:.2f}-{kmax:.2f}'
+        lmax = int(match[3])
+        label = f'EFTofLSS $P^{{gg}}_{{{",".join(map(str, range(0, lmax+1, 2)))}}}$, $k$={kmin:.2f}-{kmax:.2f}'
         if 'APFalse' in fsrun :
             label += ', no AP'
         l = fig.axes[0].plot(xcenters, h, linestyle=linestyle_cycle[fsrun_idx % len(linestyle_cycle)],

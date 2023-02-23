@@ -2,7 +2,7 @@ import sys
 from sys import argv
 import re
 import os
-from schwimmbad import MPIPool
+# from schwimmbad import MPIPool
 import emcee
 
 import numpy as np
@@ -16,7 +16,7 @@ from sbi import utils as sbi_utils
 from read_txt import read_txt
 from lfi_load_posterior import load_posterior
 
-SAMPLE_SHAPE = 10000
+SAMPLE_SHAPE = 1000
 
 NUM_WALKERS = 64
 
@@ -90,20 +90,24 @@ for model_fname_base in model_fname_bases :
 
 def logprob (theta) :
     theta = torch.from_numpy(theta.astype(np.float32)).to(device=device)
-    return sum(p.log_prob(theta).cpu().numpy() for p in posteriors) / len(posteriors)
+    return sum(p.potential(theta).cpu().numpy() for p in posteriors) / len(posteriors)
 
-with MPIPool() as pool :
+if True :
+# with MPIPool() as pool :
     
-    if not pool.is_master() :
-        pool.wait()
-        sys.exit(0)
+#     if not pool.is_master() :
+#         pool.wait()
+#         sys.exit(0)
 
     theta_lo = np.array([priors[s][0] for s in consider_params])
     theta_hi = np.array([priors[s][1] for s in consider_params])
     rng = np.random.default_rng(137)
     theta_init = rng.uniform(theta_lo, theta_hi, (NUM_WALKERS, len(consider_params)))
     sampler = emcee.EnsembleSampler(NUM_WALKERS, len(consider_params),
-                                    logprob, pool=pool)
+                                    logprob,
+                                    moves=emcee.moves.StretchMove(a=5.0),
+                                    # pool=pool,
+                                   )
     sampler.run_mcmc(theta_init, SAMPLE_SHAPE, progress=True)
     chain = sampler.get_chain()
     lp = sampler.get_log_prob()
@@ -116,5 +120,5 @@ with MPIPool() as pool :
         print(f'***WARNING: autocorr failed!')
 
     np.savez(f'{filebase}/lfi_chain_v{version}_{compression_hash}_{model_ident}'\
-             f'{f"_fid{fiducials_idx}" if fiducials_idx is not None else ""}{"_emcee" if USE_EMCEE else ""}.npz',
+             f'{f"_fid{fiducials_idx}" if fiducials_idx is not None else ""}_emceegpu.npz',
              chain=chain, param_names=consider_params, model_hashes=model_hashes, log_prob=lp)

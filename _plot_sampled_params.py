@@ -5,23 +5,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from _plot_labels import plot_labels
+from _plot_fiducials import fid
 from _plot_style import *
-
-fid = {'Mnu': 0.1,
-       'Om': 0.3219034692307693,
-       'Ob': 0.049976779230769236,
-       'h': 0.66908459,
-       'ns': 0.9651028379487179,
-       '1e9As': 2.0971604141485533,
-       'logA': 3.043169338959259,
-       'Oc': 0.26952822,
-       'On': 0.00239847,
-       'sigma8': 0.80562700,
-       'Obh2': 0.022373314089749925,
-       'Och2': 0.12066082718669024,
-       'S8': 0.8345189714099627,
-       'theta': 1.041118752752947,
-      }
 
 cosmo_idx = []
 param_names = None

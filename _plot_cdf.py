@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 from _plot_get_chain import get_chain
 from _plot_labels import plot_labels
 from _plot_style import *
+from _plot_fiducials import fid
 
 Nbins = 50
 
@@ -13,7 +14,7 @@ class Formatter :
     
     def __init__ (self,
                   have_hash=False, have_stats=True, have_kmax=False, have_budget=True,
-                  fs_color='white', fs_lines=["-","--","-.",":"], fid_color='grey',
+                  fs_color='white', fs_lines=['-','--','-.',':'], fid_color='white',
                   special=None) :
         self.have_hash = have_hash
         self.have_stats = have_stats
@@ -52,6 +53,7 @@ class Formatter :
         if chain_container.fid_idx is not None :
             self.used_fid_label = True
 
+
         if self.special is not None :
             d = self.special(chain_container)
             for k, v in d.items() :
@@ -81,10 +83,13 @@ def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True) :
         ax.set_ylabel('$P(<)$')
         ax.legend(loc='lower right', frameon=False)
         ax.axline((xmin, 0), (xmax, 1), color='grey', linestyle='dashed')
+        if any(c.fid_idx is not None for c in chain_containers) :
+            ax.axvline(fid[param_name], color='grey', linestyle='dotted')
+            ax.text(fid[param_name], 0, ' fiducial', ha='right', va='bottom', rotatation=90)
         for percentile in [68, 95, ] :
             y = percentile / 100
             ax.axhline(y, color='grey', linestyle='dotted')
-            ax.text(xmax, y, f'{percentile}%', ha='right', va='top', transform=ax.transData)
+            ax.text(xmin, y, f' {percentile}%', ha='left', va='bottom', transform=ax.transData)
 
 
 def plot_cdfs (runs, name) :

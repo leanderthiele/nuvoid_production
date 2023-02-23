@@ -20,15 +20,18 @@ def plot_ranks (ranks_base, ax, pretty=True) :
     xs = [ranks[:, ii].astype(float) / chain_len.astype(float) for ii in range(len(param_names))]
 
     # use Scott's bin width (on average)
-    Nbins = min(np.cbrt(len(x)) / (3.5 * np.std(x)) for x in xs)
+    Nbins = int(min(np.cbrt(len(x)) / (3.5 * np.std(x)) for x in xs))
     edges = np.linspace(0, 1, num=Nbins)
     centers = 0.5 * (edges[1:] + edges[:-1])
 
     for param_name, x in zip(param_names, xs) :
-        ax.hist(x, bins=edges, label=plot_labels[param_name])
+        ax.hist(x, bins=edges, histtype='step', label=plot_labels[param_name])
+
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, None)
 
     if pretty :
-        ax.legend(frameon=False)
+        ax.legend(loc='lower center', frameon=False)
         ax.set_xlabel('fractional position in chain')
         ax.set_ylabel('number of chains')
 

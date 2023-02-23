@@ -8,12 +8,13 @@ plt.style.use('dark_background')
 
 filebase = '/tigress/lthiele/nuvoid_production'
 target_data = np.loadtxt(f'{filebase}/datavector_CMASS_North.dat')
+figsize = (12, 4)
 
 def plot_datavec (ax=None, pretty_ax=True, **plot_kwargs) :
     # plots into [-1, 1] range
     
     if ax is None :
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12,4))
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize)
     else :
         fig = None
 
@@ -70,4 +71,4 @@ def plot_datavec (ax=None, pretty_ax=True, **plot_kwargs) :
 
 if __name__ == '__main__' :
     fig, ax = plot_datavec()
-    fig.savefig('_plot_datavec.png', bbox_inches='tight', transparent=False)
+    fig.savefig('_plot_datavec.png', bbox_inches='tight', transparent=True)

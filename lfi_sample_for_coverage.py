@@ -1,7 +1,7 @@
 from sys import argv
 import re
 import os
-# from schwimmbad import MPIPool
+import os.path
 import emcee
 
 import numpy as np
@@ -52,12 +52,17 @@ def logprob (theta) :
 
 # loop until time is up
 for obs_idx in range(start_idx, 100000) :
-
-    print(f'working on observation index {obs_idx}')
-
+    
     x = validation_data[obs_idx]
     p = validation_params[obs_idx]
     cosmo_idx = validation_sim_idx[obs_idx]
+
+    outfname = f'{outdir}/chain_{obs_idx}_cosmo{cosmo_idx}.npz'
+    if os.path.isfile(outfname) :
+        continue
+
+    print(f'working on observation index {obs_idx}')
+
     posterior = posterior.set_default_x(x)
 
     theta_lo = np.array([priors[s][0] for s in consider_params])
@@ -80,7 +85,7 @@ for obs_idx in range(start_idx, 100000) :
     except emcee.autocorr.AutocorrError :
         print(f'***WARNING: autocorr failed!')
 
-    np.savez(f'{outdir}/chain_{obs_idx}_cosmo{cosmo_idx}.npz',
+    np.savez(outfname,
              chain=chain.astype(np.float32),
              log_prob=lp.astype(np.float32),
              param_names=consider_params,

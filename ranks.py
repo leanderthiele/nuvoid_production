@@ -1,6 +1,7 @@
 from sys import argv
 from glob import glob
 import re
+from tqdm import tqdm
 
 import numpy as np
 
@@ -22,7 +23,7 @@ chain_len = []
 
 chain_fnames = glob(f'{filebase}/{outdir_base}/chain_*.npz')
 
-for chain_fname in chain_fnames :
+for chain_fname in tqdm(chain_fnames) :
     
     match = re.search('chain_(\d*)_cosmo(\d*).npz', chain_fname)
     obs_idx_  = int(match[1])

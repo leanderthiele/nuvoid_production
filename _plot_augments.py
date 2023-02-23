@@ -20,24 +20,36 @@ with np.load(fiducials_fname) as f :
     data = f['data']
     sim_idx = f['sim_idx']
     lc_idx = f['lc_idx']
-uniq_sim_idx = np.unique(sim_idx)
-uniq_lc_idx = np.unique(lc_idx)
-
-# downsample to equal sims and lightcones
-rng = np.random.default_rng(137)
-uniq_lc_idx = rng.choice(uniq_lc_idx, len(uniq_sim_idx), replace=False)
-
-assert len(uniq_sim_idx) == len(uniq_lc_idx)
 
 compress_norm = read_txt(compress_fname, 'normalization:')
 compress_matrix = read_txt(compress_fname, 'compression matrix:')
 
+# first pass to get best covariances
 data = data / compress_norm[None, :]
 cmp_data = np.einsum('ab,ib->ia', compress_matrix, data)
 
-def do_job(x, is_compressed) :
+cov = np.cov(data, rowvar=False)
+cmp_cov = np.cov(cmp_data, rowvar=False)
 
-    all_cov = np.cov(x, rowvar=False)
+uniq_sim_idx = np.unique(sim_idx)
+uniq_lc_idx = np.unique(lc_idx)
+num_avail = np.array([np.count_nonzero(lc_idx==ii) for ii in uniq_lc_idx])
+uniq_lc_idx = uniq_lc_idx[num_avail == len(uniq_sim_idx)]
+
+# downsample to equal sims and lightcones
+rng = np.random.default_rng(137)
+uniq_lc_idx = rng.choice(uniq_lc_idx, len(uniq_sim_idx), replace=False)
+assert len(uniq_sim_idx) == len(uniq_lc_idx)
+
+# choose only the data that have the lightcone index we need
+mask = np.array([ii in uniq_lc_idx for ii in lc_idx])
+data = data[mask]
+cmp_data = cmp_data[mask]
+sim_idx = sim_idx[mask]
+lc_idx = lc_idx[mask]
+
+def do_job(x, all_cov, is_compressed) :
+
     covs_by_sim = [np.cov(x[sim_idx==ii], rowvar=False) for ii in uniq_sim_idx]
     covs_by_lc = [np.cov(x[lc_idx==ii], rowvar=False) for ii in uniq_lc_idx]
 
@@ -96,9 +108,10 @@ def do_job(x, is_compressed) :
 
     return fig_sigma, fig_wishart
 
-for x, is_cmp, ident in zip([data, cmp_data, ],
-                            [False, True, ],
-                            ['raw', 'compressed', ]) :
+for x, C, is_cmp, ident in zip([data, cmp_data, ],
+                               [cov, cmp_cov, ],
+                               [False, True, ],
+                               ['raw', 'compressed', ]) :
 
     fs, fw = do_job(x, is_cmp)
 

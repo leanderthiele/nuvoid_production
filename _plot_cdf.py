@@ -97,8 +97,8 @@ def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True) :
     formatter.reset()
     
     chain_containers = [get_chain(run) for run in runs]
-    xmin = min(np.min(c.chain[:, c.param_names.index(param_name)]) for c in chain_containers)
-    xmax = max(np.max(c.chain[:, c.param_names.index(param_name)]) for c in chain_containers)
+    xmin = min(c.priors[param_name][0] for c in chain_containers)
+    xmax = max(c.priors[param_name][1] for c in chain_containers)
     edges = np.linspace(xmin, xmax, num=Nbins+1)
 
     for chain_container in chain_containers :
@@ -153,7 +153,7 @@ def plot_cdfs (runs, name) :
         if title is not None :
             a.set_title(title)
 
-    savefig(fig, f'cdfs_{name}')
+    savefig(fig, f'cdf_{name}')
 
 
 if __name__ == '__main__' :
@@ -186,8 +186,8 @@ if __name__ == '__main__' :
             ([
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_6aad59fa700e94d8cedc0ec994380573_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'full_shape_production_kmin0.01_kmax0.15_lmax4',
               'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
+              'full_shape_production_kmin0.01_kmax0.15_lmax4',
              ],
              {'formatter': Formatter(special=lambda c: {'linestyle': '-' if c.lmax==0 else '--', }), }
             ),

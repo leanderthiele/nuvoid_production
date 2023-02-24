@@ -13,7 +13,7 @@ class ChainContainer :
     def __init__ (self, chain, logprob, param_names, is_fs, stats_str,
                         fid_idx=None, quick_hash=None, version=None, compression_hash=None,
                         model_hash=None, model_settings=None, compression_settings=None,
-                        kmax=None, lmax=None) :
+                        kmax=None, lmax=None, priors=None) :
         self.chain = chain
         self.logprob = logprob
         self.param_names = param_names
@@ -28,6 +28,7 @@ class ChainContainer :
         self.compression_settings = compression_settings
         self.kmax = kmax
         self.lmax = lmax
+        self.priors = priors
 
 
 def get_fs (name) :
@@ -52,8 +53,10 @@ def get_fs (name) :
     param_name_files = glob(f'{fsbase}/*.paramnames')
     assert len(param_name_files) == 1
     param_names = []
+    param_names_mp = []
     with open(param_name_files[0], 'r') as f :
-        param_names.extend(map_names[l.split()[0]] for l in f)
+        param_names_mp.extend(l.split()[0] for l in f)
+    param_names.extend(map_names[s] for s in param_names_mp)
 
     input_file = f'{fsbase}/log.param'
 
@@ -73,6 +76,8 @@ def get_fs (name) :
     if not hasattr(full_shape_spectra, 'lmax') :
         full_shape_spectra.lmax = 4
 
+    priors = {map_names[p]: data.parameters[p][1:3] for p in param_names_mp}
+
     chain = np.empty((0, len(param_names)))
     logprob = np.empty(0)
     txt_files = glob(f'{fsbase}/*.txt')
@@ -85,7 +90,7 @@ def get_fs (name) :
     stats_str = f'$P^{{gg}}_{{{",".join(map(str, range(0, full_shape_spectra.lmax+1, 2)))}}}$'
 
     return ChainContainer(chain, logprob, param_names, True, stats_str,
-                          kmax=full_shape_spectra.kmaxP[0], lmax=full_shape_spectra.lmax)
+                          kmax=full_shape_spectra.kmaxP[0], lmax=full_shape_spectra.lmax, priors=priors)
 
 
 
@@ -122,6 +127,8 @@ def get_sbi (fname) :
     model_settings, _ = load_posterior(model_fname, None, need_posterior=False)
     compression_settings = read_txt(compression_fname, 'cut_kwargs:', pyobj=True)
 
+    priors = {p: model_settings['priors'][p] for p in param_names}
+
     stats_str = '+'.join( \
         map(lambda s: \
             '$N_v$' if s=='vsf' \
@@ -146,7 +153,7 @@ def get_sbi (fname) :
                           fid_idx=fid_idx, quick_hash=quick_hash, version=version,
                           compression_hash=compression_hash, model_hash=model_hash,
                           model_settings=model_settings, compression_settings=compression_settings,
-                          kmax=kmax, lmax=lmax)
+                          kmax=kmax, lmax=lmax, priors=priors)
 
 
 def get_chain (name, cache={}) :

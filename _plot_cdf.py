@@ -15,8 +15,7 @@ class Formatter :
     def __init__ (self,
                   have_hash=False, have_stats=True, have_kmax=False, have_budget=True,
                   have_vsf_info=False, have_vgplk_info=False,
-                  fs_color='white', fs_lines=['-','--','-.',':'], fid_color='white',
-                  special=None) :
+                  fs_color='white', fid_color='white', special=None) :
         self.have_hash = have_hash
         self.have_stats = have_stats
         self.have_kmax = have_kmax
@@ -24,14 +23,15 @@ class Formatter :
         self.have_vsf_info = have_vsf_info
         self.have_vgplk_info = have_vgplk_info
         self.fs_color = fs_color
-        self.fs_line_cycle = cycle(fs_lines)
         self.fid_color = fid_color
-        self.used_fid_label = False
         self.special = special
+        self.reset()
 
     def reset(self) :
         # reset for new axis
         self.used_fid_label = False
+        self.color_cycle = cycle(default_colors)
+        self.fs_line_cycle = cycle(default_linestyles)
 
     def __call__ (self, chain_container) :
 
@@ -189,7 +189,8 @@ if __name__ == '__main__' :
               'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
               'full_shape_production_kmin0.01_kmax0.15_lmax4',
              ],
-             {'formatter': Formatter(special=lambda c: {'linestyle': '-' if c.lmax==0 else '--', }), }
+             {'formatter': Formatter(special=lambda c: {'linestyle': '-' if c.lmax==0 else '--',
+                                                        'color': default_colors[1 if c.is_fs else 0], }), }
             ),
             'budget':
             ([

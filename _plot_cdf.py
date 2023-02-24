@@ -3,6 +3,8 @@ from itertools import cycle
 import numpy as np
 from matplotlib import pyplot as plt
 
+import corner
+
 from _plot_get_chain import get_chain
 from _plot_labels import plot_labels
 from _plot_style import *
@@ -83,16 +85,18 @@ class Formatter :
         if chain_container.fid_idx is not None :
             self.used_fid_label = True
 
-
         if self.special is not None :
             d = self.special(chain_container)
             for k, v in d.items() :
                 plot_kwargs[k] = v
 
+        if 'color' not in plot_kwargs :
+            plot_kwargs['color'] = next(self.color_cycle)
+
         return plot_kwargs
 
 
-def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True) :
+def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True, want_corner=False) :
 
     formatter.reset()
     
@@ -101,11 +105,31 @@ def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True) :
     xmax = max(c.priors[param_name][1] for c in chain_containers)
     edges = np.linspace(xmin, xmax, num=Nbins+1)
 
+    fig_corner = None
+    ax_corner_legend = None
+
+    if want_corner :
+        assert all(chain_containers[0].param_names == c.param_names for c in chain_containers)
+
     for chain_container in chain_containers :
         x = chain_container.chain[:, chain_container.param_names.index(param_name)]
         cdf = np.array([np.count_nonzero(x<e) for e in edges]) / len(x)
         plot_kwargs = formatter(chain_container)
         ax.plot(edges, cdf, **plot_kwargs)
+
+        if want_corner :
+            fig_corner = corner.corner(chain_container.chain, 
+                                       labels=[plot_labels[p] for p in chain_container.param_names],
+                                       plot_datapoints=False, plot_density=False, no_fill_contours=True,
+                                       levels=1 - np.exp(-0.5 * np.array([2])**2), # values in array are sigmas
+                                       color=plot_kwargs['color'],
+                                       hist_bin_factor=1,
+                                       fig=fig_corner)
+            if ax_corner_legend is None :
+                ax_corner_legend = fig_corner.axes[1]
+            if 'label' in plot_kwargs :
+                ax_corner_legend.hist(np.random.rand(2), label=plot_kwargs['label'], color=plot_kwargs['color'])
+
 
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(0, 1)
@@ -122,6 +146,13 @@ def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True) :
             y = percentile / 100
             ax.axhline(y, color='grey', linestyle='dotted')
             ax.text(xmin, y, f' {percentile}%', ha='left', va='bottom', transform=ax.transData)
+
+    if want_corner :
+        ax_corner_legend.set_xlim(10,11)
+        ax_corner_legend.legend(loc='upper left', frameon=False)
+
+    return fig_corner
+
 
 
 def plot_cdfs (runs, name) :
@@ -142,18 +173,20 @@ def plot_cdfs (runs, name) :
         title = None
         if len(r) > 1 :
             assert len(r) == 2
-            for s in ['formatter', 'param_name', ] :
+            for s in ['formatter', 'param_name', 'want_corner', ] :
                 if s in r[1] :
                     kw[s] = r[1][s]
             if 'title' in r[1] :
                 title = r[1]['title']
-        plot_cdf(r[0], a, **kw)
+        fig_corner = plot_cdf(r[0], a, **kw)
         if ii != 0 :
             a.set_ylabel(None)
         if title is not None :
             a.set_title(title)
 
     savefig(fig, f'cdf_{name}')
+    if fig_corner is not None :
+        savefig(fig_corner, f'posterior_{name}')
 
 
 if __name__ == '__main__' :
@@ -165,6 +198,7 @@ if __name__ == '__main__' :
               'lfi_chain_v0_c62bf69edab920b916fbca0a9cd81acd_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_37715c02cbc4c059eaac51410906acd8_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
              ],
+             {'want_corner': True, }
             ),
             'statswPgg':
             ([

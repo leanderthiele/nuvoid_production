@@ -246,7 +246,8 @@ if __name__ == '__main__' :
               'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
              ],
              {'formatter': Formatter(have_kmax=True,
-                                     special=lambda c: {'linestyle': '-' if c.kmax<0.17 else '--'}), }
+                                     special=lambda c: {'linestyle': '-' if c.kmax<0.17 else '--',
+                                                        'color': default_colors[1 if c.compression_settings['use_vsf'] else 0], }), }
             ),
             'fid':
             [

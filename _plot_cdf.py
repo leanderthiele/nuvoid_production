@@ -244,6 +244,7 @@ if __name__ == '__main__' :
               'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'full_shape_production_kmin0.01_kmax0.2_lmax0_APTrue',
              ],
              {'formatter': Formatter(have_kmax=True,
                                      special=lambda c: {'linestyle': '-' if c.kmax<0.17 else '--',

@@ -42,8 +42,9 @@ class Formatter :
 
         if chain_container.is_fs :
             info.append('EFTofLSS')
-            plot_kwargs['color'] = self.fs_color
-            plot_kwargs['linestyle'] = next(self.fs_line_cycle)
+            if self.fs_color is not None :
+                plot_kwargs['color'] = self.fs_color
+                plot_kwargs['linestyle'] = next(self.fs_line_cycle)
         if self.have_hash and chain_container.quick_hash is not None :
             info.append(f'$\\tt{{ {chain_container.quick_hash} }}$')
         if self.have_stats :
@@ -110,6 +111,8 @@ def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True, wa
 
     if want_corner :
         assert all(chain_containers[0].param_names == c.param_names for c in chain_containers)
+        rng = np.random.default_rng(137) # for downsampling to same length
+        min_len = min(len(c.chain) for c in chain_containers)
 
     for chain_container in chain_containers :
         x = chain_container.chain[:, chain_container.param_names.index(param_name)]
@@ -118,7 +121,11 @@ def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True, wa
         ax.plot(edges, cdf, **plot_kwargs)
 
         if want_corner :
-            fig_corner = corner.corner(chain_container.chain, 
+            # corner doesn't normalize by itself so we need to downsample all chains to the same length
+            corner_chain = chain_container.chain
+            if len(corner_chain) != min_len :
+                corner_chain = rng.choice(corner_chain, size=min_len, replace=False)
+            fig_corner = corner.corner(corner_chain, 
                                        labels=[plot_labels[p] for p in chain_container.param_names],
                                        plot_datapoints=False, plot_density=False, no_fill_contours=True,
                                        levels=1 - np.exp(-0.5 * np.array([2])**2), # values in array are sigmas
@@ -128,7 +135,7 @@ def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True, wa
             if ax_corner_legend is None :
                 ax_corner_legend = fig_corner.axes[1]
             if 'label' in plot_kwargs :
-                ax_corner_legend.hist(np.random.rand(2), label=plot_kwargs['label'], color=plot_kwargs['color'])
+                ax_corner_legend.plot(np.random.rand(2), label=plot_kwargs['label'], color=plot_kwargs['color'])
 
 
     ax.set_xlim(xmin, xmax)
@@ -198,7 +205,6 @@ if __name__ == '__main__' :
               'lfi_chain_v0_c62bf69edab920b916fbca0a9cd81acd_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_37715c02cbc4c059eaac51410906acd8_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
              ],
-             {'want_corner': True, }
             ),
             'statswPgg':
             ([
@@ -289,6 +295,26 @@ if __name__ == '__main__' :
              {'title': '$P^{vg}$ cutting', 'formatter': Formatter(have_vgplk_info=True), }
             ),
             ],
+            'hod':
+            ([
+              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_6604ce64512d9fb9575ec29edad6d652_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_0b59eb1479fd93eaeb7262ce1a805d63_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+             ],
+             {'want_corner': True, 'formatter': Formatter(have_kmax=True), }
+            ),
+            'eftbias':
+            ([
+              'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
+              'full_shape_production_kmin0.01_kmax0.15_lmax4',
+              'full_shape_production_kmin0.01_kmax0.2_lmax0_APTrue',
+              'full_shape_production_kmin0.01_kmax0.2_lmax4',
+             ],
+             {'want_corner': True, 'formatter': Formatter(have_kmax=True, fs_color=None), }
+            ),
            }
     
     for name, runs in todo.items() :

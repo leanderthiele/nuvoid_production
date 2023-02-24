@@ -70,6 +70,9 @@ def get_fs (name) :
         for line in f :
             exec(line)
 
+    if not hasattr(full_shape_spectra, 'lmax') :
+        full_shape_spectra.lmax = 4
+
     chain = np.empty((0, len(param_names)))
     logprob = np.empty(0)
     txt_files = glob(f'{fsbase}/*.txt')
@@ -143,7 +146,7 @@ def get_sbi (fname) :
                           fid_idx=fid_idx, quick_hash=quick_hash, version=version,
                           compression_hash=compression_hash, model_hash=model_hash,
                           model_settings=model_settings, compression_settings=compression_settings,
-                          kmax=kmax)
+                          kmax=kmax, lmax=lmax)
 
 
 def get_chain (name, cache={}) :

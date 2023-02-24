@@ -29,6 +29,10 @@ class Formatter :
         self.used_fid_label = False
         self.special = special
 
+    def reset(self) :
+        # reset for new axis
+        self.used_fid_label = False
+
     def __call__ (self, chain_container) :
 
         plot_kwargs = {}
@@ -44,33 +48,34 @@ class Formatter :
             info.append(f'{chain_container.stats_str}')
         if self.have_kmax and chain_container.kmax is not None :
             info.append(f'$k_{{\sf max}}={chain_container.kmax:.2f}$')
-        if not chain_container.is_fs and self.have_budget and 'sim_budget' in chain_container.model_settings :
-            info.append(f'budget={chain_container.model_settings["sim_budget"]*100:.0f}%')
-        if chain_container.fid_idx is not None :
-            info.append(f'fiducials')
-            plot_kwargs['color'] = self.fid_color
-        if chain_container.compression_settings['use_vsf'] and self.have_vsf_info :
-            if chain_container.compression_settings['vsf_Rmin']==30 :
-                if chain_container.compression_settings['vsf_Rmax']==80 :
-                    info.append('all $R$')
+        if not chain_container.is_fs :
+            if self.have_budget and 'sim_budget' in chain_container.model_settings :
+                info.append(f'budget={chain_container.model_settings["sim_budget"]*100:.0f}%')
+            if chain_container.fid_idx is not None :
+                info.append(f'fiducials')
+                plot_kwargs['color'] = self.fid_color
+            if chain_container.compression_settings['use_vsf'] and self.have_vsf_info :
+                if chain_container.compression_settings['vsf_Rmin']==30 :
+                    if chain_container.compression_settings['vsf_Rmax']==80 :
+                        info.append('all $R$')
+                    else :
+                        info.append(f'$R < {chain_container.compression_settings["vsf_Rmax"]}$')
                 else :
-                    info.append(f'$R < {chain_container.compression_settings["vsf_Rmax"]}$')
-            else :
-                assert chain_container.compression_settings['vsf_Rmax']==80, 'not implemented'
-                info.append(f'$R > {chain_container.compression_settings["vsf_Rmin"]}$')
-            if 0 in chain_container.compression_settings['vsf_zbins'] :
-                if 1 in chain_container.compression_settings['vsf_zbins'] :
-                    info.append('all $z$')
+                    assert chain_container.compression_settings['vsf_Rmax']==80, 'not implemented'
+                    info.append(f'$R > {chain_container.compression_settings["vsf_Rmin"]}$')
+                if 0 in chain_container.compression_settings['vsf_zbins'] :
+                    if 1 in chain_container.compression_settings['vsf_zbins'] :
+                        info.append('all $z$')
+                    else :
+                        info.append('$z < 0.53$')
                 else :
-                    info.append('$z < 0.53$')
-            else :
-                assert 1 in chain_container.compression_settings['vsf_zbins']
-                info.append('$z > 0.53$')
-        if chain_container.compression_settings['use_vgplk'] and self.have_vgplk_info :
-            if len(chain_container.compression_settings['vgplk_Rbins']) ==  3 :
-                info.append('all $R_{\sf min}$')
-            else :
-                info.append(f'$R_{{\sf min}} = {{ ",".join(map(str, sorted(chain_container.compression_settings["vgplk_Rbins"]))) }}$')
+                    assert 1 in chain_container.compression_settings['vsf_zbins']
+                    info.append('$z > 0.53$')
+            if chain_container.compression_settings['use_vgplk'] and self.have_vgplk_info :
+                if len(chain_container.compression_settings['vgplk_Rbins']) ==  3 :
+                    info.append('all $R_{\sf min}$')
+                else :
+                    info.append(f'$R_{{\sf min}} = {{ {",".join(map(str, sorted(chain_container.compression_settings["vgplk_Rbins"])))} }}$')
 
         if chain_container.fid_idx is None or not self.used_fid_label :
             plot_kwargs['label'] = ', '.join(info)
@@ -88,6 +93,8 @@ class Formatter :
 
 
 def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True) :
+
+    formatter.reset()
     
     chain_containers = [get_chain(run) for run in runs]
     xmin = min(np.min(c.chain[:, c.param_names.index(param_name)]) for c in chain_containers)
@@ -110,7 +117,7 @@ def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True) :
         ax.axline((xmin, 0), (xmax, 1), color='grey', linestyle='dashed')
         if any(c.fid_idx is not None for c in chain_containers) :
             ax.axvline(fid[param_name], color='grey', linestyle='dotted')
-            ax.text(fid[param_name], 0, ' fiducial', ha='right', va='bottom', rotatation=90)
+            ax.text(fid[param_name], 0, ' fiducial', ha='right', va='bottom', rotation=90)
         for percentile in [68, 95, ] :
             y = percentile / 100
             ax.axhline(y, color='grey', linestyle='dotted')
@@ -182,7 +189,7 @@ if __name__ == '__main__' :
               'full_shape_production_kmin0.01_kmax0.15_lmax4',
               'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
              ],
-             {'formatter': Formatter(special=lambda c: {'linestyle': '-' if c.lmax==0 else '--', }, }
+             {'formatter': Formatter(special=lambda c: {'linestyle': '-' if c.lmax==0 else '--', }), }
             ),
             'budget':
             ([
@@ -198,7 +205,7 @@ if __name__ == '__main__' :
               'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
              ],
              {'formatter': Formatter(have_kmax=True,
-                                     special=lambda c: {'linestyle': '-' if c.kmax<0.17 else '--'}, }
+                                     special=lambda c: {'linestyle': '-' if c.kmax<0.17 else '--'}), }
             ),
             'fid':
             [
@@ -209,7 +216,9 @@ if __name__ == '__main__' :
                            4086, 4819, 4844, 5168, 5259, 5832, 808, 97, ]
                ],
              ],
-             {'title': '$k_{\sf max}=0.15$', }
+             {'title': '$k_{\sf max}=0.15$',
+              'formatter': Formatter(special=lambda c: {'marker': 'o' if c.fid_idx is None else None})
+             }
             ),
             ([
               'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
@@ -218,7 +227,10 @@ if __name__ == '__main__' :
                            3195, 3329, 3397, 433, 4640, 5350, 5458, 6189, 6579, ]
                ],
              ],
-             {'title': '$k_{\sf max}=0.20$', }
+             {
+              'title': '$k_{\sf max}=0.20$',
+              'formatter': Formatter(special=lambda c: {'marker': 'o' if c.fid_idx is None else None})
+             }
             ),
             ],
             'voidcuts':

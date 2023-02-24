@@ -14,12 +14,15 @@ class Formatter :
     
     def __init__ (self,
                   have_hash=False, have_stats=True, have_kmax=False, have_budget=True,
+                  have_vsf_info=False, have_vgplk_info=False,
                   fs_color='white', fs_lines=['-','--','-.',':'], fid_color='white',
                   special=None) :
         self.have_hash = have_hash
         self.have_stats = have_stats
         self.have_kmax = have_kmax
         self.have_budget = have_budget
+        self.have_vsf_info = have_vsf_info
+        self.have_vgplk_info = have_vgplk_info
         self.fs_color = fs_color
         self.fs_line_cycle = cycle(fs_lines)
         self.fid_color = fid_color
@@ -46,6 +49,28 @@ class Formatter :
         if chain_container.fid_idx is not None :
             info.append(f'fiducials')
             plot_kwargs['color'] = self.fid_color
+        if chain_container.compression_settings['use_vsf'] and self.have_vsf_info :
+            if chain_container.compression_settings['vsf_Rmin']==30 :
+                if chain_container.compression_settings['vsf_Rmax']==80 :
+                    info.append('all $R$')
+                else :
+                    info.append(f'$R < {chain_container.compression_settings["vsf_Rmax"]}$')
+            else :
+                assert chain_container.compression_settings['vsf_Rmax']==80, 'not implemented'
+                info.append(f'$R > {chain_container.compression_settings["vsf_Rmin"]}$')
+            if 0 in chain_container.compression_settings['vsf_zbins'] :
+                if 1 in chain_container.compression_settings['vsf_zbins'] :
+                    info.append('all $z$')
+                else :
+                    info.append('$z < 0.53$')
+            else :
+                assert 1 in chain_container.compression_settings['vsf_zbins']
+                info.append('$z > 0.53$')
+        if chain_container.compression_settings['use_vgplk'] and self.have_vgplk_info :
+            if len(chain_container.compression_settings['vgplk_Rbins']) ==  3 :
+                info.append('all $R_{\sf min}$')
+            else :
+                info.append(f'$R_{{\sf min}} = {{ ",".join(map(str, sorted(chain_container.compression_settings["vgplk_Rbins"]))) }}$')
 
         if chain_container.fid_idx is None or not self.used_fid_label :
             plot_kwargs['label'] = ', '.join(info)
@@ -184,7 +209,7 @@ if __name__ == '__main__' :
                            4086, 4819, 4844, 5168, 5259, 5832, 808, 97, ]
                ],
              ],
-             {'title': '$k_{\sf max}=0.15$', 'formatter': Formatter(have_kmax=False), }
+             {'title': '$k_{\sf max}=0.15$', }
             ),
             ([
               'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
@@ -194,7 +219,28 @@ if __name__ == '__main__' :
                ],
              ],
              {'title': '$k_{\sf max}=0.20$', }
-            )
+            ),
+            ],
+            'voidcuts':
+            [
+            ([
+              'lfi_chain_v0_dd916201431a1b9e5b960c075709f418_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
+              'lfi_chain_v0_143746cce89185cf116f87d452bb85a0_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
+              'lfi_chain_v0_e5debc1a5af3f0cad12b97cd8cdc96a2_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
+              'lfi_chain_v0_183edfcf2596ab34bc6853a235a4312f_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
+              'lfi_chain_v0_4e6cfeceee9d3a96b66af8f3920979b1_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
+             ],
+             {'title': '$N_v$ cutting', 'formatter': Formatter(have_vsf_info=True), }
+            ),
+            (
+             [
+              'lfi_chain_v0_c62bf69edab920b916fbca0a9cd81acd_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
+              'lfi_chain_v0_7e2cfa24acd42dc91e781f0352bcda76_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
+              'lfi_chain_v0_c86572390de35979ffe32343bcae263b_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
+              'lfi_chain_v0_505845a955640811c282b6e9d6912957_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
+             ],
+             {'title': '$P^{vg}$ cutting', 'formatter': Formatter(have_vgplk_info=True), }
+            ),
             ],
            }
     

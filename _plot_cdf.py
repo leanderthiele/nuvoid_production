@@ -247,7 +247,8 @@ if __name__ == '__main__' :
              ],
              {'formatter': Formatter(have_kmax=True,
                                      special=lambda c: {'linestyle': '-' if c.kmax<0.17 else '--',
-                                                        'color': default_colors[1 if c.compression_settings['use_vsf'] else 0], }), }
+                                                        'color': 'white' if c.is_fs else \
+                                                                 default_colors[1 if c.compression_settings['use_vsf'] else 0], }), }
             ),
             'fid':
             [

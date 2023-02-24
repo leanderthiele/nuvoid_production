@@ -52,7 +52,7 @@ def make_plot (consider_params, name) :
         for col in range(1, D-1) :
             ax[row-1, col].set_yticklabels([])
     for col in range(D-1) :
-        ax[-1, col].set_xlabel(labels[consider_params[col]])
+        ax[-1, col].set_xlabel(plot_labels[consider_params[col]])
         for row in range(0, D-2) :
             ax[row, col].set_xticklabels([])
 

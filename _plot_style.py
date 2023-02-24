@@ -4,10 +4,11 @@ from matplotlib import pyplot as plt
 from itertools import cycle
 
 plt.style.use('dark_background')
+# plt.rcParams.update({'font.size': 20})
 
 def savefig (fig, name) :
     fmt = 'png'
-    kwargs = dict(bbox_inches='tight', transparent=False)
+    kwargs = dict(bbox_inches='tight', transparent=True)
     outdir = '.'
 
     fig.savefig(f'{outdir}/_plot_{name}.{fmt}', **kwargs)

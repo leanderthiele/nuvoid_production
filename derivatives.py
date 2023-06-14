@@ -33,7 +33,7 @@ class LinRegress :
                   'hod_alpha', 'hod_transf_eta_cen', 'hod_transf_eta_sat', 'hod_mu_Mmin', 'hod_mu_M1',
                  ]
 
-    def __init__ (self, version, cut=None) :
+    def __init__ (self, version, cut=None, deriv_fraction=None) :
         """ the cut argument is only useful for easy diagnostic output,
             we probably don't want to use it in production
         """
@@ -48,6 +48,13 @@ class LinRegress :
             param_names = list(f['param_names'])
         with np.load(fiducials_fname) as f :
             fiducials_data = f['data']
+
+        if deriv_fraction is not None :
+            rng = np.random.default_rng()
+            indices = rng.choice(len(derivatives_data), int(deriv_fraction*len(derivatives_data)), replace=False)
+            derivatives_data = derivatives_data[indices]
+            derivatives_params = derivatives_params[indices]
+            derivatives_nsims = derivatives_nsims[indices]
 
         self.n_samples = derivatives_data.shape[0]
 

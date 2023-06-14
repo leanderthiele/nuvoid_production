@@ -17,7 +17,7 @@ class Formatter :
     def __init__ (self,
                   have_hash=False, have_stats=True, have_kmax=False, have_budget=True,
                   have_vsf_info=False, have_vgplk_info=False,
-                  fs_color='white', fid_color='white', special=None) :
+                  fs_color=black, fid_color=black, special=None) :
         self.have_hash = have_hash
         self.have_stats = have_stats
         self.have_kmax = have_kmax
@@ -210,7 +210,7 @@ if __name__ == '__main__' :
             ([
               'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_6604ce64512d9fb9575ec29edad6d652_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_0b59eb1479fd93eaeb7262ce1a805d63_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_fe169f0711650a7bc28866af6738b56d_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
              ],
             ),
@@ -248,7 +248,7 @@ if __name__ == '__main__' :
              ],
              {'formatter': Formatter(have_kmax=True,
                                      special=lambda c: {'linestyle': '-' if c.kmax<0.17 else '--',
-                                                        'color': 'white' if c.is_fs else \
+                                                        'color': black if c.is_fs else \
                                                                  default_colors[1 if c.compression_settings['use_vsf'] else 0], }), }
             ),
             'fid':

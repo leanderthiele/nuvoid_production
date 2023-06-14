@@ -20,11 +20,16 @@ def plot_ranks (ranks_base, ax, pretty=True) :
 
     # use Scott's bin width (on average)
     Nbins = int(min(np.cbrt(len(x)) / (3.5 * np.std(x)) for x in xs))
-    edges = np.linspace(0, 1, num=Nbins)
+    edges = np.linspace(0, 1, num=Nbins+1)
     centers = 0.5 * (edges[1:] + edges[:-1])
 
     for param_name, x in zip(param_names, xs) :
         ax.hist(x, bins=edges, histtype='step', label=plot_labels[param_name])
+
+    # indicate 2-sigma interval
+    nsigma = 2
+    avg = len(xs[0]) / Nbins
+    ax.fill_between([0, 1], avg-nsigma*np.sqrt(avg), avg+nsigma*np.sqrt(avg), alpha=0.3, color='grey')
 
     ax.set_xlim(0, 1)
     ax.set_ylim(0, None)

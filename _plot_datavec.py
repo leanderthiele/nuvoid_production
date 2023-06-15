@@ -8,8 +8,9 @@ from _plot_style import *
 
 filebase = '/tigress/lthiele/nuvoid_production'
 target_data = np.loadtxt(f'{filebase}/datavector_CMASS_North.dat')
+target_data_wweight = np.loadtxt(f'{filebase}/datavector_CMASS_North_wweight.dat')
 xindices = np.arange(len(target_data))
-figsize = (12, 4)
+figsize = (12, 3)
 
 # these are the best fit trial indices (averaged) for the cut data vectors
 # fit to plk and vsf only
@@ -25,8 +26,8 @@ vsf_R_ticks = [40, 60, ]
 plk_k_ticks = [0.05, 0.15]
 
 # where the axis labels go (hacky!)
-vsf_R_labels = (55, 'R [Mpc/h]')
-plk_k_labels = (0.1,'k [h/Mpc]')
+vsf_R_labels = (55, '$R$ [Mpc/$h$]')
+plk_k_labels = (0.1,'$k$ [$h$/Mpc]')
 
 def plot_datavec (ax=None, pretty_ax=True, have_bf=False, have_xticks=False, **plot_kwargs) :
     # plots into [-1, 1] range
@@ -59,6 +60,9 @@ def plot_datavec (ax=None, pretty_ax=True, have_bf=False, have_xticks=False, **p
 
     y = transf_datavec(target_data)
 
+    # FIXME
+    yweight = transf_datavec(target_data_wweight)
+
     vlines = [-0.5, ]
     part_desc = []
     for zbin in Cut.vsf_zbins :
@@ -78,6 +82,10 @@ def plot_datavec (ax=None, pretty_ax=True, have_bf=False, have_xticks=False, **p
 
     ax.set_ylim(-1, 1)
     ax.set_xlim(-0.5, len(target_data)-0.5)
+
+    # FIXME
+    ax.plot(xindices, yweight, linestyle='none', marker='v', label='CMASS NGC', **plot_kwargs)
+
     ax.plot(xindices, y, linestyle='none', marker='x', label='CMASS NGC', **plot_kwargs)
 
     if have_bf :
@@ -120,7 +128,7 @@ def plot_datavec (ax=None, pretty_ax=True, have_bf=False, have_xticks=False, **p
         ax.set_xticks([x[1] for x in tick_locs])
         ax.set_xticklabels([str(x[0]) for x in tick_locs])
         for l, loc in label_locs :
-            ax.text(loc, ax.get_ylim()[0]-0.15, l, transform=ax.transData, va='top', ha='center')
+            ax.text(loc, ax.get_ylim()[0]-0.2, l, transform=ax.transData, va='top', ha='center')
 
 
         

@@ -43,11 +43,13 @@ class PLKCalc :
         self.pos_rand = NBL.transform.SkyToCartesian(ra_rand, dec_rand, self.z_rand, cosmo=self.cosmo)
 
 
-    def compute_from_arrays(self, ra_gals, dec_gals, z_gals) :
+    def compute_from_arrays(self, ra_gals, dec_gals, z_gals, w_gals=None) :
         zselect = (z_gals>PLKCalc.zmin) * (z_gals<PLKCalc.zmax)
         ra_gals = ra_gals[zselect]
         dec_gals = dec_gals[zselect]
         z_gals = z_gals[zselect]
+        if w_gals is not None :
+            w_gals = w_gals[zselect]
 
         # everyone needs to compute the same for this
         ng_of_z = self.nz(z_gals)
@@ -57,6 +59,8 @@ class PLKCalc :
         ra_gals = ra_gals[lo:hi]
         dec_gals = dec_gals[lo:hi]
         z_gals = z_gals[lo:hi]
+        if w_gals is not None :
+            w_gals = w_gals[lo:hi]
 
         nbar_gals = ng_of_z(z_gals)
         nbar_rand = ng_of_z(self.z_rand)
@@ -68,9 +72,11 @@ class PLKCalc :
 
 
         cat_gals = NBL.ArrayCatalog({'Position': pos_gals, 'NZ': nbar_gals,
-                                     'WEIGHT': np.ones(len(z_gals)), 'WEIGHT_FKP': fkp_gals})
+                                     'WEIGHT': np.ones(len(z_gals)) if w_gals is None else w_gals,
+                                     'WEIGHT_FKP': fkp_gals})
         cat_rand = NBL.ArrayCatalog({'Position': self.pos_rand, 'NZ': nbar_rand,
-                                     'WEIGHT': np.ones(len(self.z_rand)), 'WEIGHT_FKP': fkp_rand})
+                                     'WEIGHT': np.ones(len(self.z_rand)),
+                                     'WEIGHT_FKP': fkp_rand})
 
         cat_fkp = NBL.FKPCatalog(cat_gals, cat_rand)
         mesh = cat_fkp.to_mesh(Nmesh=PLKCalc.Nmesh, nbar='NZ', fkp_weight='WEIGHT_FKP', comp_weight='WEIGHT',
@@ -84,10 +90,11 @@ class PLKCalc :
                    )
 
 
-    def compute_from_fname(self, fname) :
-        # expects a binary file in the order RA, DEC, Z,
+    def compute_from_fname(self, fname, weights_fname=None) :
+        # expects a binary file in the order RA, DEC, Z
         # 8 byte doubles
-        return self.compute_from_arrays(*np.fromfile(fname).reshape(3, -1))
+        return self.compute_from_arrays(*np.fromfile(fname).reshape(3, -1),
+                                        w_gals=None if weights_fname is None else np.fromfile(weights_fname))
 
 
     def nz(self, z) :

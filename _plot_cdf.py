@@ -1,3 +1,4 @@
+from sys import argv
 from itertools import cycle
 
 import numpy as np
@@ -214,17 +215,15 @@ if __name__ == '__main__' :
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
              ],
-             {'formatter': Formatter(special=lambda c: {'linestyle': '-' if c.lmax==0 else '--',
-                                                        'color': black if c.is_fs else \
-                                                                 default_colors[0], }), }
             ),
-            # TODO
-            #'largevoids':
-            #([
-            #
-            # ]
-            #
-            #),
+            'largevoids':
+            ([
+              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_7ef5da19b69c33bd891d7c6ca67453cb_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+             ],
+             {'formatter': Formatter(have_vgplk_info=True), }
+            ),
             'cmpEFT':
             ([
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
@@ -256,6 +255,7 @@ if __name__ == '__main__' :
               'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
               'full_shape_production_kmin0.01_kmax0.2_lmax0_APTrue',
              ],
              {'formatter': Formatter(have_kmax=True,
@@ -332,6 +332,12 @@ if __name__ == '__main__' :
             ),
            }
     
+    try :
+        only_this = argv[1]
+    except IndexError :
+        only_this = None
+
     for name, runs in todo.items() :
-        print(name)
-        plot_cdfs(runs, name)
+        if only_this is None or name == only_this :
+            print(name)
+            plot_cdfs(runs, name)

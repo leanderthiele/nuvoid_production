@@ -5,11 +5,12 @@ from read_txt import read_txt
 from cut import Cut
 
 consider_hashes = {
-                   '558e99a0b3ea41d1976b469af5c8a461': 'all, kmax=0.1',
+#                   '558e99a0b3ea41d1976b469af5c8a461': 'all, kmax=0.1',
                    '1b33d8416f5a164be6f8850c11214029': 'all, kmax=0.15',
                    'f0a5be2c040b44c8269f5c8b9a48a79f': 'plk, kmax=0.15',
                    'f838d51a7c13abe194429f6e87d8cb12': 'vsf+plk, kmax=0.15',
                    '76c30e9ea67c1464374e21ea832cbbb2': 'vsf',
+                   'c62bf69edab920b916fbca0a9cd81acd': 'vgplk',
                   }
 
 have_params = ['Mnu', 'hod_log_Mmin', ]
@@ -89,11 +90,11 @@ for compression_hash, a in zip(consider_hashes.keys(), ax_residuals) :
 
     # first do the used data
     l = a.plot(xindices[cut.mask], delta_bf_cut[cut.mask], linestyle='none', marker='o',
-                          label=f'{label} cut $\\chi^2_{{\\sf red}}$={chisq_red_bf_cut:.2f} {param_str_cut}')
+                          label=f'{label} cut $\\chi^2_{{\\sf red}}$={chisq_red_bf_cut:.2f} {param_str_cut} idx={min_idx_cut}')
     l = l[0]
     a.plot(xindices[cut.mask], delta_bf_cmpr[cut.mask], linestyle='none', marker='s',
                       color=l.get_color(),
-                      label=f'{label} compressed $\\chi^2_{{\\sf red}}$={chisq_red_bf_cmpr:.2f} {param_str_cmpr}')
+                      label=f'{label} compressed $\\chi^2_{{\\sf red}}$={chisq_red_bf_cmpr:.2f} {param_str_cmpr} idx={min_idx_cmpr}')
 
     # now the unused
     a.plot(xindices[~cut.mask], delta_bf_cut[~cut.mask], linestyle='none', marker='o',

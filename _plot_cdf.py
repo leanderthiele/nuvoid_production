@@ -214,6 +214,9 @@ if __name__ == '__main__' :
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
              ],
+             {'formatter': Formatter(special=lambda c: {'linestyle': '-' if c.lmax==0 else '--',
+                                                        'color': black if c.is_fs else \
+                                                                 default_colors[0], }), }
             ),
             # TODO
             #'largevoids':
@@ -235,7 +238,7 @@ if __name__ == '__main__' :
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_6aad59fa700e94d8cedc0ec994380573_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
-              'full_shape_production_kmin0.01_kmax0.15_lmax4', # TODO
+              'full_shape_production_kmin0.01_kmax0.15_lmax2_APTrue',
              ],
              {'formatter': Formatter(special=lambda c: {'linestyle': '-' if c.lmax==0 else '--',
                                                         'color': black if c.is_fs else \

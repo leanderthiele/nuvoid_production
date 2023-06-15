@@ -11,6 +11,12 @@ target_data = np.loadtxt(f'{filebase}/datavector_CMASS_North.dat')
 xindices = np.arange(len(target_data))
 figsize = (12, 4)
 
+# these are the best fit trial indices (averaged) for the compressed data vectors
+# fit to plk and vsf only
+# (with kmax=0.15)
+# taken from bestfit.py
+trial_indices = {'plk': 17301, 'vsf': 12163}
+
 def plot_datavec (ax=None, pretty_ax=True, **plot_kwargs) :
     # plots into [-1, 1] range
     
@@ -26,13 +32,16 @@ def plot_datavec (ax=None, pretty_ax=True, **plot_kwargs) :
     vgplk_k = np.concatenate([VGPLK_K, ] * int(np.count_nonzero(cut_vgplk.mask)/len(VGPLK_K)))
     plk_k = np.concatenate([PLK_K, ] * int(np.count_nonzero(cut_plk.mask)/len(PLK_K)))
 
-    y = target_data.copy()
-    y[cut_vgplk.mask] *= vgplk_k
-    y[cut_plk.mask] *= plk_k
-    y[cut_vsf.mask] *= 60
-    y[cut_plk.mask] *= 3
+    def transf_datavec (x) :
+        x = x.copy()
+        x[cut_vgplk.mask] *= vgplk_k
+        x[cut_plk.mask] *= plk_k
+        x[cut_vsf.mask] *= 60
+        x[cut_plk.mask] *= 3
+        print(np.max(np.fabs(x)))
+        x /= np.max(np.fabs(x)) # TODO
 
-    y /= np.max(np.fabs(y))
+    y = transf_datavec(target_data)
 
     vlines = [-0.5, ]
     part_desc = []

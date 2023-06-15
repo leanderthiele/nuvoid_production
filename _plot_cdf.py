@@ -212,8 +212,16 @@ if __name__ == '__main__' :
               'lfi_chain_v0_6604ce64512d9fb9575ec29edad6d652_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_fe169f0711650a7bc28866af6738b56d_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
              ],
             ),
+            # TODO
+            #'largevoids':
+            #([
+            #
+            # ]
+            #
+            #),
             'cmpEFT':
             ([
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
@@ -227,10 +235,11 @@ if __name__ == '__main__' :
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_6aad59fa700e94d8cedc0ec994380573_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
-              'full_shape_production_kmin0.01_kmax0.15_lmax4',
+              'full_shape_production_kmin0.01_kmax0.15_lmax4', # TODO
              ],
              {'formatter': Formatter(special=lambda c: {'linestyle': '-' if c.lmax==0 else '--',
-                                                        'color': default_colors[1 if c.is_fs else 0], }), }
+                                                        'color': black if c.is_fs else \
+                                                                 default_colors[0], }), }
             ),
             'budget':
             ([

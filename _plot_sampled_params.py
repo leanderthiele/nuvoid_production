@@ -35,7 +35,7 @@ def make_plot (consider_params, name) :
     
     D = len(consider_params)
 
-    fig, ax = plt.subplots(nrows=D-1, ncols=D-1, figsize=(8,8),
+    fig, ax = plt.subplots(nrows=D-1, ncols=D-1, figsize=(5,5),
                            gridspec_kw={'hspace': 0.05, 'wspace': 0.05})
 
     for row in range(1, D) :
@@ -59,7 +59,10 @@ def make_plot (consider_params, name) :
     for a in ax.flatten() :
         if not a.collections :
             a.axis('off')
+        else :
+            a.tick_params(axis='x', labelrotation=45)
 
+    fig.align_labels()
     savefig(fig, f'sampled_params_{name}')
 
 make_plot(['Mnu', 'Och2', 'Obh2', 'logA', 'ns', 'theta', ], 'CMB')

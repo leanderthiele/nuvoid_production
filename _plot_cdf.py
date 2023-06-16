@@ -18,7 +18,8 @@ class Formatter :
     def __init__ (self,
                   have_hash=False, have_stats=True, have_kmax=False, have_budget=True,
                   have_vsf_info=False, have_vgplk_info=False,
-                  fs_color=black, fid_color=black, special=None, one_fid_label=True) :
+                  fs_color=black, fid_color=black, special=None, one_fid_label=True,
+                  default_colors=True) :
         self.have_hash = have_hash
         self.have_stats = have_stats
         self.have_kmax = have_kmax
@@ -29,6 +30,7 @@ class Formatter :
         self.fid_color = fid_color
         self.special = special
         self.one_fid_label = one_fid_label
+        self.default_colors = default_colors
         self.reset()
 
     def reset(self) :
@@ -95,7 +97,17 @@ class Formatter :
                 plot_kwargs[k] = v
 
         if 'color' not in plot_kwargs or plot_kwargs['color'] is None :
-            plot_kwargs['color'] = next(self.color_cycle)
+            if self.default_colors and chain_container.compression_settings is not None :
+                cidx = 3 if all(chain_container.compression_settings[f'use_{s}'] \
+                                for s in ['vsf', 'vgplk', 'plk',]) \
+                       else 2 if all(chain_container.compression_settings[f'use_{s}'] \
+                                     for s in ['vgplk', 'plk', ]) \
+                       else 1 if all(chain_container.compression_settings[f'use_{s}'] \
+                                     for s in ['vsf', 'plk', ]) \
+                       else 0
+                plot_kwargs['color'] = default_colors[cidx]
+            else :
+                plot_kwargs['color'] = next(self.color_cycle)
 
         return plot_kwargs
 
@@ -172,7 +184,7 @@ def plot_cdfs (runs, name) :
 
     if isinstance(runs, tuple) :
         runs = [runs, ]
-    fig, ax = plt.subplots(nrows=1, ncols=len(runs), figsize=(5*len(runs), 5))
+    fig, ax = plt.subplots(nrows=1, ncols=len(runs), figsize=(5*np.sqrt(len(runs)), 5/np.sqrt(len(runs))))
     try :
         ax = ax.flatten()
     except AttributeError :
@@ -225,7 +237,12 @@ if __name__ == '__main__' :
               'lfi_chain_v0_2ba65ec0068b7db92a57d6b7df935d17_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_7ef5da19b69c33bd891d7c6ca67453cb_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
              ],
-             {'formatter': Formatter(have_vsf_info=True), }
+             {'formatter': Formatter(have_vsf_info=True,
+                                     special=lambda c: {'linestyle': '-' if not c.compression_settings['use_vsf']
+                                                                            or c.compression_settings['vsf_Rmin']==30
+                                                                     else '-.' if c.compression_settings['vsf_Rmin']==40
+                                                                     else ':' if c.compression_settings['vsf_Rmin']==50
+                                                                     else '--' }), }
             ),
             'cmpEFT':
             ([
@@ -242,15 +259,14 @@ if __name__ == '__main__' :
               'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
               'full_shape_production_kmin0.01_kmax0.15_lmax2_APTrue',
              ],
-             {'formatter': Formatter(special=lambda c: {'linestyle': '-' if c.lmax==0 else '--',
-                                                        'color': black if c.is_fs else \
-                                                                 default_colors[0], }), }
+             {'formatter': Formatter(special=lambda c: {'linestyle': '-' if c.lmax==0 else '--', }), }
             ),
             'budget':
             ([
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_ce02407fa6db4df6343a60fe19a6f4c7_emcee.npz',
              ],
+             {'formatter': Formatter(default_colors=False), }
             ),
             'kmax':
             ([
@@ -262,9 +278,7 @@ if __name__ == '__main__' :
               'full_shape_production_kmin0.01_kmax0.2_lmax0_APTrue',
              ],
              {'formatter': Formatter(have_kmax=True,
-                                     special=lambda c: {'linestyle': '-' if c.kmax<0.17 else '--',
-                                                        'color': black if c.is_fs else \
-                                                                 default_colors[1 if c.compression_settings['use_vsf'] else 0], }), }
+                                     special=lambda c: {'linestyle': '-' if c.kmax<0.17 else '--', }), }
             ),
             'fid':
             [
@@ -294,16 +308,15 @@ if __name__ == '__main__' :
             ],
             'fid1': # TODO further checks on effect of voids
             ([
-              # 'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
-              # 'lfi_chain_v0_6604ce64512d9fb9575ec29edad6d652_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
+              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
+              'lfi_chain_v0_6604ce64512d9fb9575ec29edad6d652_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
               # NOTE that faae run on different seeds but it should be ok
-              # 'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz'
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
               'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
               'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
              ],
              {'formatter': Formatter(fid_color=None, one_fid_label=False, have_kmax=True,
-                                     special=lambda c: {'linestyle': '-' if c.kmax<0.17 else '--',
-                                                        'color': default_colors[1 if c.compression_settings['use_vsf'] else 0],}, ), }
+                                     special=lambda c: {'linestyle': '-' if c.kmax<0.17 else '--', }, ), }
             ),
             'voidcuts':
             [
@@ -314,7 +327,7 @@ if __name__ == '__main__' :
               'lfi_chain_v0_183edfcf2596ab34bc6853a235a4312f_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
               'lfi_chain_v0_4e6cfeceee9d3a96b66af8f3920979b1_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
              ],
-             {'title': '$N_v$ cutting', 'formatter': Formatter(have_vsf_info=True), }
+             {'title': '$N_v$ cutting', 'formatter': Formatter(have_vsf_info=True, default_colors=False), }
             ),
             (
              [
@@ -323,7 +336,7 @@ if __name__ == '__main__' :
               'lfi_chain_v0_c86572390de35979ffe32343bcae263b_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
               'lfi_chain_v0_505845a955640811c282b6e9d6912957_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
              ],
-             {'title': '$P^{vg}$ cutting', 'formatter': Formatter(have_vgplk_info=True), }
+             {'title': '$P^{vg}$ cutting', 'formatter': Formatter(have_vgplk_info=True, default_colors=False), }
             ),
             ],
             'hod':
@@ -335,7 +348,7 @@ if __name__ == '__main__' :
               'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
              ],
-             {'want_corner': True, 'formatter': Formatter(have_kmax=True), }
+             {'want_corner': True, 'formatter': Formatter(have_kmax=True, default_colors=False), }
             ),
             'eftbias':
             ([

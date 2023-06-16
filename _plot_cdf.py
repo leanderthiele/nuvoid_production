@@ -296,6 +296,8 @@ if __name__ == '__main__' :
             ([
               # 'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
               # 'lfi_chain_v0_6604ce64512d9fb9575ec29edad6d652_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
+              # NOTE that faae run on different seeds but it should be ok
+              # 'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz'
               'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
               'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
              ],

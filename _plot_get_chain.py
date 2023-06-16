@@ -1,6 +1,7 @@
 import re
 from glob import glob
 import subprocess
+import os.path
 
 import numpy as np
 
@@ -100,12 +101,28 @@ def get_sbi (fname) :
     # so burn-in is less
     discard = 100 if 'emceegpu' in fname else 1000
 
-    with np.load(f'{filebase}/{fname}') as f :
-        chain = f['chain']
-        logprob = f['log_prob']
-        param_names = list(f['param_names'])
-    chain = chain[discard:].reshape(-1, chain.shape[-1])
-    logprob = logprob[discard:]
+    fname1 = f'{filebase}/{fname}'
+    if not os.path.isfile(fname1) :
+        print(f'*** Could not find {fname}, attempting glob...')
+        fnames = glob(fname1)
+        if not fnames :
+            print(f'*** ... glob failed for {fname}')
+            raise RuntimeError
+        else :
+            print(f'*** ... glob succeeded for {fname}, concatenating chains!')
+        chain = np.concatenate([np.load(f)['chain'][discard:] for f in fnames], axis=0)
+        logprob = np.concatenate([np.load(f)['log_prob'][discard:] for f in fnames])
+        param_names = list(np.load(fnames[0])['param_names'])
+        assert all(param_names == list(np.load(f)['param_names']) for f in fnames)
+    else :
+        with np.load(fname1) as f :
+            chain = f['chain']
+            logprob = f['log_prob']
+            param_names = list(f['param_names'])
+        chain = chain[discard:]
+        logprob = logprob[discard:]
+
+    chain = chain.reshape(-1, chain.shape[-1])
 
     match = re.search('.*v(\d*).*([a-f,0-9]{32}).*([a-f,0-9]{32}).*', fname)
     version = int(match[1])

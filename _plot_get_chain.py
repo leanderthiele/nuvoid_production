@@ -109,7 +109,7 @@ def get_sbi (fname) :
             print(f'*** ... glob failed for {fname}')
             raise RuntimeError
         else :
-            print(f'*** ... glob succeeded for {fname}, concatenating chains!')
+            print(f'*** ... glob succeeded for {fname}, concatenating {len(fnames)} chains!')
         chain = np.concatenate([np.load(f)['chain'][discard:] for f in fnames], axis=0)
         logprob = np.concatenate([np.load(f)['log_prob'][discard:] for f in fnames])
         param_names = list(np.load(fnames[0])['param_names'])
@@ -133,8 +133,8 @@ def get_sbi (fname) :
     quick_hash = f'{compression_hash[:4]}-{model_hash[:4]}'
 
     if 'fid' in fname :
-        match = re.search('.*fid([0-9]*).*', fname)
-        fid_idx = int(match[1])
+        match = re.search('.*fid([0-9,\*]*).*', fname)
+        fid_idx = -1 if match[1]=='*' else int(match[1])
     else :
         fid_idx = None
 

@@ -18,7 +18,7 @@ class Formatter :
     def __init__ (self,
                   have_hash=False, have_stats=True, have_kmax=False, have_budget=True,
                   have_vsf_info=False, have_vgplk_info=False,
-                  fs_color=black, fid_color=black, special=None) :
+                  fs_color=black, fid_color=black, special=None, one_fid_label=True) :
         self.have_hash = have_hash
         self.have_stats = have_stats
         self.have_kmax = have_kmax
@@ -28,6 +28,7 @@ class Formatter :
         self.fs_color = fs_color
         self.fid_color = fid_color
         self.special = special
+        self.one_fid_label = one_fid_label
         self.reset()
 
     def reset(self) :
@@ -85,7 +86,7 @@ class Formatter :
         if chain_container.fid_idx is None or not self.used_fid_label :
             plot_kwargs['label'] = ', '.join(info)
 
-        if chain_container.fid_idx is not None :
+        if chain_container.fid_idx is not None and self.one_fid_label :
             self.used_fid_label = True
 
         if self.special is not None :
@@ -93,7 +94,7 @@ class Formatter :
             for k, v in d.items() :
                 plot_kwargs[k] = v
 
-        if 'color' not in plot_kwargs :
+        if 'color' not in plot_kwargs or plot_kwargs['color'] is None :
             plot_kwargs['color'] = next(self.color_cycle)
 
         return plot_kwargs
@@ -291,6 +292,17 @@ if __name__ == '__main__' :
              }
             ),
             ],
+            'fid1': # TODO further checks on effect of voids
+            ([
+              # 'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
+              # 'lfi_chain_v0_6604ce64512d9fb9575ec29edad6d652_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
+             ],
+             {'formatter': Formatter(fid_color=None, one_fid_label=False, have_kmax=True,
+                                     special=lambda c: {'linestyle': '-' if c.kmax<0.17 else '--',
+                                                        'color': default_colors[1 if c.compression_settings['use_vsf'] else 0],}, ), }
+            ),
             'voidcuts':
             [
             ([

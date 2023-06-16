@@ -61,15 +61,16 @@ class Formatter :
             if chain_container.compression_settings['use_vsf'] and self.have_vsf_info :
                 if chain_container.compression_settings['vsf_Rmin']==30 :
                     if chain_container.compression_settings['vsf_Rmax']==80 :
-                        info.append('all $R$')
+                        info.append('all $R_{\sf void}$')
                     else :
-                        info.append(f'$R < {chain_container.compression_settings["vsf_Rmax"]}$')
+                        info.append(f'$R_{{\sf void}} < {chain_container.compression_settings["vsf_Rmax"]}$')
                 else :
                     assert chain_container.compression_settings['vsf_Rmax']==80, 'not implemented'
-                    info.append(f'$R > {chain_container.compression_settings["vsf_Rmin"]}$')
+                    info.append(f'$R_{{\sf void}} > {chain_container.compression_settings["vsf_Rmin"]}$')
                 if 0 in chain_container.compression_settings['vsf_zbins'] :
                     if 1 in chain_container.compression_settings['vsf_zbins'] :
-                        info.append('all $z$')
+                        pass
+                        # info.append('all $z$')
                     else :
                         info.append('$z < 0.53$')
                 else :
@@ -220,9 +221,10 @@ if __name__ == '__main__' :
             ([
               'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_2ba65ec0068b7db92a57d6b7df935d17_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_7ef5da19b69c33bd891d7c6ca67453cb_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
              ],
-             {'formatter': Formatter(have_vgplk_info=True), }
+             {'formatter': Formatter(have_vsf_info=True), }
             ),
             'cmpEFT':
             ([

@@ -45,9 +45,12 @@ Some utilities:
 HOD prior:
 * `hod_prior.dat`, `hod_deriv_prior_v0.dat`
 
-Make galaxies (implementation currently not provided):
+Make galaxies:
 * `hod_galaxies.py`
 * ..
+
+Implementation for the HOD (used in `hod_galaxies.py`) provided in
+the `galaxies_src` directory.
 
 Make lightcones:
 * `lightcone.cpp`

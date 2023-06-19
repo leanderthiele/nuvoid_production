@@ -1,0 +1,16 @@
+populate.cpp contains the HOD implementation.
+
+There are also tools to measure power spectrum multipoles in periodic
+simulation boxes (used for preliminary tests on QUIJOTE), using
+interpolation of particles to a mesh.
+Also provided is some implementation of a marked power spectrum.
+
+The stuff with zobov was an aborted attempt to make zobov better.
+
+Also provided are tools to read bigfile and hdf5 halo catalogs.
+
+The source compiles to a python-usable dynamic library, defined
+in pyapi.cpp (using pybind11).
+A small utility is provided in enum_dispatch.h, turning template
+arguments into dynamic ones (to be used from python). It automatically
+ensures that all needed template specializations are compiled.

@@ -51,7 +51,7 @@ def do_job(x, all_cov, is_compressed) :
     covs_by_lc = [np.cov(x[lc_idx==ii], rowvar=False) for ii in uniq_lc_idx]
 
     if is_compressed :
-        fig_sigma, ax_sigma = plt.subplots(nrows=1, ncols=1, figsize=(5,3))
+        fig_sigma, ax_sigma = plt.subplots(nrows=1, ncols=1, figsize=(5,1.5))
     else :
         fig_sigma, _ax_sigma = plot_datavec(color='grey', alpha=0.3)
         ax_sigma = _ax_sigma.twinx()
@@ -89,7 +89,7 @@ def do_job(x, all_cov, is_compressed) :
         gen = wishart_gen(df=n, scale=scale)
         wishart_rvs = np.array([wishart(gen.rvs()) for _ in range(1000)])
 
-        fig_wishart, ax_wishart = plt.subplots(nrows=1, ncols=1, figsize=(5,3))
+        fig_wishart, ax_wishart = plt.subplots(nrows=1, ncols=1, figsize=(5,1.5))
         hist_kwargs = dict(histtype='step')
         ax_wishart.hist(wishart_by_sim, bins=edges, label='augments', **hist_kwargs)
         ax_wishart.hist(wishart_by_lc, bins=edges, label='ICs', **hist_kwargs)

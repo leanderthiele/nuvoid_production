@@ -17,7 +17,7 @@ avg = np.mean(data, axis=0)
 cov = np.cov(data, rowvar=False)
 cov_rescaled = cov / np.sqrt(avg[:,None] * avg[None,:])
 
-fig, ax = plt.subplots(ncols=2, figsize=(5,3))
+fig, ax = plt.subplots(ncols=2, figsize=(5,2.5))
 ax_cov = ax[0]
 ax_asc = ax[1]
 

@@ -1,6 +1,6 @@
 
 plot_labels = {
-               'Mnu': r'$\Sigma m_\nu$',
+               'Mnu': r'$\Sigma m_\nu$ [eV]',
                'Om': r'$\Omega_m$',
                'Ob': r'$\Omega_b$',
                'h': r'$h$',

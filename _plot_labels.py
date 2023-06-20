@@ -29,3 +29,5 @@ plot_labels = {
                'eft_b2': r'$b_2$',
                'eft_bG2': r'$b_{G2}$',
               }
+
+nounit = lambda s: '$' + s.split('$')[1] + '$'

@@ -18,6 +18,8 @@ with np.load(fiducials_fname) as f :
     sim_idx = f['sim_idx']
     lc_idx = f['lc_idx']
 
+print(np.unique(sim_idx))
+
 compress_norm = read_txt(compress_fname, 'normalization:')
 compress_matrix = read_txt(compress_fname, 'compression matrix:')
 

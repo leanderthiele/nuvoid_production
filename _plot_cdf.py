@@ -131,6 +131,11 @@ def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True, wa
 
     for chain_container in chain_containers :
         x = chain_container.chain[:, chain_container.param_names.index(param_name)]
+
+        level = 0.95
+        cl = np.quantile(x, 0.95)
+        print(f'{chain_container.quick_hash}: {level} quantile = {cl}')
+
         cdf = np.array([np.count_nonzero(x<e) for e in edges]) / len(x)
         plot_kwargs = formatter(chain_container)
         ax.plot(edges, cdf, **plot_kwargs)
@@ -167,7 +172,7 @@ def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True, wa
         for percentile in [68, 95, ] :
             y = percentile / 100
             ax.axhline(y, color='grey', linestyle='dotted')
-            ax.text(xmin, y, f' {percentile}%', ha='left', va='bottom', transform=ax.transData)
+            ax.text(xmin, y-0.02, f' {percentile}%', ha='left', va='top', transform=ax.transData)
 
     if want_corner :
         ax_corner_legend.set_xlim(10,11)
@@ -184,7 +189,13 @@ def plot_cdfs (runs, name) :
 
     if isinstance(runs, tuple) :
         runs = [runs, ]
-    fig, ax = plt.subplots(nrows=1, ncols=len(runs), figsize=(5*np.sqrt(len(runs)), 5/np.sqrt(len(runs))))
+    if '_' in name :
+        name, width, height = name.split('_')
+        width = float(width)
+        height = float(height)
+    else :
+        width, height = 5*np.sqrt(len(runs)), 5/np.sqrt(len(runs))
+    fig, ax = plt.subplots(nrows=1, ncols=len(runs), figsize=(width, height))
     try :
         ax = ax.flatten()
     except AttributeError :
@@ -208,6 +219,13 @@ def plot_cdfs (runs, name) :
 
     savefig(fig, f'cdf_{name}')
     if fig_corner is not None :
+        fig_corner.set_figheight(7)
+        fig_corner.set_figwidth(7)
+        N_ = np.sqrt(len(fig_corner.axes))
+        delta_ = 0.7 * (N_ / 9)
+        for a in fig_corner.axes :
+            a.xaxis.set_label_coords(0.5, -delta_)
+            a.yaxis.set_label_coords(-delta_, 0.5)
         savefig(fig_corner, f'posterior_{name}')
 
 
@@ -230,7 +248,7 @@ if __name__ == '__main__' :
               'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
              ],
             ),
-            'largevoids':
+            'largevoids_5_2':
             ([
               'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
@@ -252,7 +270,7 @@ if __name__ == '__main__' :
              ],
              {'formatter': Formatter(have_kmax=True), }
             ),
-            'quadrupole':
+            'quadrupole_5_2':
             ([
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_6aad59fa700e94d8cedc0ec994380573_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
@@ -350,14 +368,39 @@ if __name__ == '__main__' :
              ],
              {'want_corner': True, 'formatter': Formatter(have_kmax=True, default_colors=False), }
             ),
+            'moreparams':
+            ([
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_4c949c410d4ac209fb515137929b7c7b_emcee.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_4c949c410d4ac209fb515137929b7c7b_emcee.npz',
+             ],
+             {'want_corner': True, 'formatter': Formatter(have_kmax=True, default_colors=False), }
+            ),
+            'moreparams1':
+            ([
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_ddd913a3f968fe60c439465ee476c3c9_emcee.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_ddd913a3f968fe60c439465ee476c3c9_emcee.npz',
+             ],
+             {'want_corner': True, 'formatter': Formatter(have_kmax=True, default_colors=False), }
+            ),
             'eftbias':
             ([
-              'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
+              #'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
               'full_shape_production_kmin0.01_kmax0.15_lmax4',
-              'full_shape_production_kmin0.01_kmax0.2_lmax0_APTrue',
+              #'full_shape_production_kmin0.01_kmax0.2_lmax0_APTrue',
               'full_shape_production_kmin0.01_kmax0.2_lmax4',
              ],
              {'want_corner': True, 'formatter': Formatter(have_kmax=True, fs_color=None), }
+            ),
+            'differentparams':
+            ([
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_4c949c410d4ac209fb515137929b7c7b_emcee.npz',
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_ddd913a3f968fe60c439465ee476c3c9_emcee.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_4c949c410d4ac209fb515137929b7c7b_emcee.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_ddd913a3f968fe60c439465ee476c3c9_emcee.npz',
+             ],
+             {'formatter': Formatter(default_colors=False, have_kmax=True, special=lambda c: {'linestyle': '-' if c.kmax<0.17 else '--', },), }
             ),
            }
     
@@ -367,6 +410,6 @@ if __name__ == '__main__' :
         only_this = None
 
     for name, runs in todo.items() :
-        if only_this is None or name == only_this :
+        if only_this is None or name.split('_')[0] == only_this :
             print(name)
             plot_cdfs(runs, name)

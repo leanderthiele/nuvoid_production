@@ -15,7 +15,7 @@ plot_labels = {
                'Obh2': r'$\Omega_b h^2$',
                'Och2': r'$\Omega_{\sf cdm} h^2$',
                'hod_transfP1': r'$P_1$',
-               'hod_abias': r'$a_{sf bias}$',
+               'hod_abias': r'$a_{\sf bias}$',
                'hod_log_Mmin': r'$\log M_{\sf min}$',
                'hod_sigma_logM': r'$\sigma_{\log M}$',
                'hod_log_M0': r'$\log M_0$',

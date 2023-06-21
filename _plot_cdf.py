@@ -18,7 +18,7 @@ class Formatter :
     def __init__ (self,
                   have_hash=False, have_stats=True, have_kmax=False, have_budget=True,
                   have_vsf_info=False, have_vgplk_info=False,
-                  fs_color=black, fid_color=black, special=None, one_fid_label=True,
+                  fs_color=black, fid_color='grey', special=None, one_fid_label=True,
                   default_colors=True) :
         self.have_hash = have_hash
         self.have_stats = have_stats
@@ -112,7 +112,8 @@ class Formatter :
         return plot_kwargs
 
 
-def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True, want_corner=False) :
+def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True, want_corner=False,
+              levels_above=True) :
 
     formatter.reset()
     
@@ -172,7 +173,8 @@ def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True, wa
         for percentile in [68, 95, ] :
             y = percentile / 100
             ax.axhline(y, color='grey', linestyle='dotted')
-            ax.text(xmin, y-0.02, f' {percentile}%', ha='left', va='top', transform=ax.transData)
+            ax.text(xmin, y+(0 if levels_above else -0.02), f' {percentile}%',
+                    ha='left', va='bottom' if levels_above else 'top', transform=ax.transData)
 
     if want_corner :
         ax_corner_legend.set_xlim(10,11)
@@ -195,6 +197,7 @@ def plot_cdfs (runs, name) :
         height = float(height)
     else :
         width, height = 5*np.sqrt(len(runs)), 5/np.sqrt(len(runs))
+    levels_above = height > 4.5
     fig, ax = plt.subplots(nrows=1, ncols=len(runs), figsize=(width, height))
     try :
         ax = ax.flatten()
@@ -211,7 +214,7 @@ def plot_cdfs (runs, name) :
                     kw[s] = r[1][s]
             if 'title' in r[1] :
                 title = r[1]['title']
-        fig_corner = plot_cdf(r[0], a, **kw)
+        fig_corner = plot_cdf(r[0], a, levels_above=levels_above, **kw)
         if ii != 0 :
             a.set_ylabel(None)
         if title is not None :
@@ -279,7 +282,7 @@ if __name__ == '__main__' :
              ],
              {'formatter': Formatter(special=lambda c: {'linestyle': '-' if c.lmax==0 else '--', }), }
             ),
-            'budget':
+            'budget_5_2':
             ([
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_ce02407fa6db4df6343a60fe19a6f4c7_emcee.npz',

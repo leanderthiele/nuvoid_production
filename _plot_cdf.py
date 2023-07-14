@@ -154,7 +154,8 @@ def plot_cdf (runs, ax, formatter=Formatter(), param_name='Mnu', pretty=True, wa
                                        hist_bin_factor=1,
                                        fig=fig_corner)
             if ax_corner_legend is None :
-                ax_corner_legend = fig_corner.axes[1]
+                nparams = corner_chain.shape[-1]
+                ax_corner_legend = fig_corner.axes[1 if nparams<=3 else 2]
             if 'label' in plot_kwargs :
                 ax_corner_legend.plot(np.random.rand(2), label=plot_kwargs['label'], color=plot_kwargs['color'])
 
@@ -197,7 +198,7 @@ def plot_cdfs (runs, name) :
         height = float(height)
     else :
         width, height = 5*np.sqrt(len(runs)), 5/np.sqrt(len(runs))
-    levels_above = height > 4.5
+    levels_above = height > 3.9
     fig, ax = plt.subplots(nrows=1, ncols=len(runs), figsize=(width, height))
     try :
         ax = ax.flatten()
@@ -242,21 +243,24 @@ if __name__ == '__main__' :
               'lfi_chain_v0_37715c02cbc4c059eaac51410906acd8_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
              ],
             ),
-            'statswPgg':
+            'statswPgg_5_4':
             ([
-              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_6604ce64512d9fb9575ec29edad6d652_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_fe169f0711650a7bc28866af6738b56d_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_6604ce64512d9fb9575ec29edad6d652_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_fe169f0711650a7bc28866af6738b56d_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
               'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
+              # these are just for testing the effect of EFT prior
+              # 'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue_prior2',
+              # 'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue_prior4',
              ],
             ),
             'largevoids_5_2':
             ([
-              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_2ba65ec0068b7db92a57d6b7df935d17_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_7ef5da19b69c33bd891d7c6ca67453cb_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_2ba65ec0068b7db92a57d6b7df935d17_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_7ef5da19b69c33bd891d7c6ca67453cb_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
              ],
              {'formatter': Formatter(have_vsf_info=True,
                                      special=lambda c: {'linestyle': '-' if not c.compression_settings['use_vsf']
@@ -267,7 +271,7 @@ if __name__ == '__main__' :
             ),
             'cmpEFT':
             ([
-              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
               'full_shape_production_kmin0.01_kmax0.15_lmax4',
               'full_shape_production_kmin0.01_kmax0.2_lmax4',
              ],
@@ -275,8 +279,8 @@ if __name__ == '__main__' :
             ),
             'quadrupole_5_2':
             ([
-              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_6aad59fa700e94d8cedc0ec994380573_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_6aad59fa700e94d8cedc0ec994380573_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
               'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
               'full_shape_production_kmin0.01_kmax0.15_lmax2_APTrue',
              ],
@@ -284,17 +288,17 @@ if __name__ == '__main__' :
             ),
             'budget_5_2':
             ([
-              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_ce02407fa6db4df6343a60fe19a6f4c7_emcee.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_ce02407fa6db4df6343a60fe19a6f4c7_emcee_wweight.npz',
              ],
              {'formatter': Formatter(default_colors=False), }
             ),
-            'kmax':
+            'kmax_5_4':
             ([
-              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
               'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
               'full_shape_production_kmin0.01_kmax0.2_lmax0_APTrue',
              ],
@@ -304,18 +308,22 @@ if __name__ == '__main__' :
             'fid':
             [
             ([
-              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
               *[f'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_fid{ii}_emceegpu.npz'
                 for ii in [1208, 1260, 1295, 1944, 2261, 2302, 2378, 3389, 346,
                            4086, 4819, 4844, 5168, 5259, 5832, 808, 97, ]
                ],
              ],
              {'title': '$k_{\sf max}=0.15$',
-              'formatter': Formatter(special=lambda c: {'marker': 'o' if c.fid_idx is None else None})
+              'formatter': Formatter(have_stats=False,
+                                     special=lambda c: {'label': 'data' if c.fid_idx is None
+                                                            else 'fiducials' if c.fid_idx==1208
+                                                            else None,
+                                                        'marker': 'o' if c.fid_idx is None else None})
              }
             ),
             ([
-              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
               *[f'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_fid{ii}_emceegpu.npz'
                 for ii in [1228, 1581, 1837, 1882, 1911, 1998, 2530, 2658, 2808, 3066,
                            3195, 3329, 3397, 433, 4640, 5350, 5458, 6189, 6579, ]
@@ -323,11 +331,15 @@ if __name__ == '__main__' :
              ],
              {
               'title': '$k_{\sf max}=0.20$',
-              'formatter': Formatter(special=lambda c: {'marker': 'o' if c.fid_idx is None else None})
+              'formatter': Formatter(have_stats=False,
+                                     special=lambda c: {'label': 'data' if c.fid_idx is None
+                                                            else 'fiducials' if c.fid_idx==1228
+                                                            else None,
+                                                        'marker': 'o' if c.fid_idx is None else None})
              }
             ),
             ],
-            'fid1': # TODO further checks on effect of voids
+            'fid1':
             ([
               'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
               'lfi_chain_v0_6604ce64512d9fb9575ec29edad6d652_6b656a4fa186194104da7c4f88f1d4c2_fid*_emceegpu.npz',
@@ -362,48 +374,58 @@ if __name__ == '__main__' :
             ],
             'hod':
             ([
-              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_6604ce64512d9fb9575ec29edad6d652_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_0b59eb1479fd93eaeb7262ce1a805d63_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_6604ce64512d9fb9575ec29edad6d652_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_0b59eb1479fd93eaeb7262ce1a805d63_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
              ],
              {'want_corner': True, 'formatter': Formatter(have_kmax=True, default_colors=False), }
             ),
             'moreparams':
             ([
-              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_4c949c410d4ac209fb515137929b7c7b_emcee.npz',
-              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_4c949c410d4ac209fb515137929b7c7b_emcee.npz',
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_4c949c410d4ac209fb515137929b7c7b_emcee_wweight.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_4c949c410d4ac209fb515137929b7c7b_emcee_wweight.npz',
              ],
              {'want_corner': True, 'formatter': Formatter(have_kmax=True, default_colors=False), }
             ),
             'moreparams1':
             ([
-              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_ddd913a3f968fe60c439465ee476c3c9_emcee.npz',
-              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_ddd913a3f968fe60c439465ee476c3c9_emcee.npz',
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_ddd913a3f968fe60c439465ee476c3c9_emcee_wweight.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_ddd913a3f968fe60c439465ee476c3c9_emcee_wweight.npz',
              ],
              {'want_corner': True, 'formatter': Formatter(have_kmax=True, default_colors=False), }
             ),
             'eftbias':
             ([
-              #'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
+              'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
               'full_shape_production_kmin0.01_kmax0.15_lmax4',
-              #'full_shape_production_kmin0.01_kmax0.2_lmax0_APTrue',
+              'full_shape_production_kmin0.01_kmax0.2_lmax0_APTrue',
               'full_shape_production_kmin0.01_kmax0.2_lmax4',
              ],
              {'want_corner': True, 'formatter': Formatter(have_kmax=True, fs_color=None), }
             ),
             'differentparams':
             ([
-              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_4c949c410d4ac209fb515137929b7c7b_emcee.npz',
-              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_ddd913a3f968fe60c439465ee476c3c9_emcee.npz',
-              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
-              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_4c949c410d4ac209fb515137929b7c7b_emcee.npz',
-              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_ddd913a3f968fe60c439465ee476c3c9_emcee.npz',
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_4c949c410d4ac209fb515137929b7c7b_emcee_wweight.npz',
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_ddd913a3f968fe60c439465ee476c3c9_emcee_wweight.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_4c949c410d4ac209fb515137929b7c7b_emcee_wweight.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_ddd913a3f968fe60c439465ee476c3c9_emcee_wweight.npz',
              ],
              {'formatter': Formatter(default_colors=False, have_kmax=True, special=lambda c: {'linestyle': '-' if c.kmax<0.17 else '--', },), }
+            ),
+            'voidsonly':
+            ([
+              'lfi_chain_v0_cba1046bfb1c70008ec7fe0d86945ed2_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
+              'lfi_chain_v0_c62bf69edab920b916fbca0a9cd81acd_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
+              'lfi_chain_v0_7e2cfa24acd42dc91e781f0352bcda76_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
+              'lfi_chain_v0_c86572390de35979ffe32343bcae263b_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
+              'lfi_chain_v0_505845a955640811c282b6e9d6912957_6f103cb42a1d934d3314f5429fb7aa9a_emcee.npz',
+             ],
+             {'formatter': Formatter(have_vgplk_info=True, default_colors=False), }
             ),
            }
     

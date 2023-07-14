@@ -134,6 +134,8 @@ def get_sbi (fname) :
 
     if 'fid' in fname :
         match = re.search('.*fid([0-9,\*]*).*', fname)
+        if match[1].startswith('0') :
+            print(f'***WARNING: special chain {match[1]}')
         fid_idx = -1 if match[1]=='*' else int(match[1])
     else :
         fid_idx = None
@@ -166,6 +168,9 @@ def get_sbi (fname) :
     else :
         lmax = None
 
+    if compression_settings['use_plk'] and 'fid' not in fname and 'wweight' not in fname :
+        print(f'***WARNING: using wrong-weight chain {fname}')
+
     return ChainContainer(chain, logprob, param_names, False, stats_str,
                           fid_idx=fid_idx, quick_hash=quick_hash, version=version,
                           compression_hash=compression_hash, model_hash=model_hash,
@@ -175,6 +180,8 @@ def get_sbi (fname) :
 
 def get_chain (name, cache={}) :
     # might be called repeatedly for different plots, so cache the results
+
+    print(name)
 
     if name not in cache :
         if name.startswith('full_shape') :

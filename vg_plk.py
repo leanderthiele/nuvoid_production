@@ -84,13 +84,16 @@ class PLKCalc :
     
     def compute_from_arrays(self, ra_gals, dec_gals, z_gals,
                                   ra_voids, dec_voids, z_voids,
-                                  R_voids) :
+                                  R_voids,
+                                  w_gals=None) :
 
         # cut the galaxies according to reshift
         zselect = (z_gals>PLKCalc.zmin) * (z_gals<PLKCalc.zmax)
         ra_gals = ra_gals[zselect]
         dec_gals = dec_gals[zselect]
         z_gals = z_gals[zselect]
+        if w_gals is not None :
+            w_gals = w_gals[zselect]
 
         ng_of_z = self.nz(z_gals)
 
@@ -99,12 +102,17 @@ class PLKCalc :
         ra_gals = ra_gals[lo:hi]
         dec_gals = dec_gals[lo:hi]
         z_gals = z_gals[lo:hi]
+        if w_gals is not None :
+            w_gals = w_gals[lo:hi]
 
         nbar_gals = ng_of_z(z_gals)
         nbar_rand_gals = ng_of_z(self.z_rand_gals)
 
         fkp_gals = 1 / (1 + nbar_gals * PLKCalc.P0_gals)
         fkp_rand_gals = 1 / (1 + nbar_rand_gals * PLKCalc.P0_gals)
+
+        if w_gals is not None :
+            fkp_gals = fkp_gals * w_gals
 
         pos_gals = NBL.transform.SkyToCartesian(ra_gals, dec_gals, z_gals,
                                                 cosmo=self.cosmo).compute()
@@ -173,11 +181,12 @@ class PLKCalc :
                        for ell in PLKCalc.poles for Rmin in PLKCalc.Rmin})
 
 
-    def compute_from_fnames(self, gals_fname, voids_fname) :
+    def compute_from_fnames(self, gals_fname, voids_fname, weights_fname=None) :
         # assumes gals_fname is binary file f8 ra, dec, z
         # and voids_fname is the sky positions file from VIDE
         return self.compute_from_arrays(*np.fromfile(gals_fname).reshape(3, -1),
-                                        *np.loadtxt(voids_fname, usecols=(0,1,2,3,), unpack=True))
+                                        *np.loadtxt(voids_fname, usecols=(0,1,2,3,), unpack=True),
+                                        w_gals=None if weights_fname is None else np.fromfile(weights_fname))
 
 
     def nz(self, z) :

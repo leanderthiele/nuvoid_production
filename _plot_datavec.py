@@ -7,8 +7,8 @@ from cut import Cut, VSF_REDGES, VGPLK_K, PLK_K
 from _plot_style import *
 
 filebase = '/tigress/lthiele/nuvoid_production'
-target_data = np.loadtxt(f'{filebase}/datavector_CMASS_North.dat')
-target_data_wweight = np.loadtxt(f'{filebase}/datavector_CMASS_North_wweight.dat')
+target_data = np.loadtxt(f'{filebase}/datavector_CMASS_North_wweight.dat')
+target_data_wweight = np.loadtxt(f'{filebase}/datavector_CMASS_North_wweight2.dat')
 xindices = np.arange(len(target_data))
 figsize = (12, 3)
 
@@ -17,9 +17,9 @@ figsize = (12, 3)
 # (with kmax=0.15)
 # taken from bestfit.py
 bf_indices = {
-              '$P^{gg}_{0,2}(k)$': (17301, 1.17),
+              '$P^{gg}_{0,2}(k)$': (17301, 1.35), #(17301, 1.17),
               '$N_{\sf void}$': (17523, 1.03),
-              '$P^{vg}_{0,2}(k)$': (23946, 1.06),
+              '$P^{vg}_{0,2}(k)$': (23946, 1.05),
              }
 
 vsf_R_ticks = [40, 60, ]
@@ -83,10 +83,8 @@ def plot_datavec (ax=None, pretty_ax=True, have_bf=False, have_xticks=False, **p
     ax.set_ylim(-1, 1)
     ax.set_xlim(-0.5, len(target_data)-0.5)
 
-    # FIXME
-    ax.plot(xindices, yweight, linestyle='none', marker='v', label='CMASS NGC', **plot_kwargs)
-
-    ax.plot(xindices, y, linestyle='none', marker='x', label='CMASS NGC', **plot_kwargs)
+    ax.plot(xindices, y, linestyle='none', marker='o', label='CMASS NGC OLD', **plot_kwargs)
+    ax.plot(xindices, yweight, linestyle='none', marker='x', label='CMASS NGC', **plot_kwargs)
 
     if have_bf :
         with np.load(f'{filebase}/avg_datavectors_trials.npz') as f :

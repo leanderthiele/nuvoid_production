@@ -19,7 +19,7 @@ version = 0
 
 filebase = '/tigress/lthiele/nuvoid_production'
 
-target_data = np.loadtxt(f'{filebase}/datavector_CMASS_North.dat')
+target_data = np.loadtxt(f'{filebase}/datavector_CMASS_North_wweight2.dat')
 
 with np.load(f'{filebase}/avg_datavectors_trials.npz') as f :
     trial_data = f['data']

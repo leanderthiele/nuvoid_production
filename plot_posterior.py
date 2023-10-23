@@ -34,7 +34,7 @@ DISCARD = 1000
 
 # chains can have different sizes due to different numbers of CPUs used
 # it is most convenient to just subsample them to a common size
-USE_SAMPLES = 16 * 20000
+USE_SAMPLES = 16 * 10000
 
 # can pass multiple
 if argv[-1] == 'nofs' :

@@ -1,6 +1,6 @@
 #------Experiments to test (separated with commas)-----
 
-data.experiments=['full_shape_spectra', 'my_planck_prior', ]
+data.experiments=['full_shape_spectra', '<<<cmb_prior>>>', ]
 
 #------ Settings for the over-sampling.
 # The first element will always be set to 1, for it is the sampling of the
@@ -135,6 +135,9 @@ full_shape_spectra.use_Q = False
 full_shape_spectra.use_B = False
 full_shape_spectra.use_AP = <<<have_AP>>>
 full_shape_spectra.lmax = <<<ellmax>>>
+
+# TODO LFT experimental prior rescaling
+full_shape_spectra.prior_rescale = <<<prior_rescale>>>
 
 ## Sample parameters
 

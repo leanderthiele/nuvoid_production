@@ -52,6 +52,7 @@ SETTINGS = dict(
                 # sim_budget=0.66, # fraction of simulations we use (apart from validation set)
                 # epochs=600,
                 # val_contiguous=[(0, 10), (127, 128), ] # allow to have contiguous slices for validation, better balancing
+                average=True, # to train on averaged data vectors (over 8 augmentations)
                )
 
 # these are the settings that are taken from a pre-trained model
@@ -102,7 +103,10 @@ else :
 ident = hashlib.md5(f'{SETTINGS}'.encode('utf-8')).hexdigest()
 print(f'ident={ident}')
 
-data_fname = f'{filebase}/datavectors_trials.npz'
+if 'average' in SETTINGS and SETTINGS['average'] :
+    data_fname = f'{filebase}/avg_datavectors_trials.npz'
+else : # usual case
+    data_fname = f'{filebase}/datavectors_trials.npz'
 fiducials_fname = f'{filebase}/datavectors_fiducials_v0.npz'
 compress_fname = f'{filebase}/compression_v{version}_{compression_hash}.dat'
 model_fname = f'{filebase}/lfi_model_v{version}_{compression_hash}_{ident}.sbi'

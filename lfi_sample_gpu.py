@@ -2,6 +2,8 @@ import sys
 from sys import argv
 import re
 import os
+from copy import deepcopy
+
 # from schwimmbad import MPIPool
 import emcee
 
@@ -25,8 +27,12 @@ filebase = '/tigress/lthiele/nuvoid_production'
 device = 'cuda'
 
 try :
-    fiducials_idx = int(argv[-1])
+    fiducials_idx = argv[-1]
     print(f'***WARNING: Working with fiducial {fiducials_idx} instead of data!')
+    if '~' not in fiducials_idx :
+        fiducials_idx = int(fiducials_idx)
+    else :
+        fiducials_idx = list(map(int, fiducials_idx.split('~')))
 except (IndexError, ValueError) :
     fiducials_idx = None
 model_fname_bases = argv[1:] if fiducials_idx is None else argv[1:-1]
@@ -67,10 +73,17 @@ if fiducials_idx is None :
 else :
     fiducials_fname = f'{filebase}/datavectors_fiducials_v{version}.npz'
     with np.load(fiducials_fname) as f :
-        observation = f['data'][fiducials_idx]
-observation = compression_matrix @ (observation/normalization)
+        if isinstance(fiducials_idx, list) :
+            observation = [f['data'][ii] for ii in fiducials_idx]
+        else :
+            observation = f['data'][fiducials_idx]
 
-# load the settings and model from file, set posteriors to observation
+if isinstance(observation, list) :
+    observation = [compression_matrix @ (oo/normalization) for oo in observation]
+else :
+    observation = compression_matrix @ (observation/normalization)
+
+# load the settings and model from file, set posteriors to observation(s)
 priors = None
 consider_params = None
 posteriors = []
@@ -85,11 +98,16 @@ for model_fname_base in model_fname_bases :
         consider_params = SETTINGS['consider_params']
     else :
         assert consider_params == SETTINGS['consider_params']
-    posteriors.append(posterior.set_default_x(observation))
+    if isinstance(observation, list) :
+        for oo in observation :
+            # hopefully the deepcopy works as expected here... how I love python...
+            posteriors.append(deepcopy(posterior).set_default_x(oo))
+    else :
+        posteriors.append(posterior.set_default_x(observation))
 
 def logprob (theta) :
     theta = torch.from_numpy(theta.astype(np.float32)).to(device=device)
-    return sum(p.potential(theta).cpu().numpy() for p in posteriors) / len(posteriors)
+    return sum(p.potential(theta).cpu().numpy() for p in posteriors)# / len(posteriors)
 
 if True :
 # with MPIPool() as pool :
@@ -118,8 +136,17 @@ if True :
     except emcee.autocorr.AutocorrError :
         print(f'***WARNING: autocorr failed!')
 
+    # for saving...
+    if isinstance(fiducials_idx, list) :
+        fiducials_idx = f'000{sum(fiducials_idx)}'
+        # this is super hacky...
+        N = '' if len(fiducials_idx)!=4 else '4'
+        fid = f'{N}fid'
+    else :
+        fid = 'fid'
+
     np.savez(f'{filebase}/lfi_chain_v{version}_{compression_hash}_{model_ident}'\
-             f'{f"_fid{fiducials_idx}" if fiducials_idx is not None else ""}_emceegpu.npz',
+             f'{f"_{fid}{fiducials_idx}" if fiducials_idx is not None else ""}_emceegpu.npz',
              chain=chain.astype(np.float32),
              log_prob=lp.astype(np.float32),
              param_names=consider_params,

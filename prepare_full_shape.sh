@@ -4,11 +4,13 @@
 #    [2] kmax
 #    [3] lmax
 #    [4] AP (True or False)
+#    [5] prior rescaling (float) -- if 0, use the no-As prior
 
 kmin="$1"
 kmax="$2"
 lmax="$3"
 AP="$4"
+prior_rescale="$5"
 
 codebase='/home/lthiele/nuvoid_production'
 database='/scratch/gpfs/lthiele/nuvoid_production'
@@ -20,8 +22,10 @@ PRODUCTION_TEMPLATE="$codebase/boss_full_shape_ours_production.sbatch"
 
 source utils.sh
 
-wrkdir_trial="$database/full_shape_trial_kmin${kmin}_kmax${kmax}_lmax${lmax}_AP${AP}"
-wrkdir_production="$database/full_shape_production_kmin${kmin}_kmax${kmax}_lmax${lmax}_AP${AP}"
+ident="kmin${kmin}_kmax${kmax}_lmax${lmax}_AP${AP}_prior${prior_rescale}"
+
+wrkdir_trial="$database/full_shape_trial_$ident"
+wrkdir_production="$database/full_shape_production_$ident"
 mkdir -p "$wrkdir_trial" "$wrkdir_production"
 
 # set the parameter file
@@ -31,11 +35,18 @@ utils::replace $params_file 'kmin' "$kmin"
 utils::replace $params_file 'kmax' "$kmax"
 utils::replace $params_file 'ellmax' "$lmax"
 utils::replace $params_file 'have_AP' "$AP"
+if [ "$prior_rescale" == "0" ]; then
+  utils::replace $params_file 'cmb_prior' 'my_planck_prior_no_As'
+  utils::replace $params_file 'prior_rescale' "1.0"
+else
+  utils::replace $params_file 'cmb_prior' 'my_planck_prior'
+  utils::replace $params_file 'prior_rescale' "$prior_rescale"
+fi
 
 # the driver files
-trial_file="$codebase/boss_full_shape_ours_trial_kmin${kmin}_kmax${kmax}_lmax${lmax}_AP${AP}.sbatch"
-covmat_file="$codebase/boss_full_shape_ours_covmat_kmin${kmin}_kmax${kmax}_lmax${lmax}_AP${AP}.sh"
-production_file="$codebase/boss_full_shape_ours_production_kmin${kmin}_kmax${kmax}_lmax${lmax}_AP${AP}.sbatch"
+trial_file="$codebase/boss_full_shape_ours_trial_$ident.sbatch"
+covmat_file="$codebase/boss_full_shape_ours_covmat_$ident.sh"
+production_file="$codebase/boss_full_shape_ours_production_$ident.sbatch"
 
 cp $TRIAL_TEMPLATE $trial_file
 cp $COVMAT_TEMPLATE $covmat_file

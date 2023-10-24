@@ -14,7 +14,7 @@ class ChainContainer :
     def __init__ (self, chain, logprob, param_names, is_fs, stats_str,
                         fid_idx=None, quick_hash=None, version=None, compression_hash=None,
                         model_hash=None, model_settings=None, compression_settings=None,
-                        kmax=None, lmax=None, priors=None) :
+                        kmax=None, lmax=None, priors=None, prior_rescale=1) :
         self.chain = chain
         self.logprob = logprob
         self.param_names = param_names
@@ -30,6 +30,7 @@ class ChainContainer :
         self.kmax = kmax
         self.lmax = lmax
         self.priors = priors
+        self.prior_rescale = prior_rescale
 
 
 def get_fs (name) :
@@ -69,6 +70,13 @@ def get_fs (name) :
     data.cosmo_arguments = {}
     data.path = {}
     full_shape_spectra = Dummy()
+
+    if 'prior' in name :
+        prior_rescale = int(re.search('.*prior([0-9]*).*', name)[1])
+        if prior_rescale == 0 :
+            my_planck_prior_no_As = Dummy()
+    else :
+        prior_rescale = 1
     my_planck_prior = Dummy()
     with open(input_file, 'r') as f :
         for line in f :
@@ -91,7 +99,8 @@ def get_fs (name) :
     stats_str = f'$P^{{gg}}_{{{",".join(map(str, range(0, full_shape_spectra.lmax+1, 2)))}}}$'
 
     return ChainContainer(chain, logprob, param_names, True, stats_str,
-                          kmax=full_shape_spectra.kmaxP[0], lmax=full_shape_spectra.lmax, priors=priors)
+                          kmax=full_shape_spectra.kmaxP[0], lmax=full_shape_spectra.lmax, priors=priors,
+                          prior_rescale=prior_rescale)
 
 
 

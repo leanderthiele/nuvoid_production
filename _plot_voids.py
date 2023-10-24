@@ -34,15 +34,18 @@ ra_gal = ra_gal[mask]
 dec_gal = dec_gal[mask]
 z_gal = z_gal[mask]
 
-ax.plot(ra_gal, dec_gal, linestyle='none', marker='o', markersize=0.2)
-for ra, dec, R in zip(ra_voids, dec_voids, R_voids) :
-    c = plt.Circle((ra, dec), radius=R, fill=False, edgecolor='white')
-    ax.add_patch(c)
-
 for pos in ['top', 'bottom', 'right', 'left', ] :
     ax.spines[pos].set(edgecolor='none')
 ax.set_aspect('equal', adjustable='box')
 ax.set_xlabel('RA')
 ax.set_ylabel('DEC')
+
+
+ax.plot(ra_gal, dec_gal, linestyle='none', marker='o', markersize=0.2)
+savefig(fig, 'novoids')
+
+for ra, dec, R in zip(ra_voids, dec_voids, R_voids) :
+    c = plt.Circle((ra, dec), radius=R, fill=False, edgecolor='white')
+    ax.add_patch(c)
 
 savefig(fig, 'voids')

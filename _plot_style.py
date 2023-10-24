@@ -12,8 +12,9 @@ else :
 
 def savefig (fig, name) :
     fmt = 'pdf'
+#    kwargs = dict(bbox_inches='tight', transparent=True, dpi=200)
     kwargs = dict(bbox_inches='tight', transparent=False)
-    outdir = '.'
+    outdir = '.' #'./desi_lunch_figures'
 
     fig.savefig(f'{outdir}/_plot_{name}.{fmt}', **kwargs)
 

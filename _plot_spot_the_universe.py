@@ -5,7 +5,9 @@ from matplotlib import pyplot as plt
 
 from _plot_style import *
 
-rng = np.random.default_rng(42)
+plt.rcParams.update({'font.size': 16})
+
+rng = np.random.default_rng(137)
 
 zmin, zmax = 0.42, 0.70
 
@@ -18,7 +20,7 @@ z0 = 0.6
 delta_z = 0.005
 
 fig_kwargs = dict(nrows=nrows, ncols=ncols, figsize=(10,10),
-                  gridspec_kw=dict(hspace=0.1, wspace=0.1))
+                  gridspec_kw=dict(hspace=0.02, wspace=0.02))
 plot_kwargs = dict(linestyle='none', marker='o', markersize=0.1)
 
 # slices of constant dec
@@ -62,10 +64,12 @@ for yax, ax in zip(['z', 'DEC', ], [ax_dec, ax_z, ]) :
             if row != nrows - 1 :
                 a.set_xticks([])
             else :
+                a.set_xticks([])
                 a.set_xlabel('RA')
             if col != 0 :
                 a.set_yticks([])
             else :
+                a.set_yticks([])
                 a.set_ylabel(yax)
             for pos in ['top', 'bottom', 'right', 'left', ] :
                 a.spines[pos].set(edgecolor='none')

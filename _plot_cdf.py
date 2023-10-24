@@ -236,12 +236,13 @@ def plot_cdfs (runs, name) :
 if __name__ == '__main__' :
     
     todo = {
-            'statsvoids':
+            'statsvoids_5_2':
             ([
               'lfi_chain_v0_dd916201431a1b9e5b960c075709f418_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_c62bf69edab920b916fbca0a9cd81acd_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
               'lfi_chain_v0_37715c02cbc4c059eaac51410906acd8_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
              ],
+             {'formatter': Formatter(default_colors=False)}
             ),
             'statswPgg_5_4':
             ([
@@ -254,6 +255,66 @@ if __name__ == '__main__' :
               # 'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue_prior2',
               # 'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue_prior4',
              ],
+            ),
+            'Asprior_5_2':
+            ([
+              'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
+              'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue_prior0',
+             ],
+             {'want_corner': True,
+              'formatter': Formatter(have_stats=True,
+                                     fs_color=None, default_colors=False,
+                                     special=lambda c: {'label': 'fiducial prior' if c.prior_rescale==1
+                                                                 else r'$\sigma(\log A_s) \times 16$' if c.prior_rescale==0
+                                                                 else 'error', })
+             }
+            ),
+            'eftprior_5_4':
+            ([
+              'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue',
+              # these are just for testing the effect of EFT prior
+              'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue_prior2',
+              'full_shape_production_kmin0.01_kmax0.15_lmax0_APTrue_prior4',
+             ],
+            ),
+            'ipmu_5_2':
+            ([
+              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+             ],
+            ),
+            'cd3main_5_3':
+            ([
+              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+             ],
+            ),
+            'cd3kmax_5_5':
+            ([
+              'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+             ],
+            ),
+            'cd3largevoids_5_5':
+            ([
+              'lfi_chain_v0_a8e282250ab78bf4fac45f297b4d822c_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_2ba65ec0068b7db92a57d6b7df935d17_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_7ef5da19b69c33bd891d7c6ca67453cb_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+             ],
+             {'formatter': Formatter(have_vsf_info=True,
+                                     special=lambda c: {'linestyle': '-' if not c.compression_settings['use_vsf']
+                                                                            or c.compression_settings['vsf_Rmin']==30
+                                                                     else '-.' if c.compression_settings['vsf_Rmin']==40
+                                                                     else ':' if c.compression_settings['vsf_Rmin']==50
+                                                                     else '--' }), }
+            ),
+            'cd3_EFT':
+            ([
+              'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'full_shape_production_kmin0.01_kmax0.15_lmax4',
+             ],
+             {'formatter': Formatter(have_kmax=True), }
             ),
             'largevoids_5_2':
             ([
@@ -277,7 +338,7 @@ if __name__ == '__main__' :
              ],
              {'formatter': Formatter(have_kmax=True), }
             ),
-            'quadrupole_5_2':
+            'quadrupole_5_5':
             ([
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
               'lfi_chain_v0_6aad59fa700e94d8cedc0ec994380573_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
@@ -380,6 +441,7 @@ if __name__ == '__main__' :
               'lfi_chain_v0_faae54307696ccaff07aef77d20e1c1f_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
               'lfi_chain_v0_8c442ad9200d17242e8e97227366fac9_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
               'lfi_chain_v0_deee27266999e84b46162bf7627d71b6_6b656a4fa186194104da7c4f88f1d4c2_emcee_wweight.npz',
+              'lfi_chain_v0_cba1046bfb1c70008ec7fe0d86945ed2_6b656a4fa186194104da7c4f88f1d4c2_emcee.npz',
              ],
              {'want_corner': True, 'formatter': Formatter(have_kmax=True, default_colors=False), }
             ),
@@ -437,4 +499,8 @@ if __name__ == '__main__' :
     for name, runs in todo.items() :
         if only_this is None or name.split('_')[0] == only_this :
             print(name)
-            plot_cdfs(runs, name)
+            try :
+                plot_cdfs(runs, name)
+            except Exception :
+                print(f'Failed to do {name}')
+

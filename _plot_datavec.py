@@ -83,7 +83,7 @@ def plot_datavec (ax=None, pretty_ax=True, have_bf=False, have_xticks=False, **p
     ax.set_ylim(-1, 1)
     ax.set_xlim(-0.5, len(target_data)-0.5)
 
-    ax.plot(xindices, y, linestyle='none', marker='o', label='CMASS NGC OLD', **plot_kwargs)
+#    ax.plot(xindices, y, linestyle='none', marker='o', label='CMASS NGC OLD', **plot_kwargs)
     ax.plot(xindices, yweight, linestyle='none', marker='x', label='CMASS NGC', **plot_kwargs)
 
     if have_bf :

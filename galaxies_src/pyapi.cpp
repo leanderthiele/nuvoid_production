@@ -296,7 +296,8 @@ static constexpr bool allowed ()
     constexpr auto cat = static_cast<Cat>(cat_);
     constexpr auto secondary = static_cast<Sec>(secondary_);
 
-    if constexpr ((cat==Cat::FOF || cat==Cat::RFOF) && (secondary != Sec::None))
+    if constexpr ((cat==Cat::FOF || cat==Cat::RFOF || cat==Cat::OLDFOF)
+                  && (secondary != Sec::None))
         return false;
     
     return true;
@@ -471,7 +472,8 @@ static constexpr bool allowed ()
     constexpr auto have_vbias = static_cast<bool>(have_vbias_);
     constexpr auto vgal_separate = static_cast<bool>(vgal_separate_);
 
-    if constexpr ((cat==Cat::FOF || cat==Cat::RFOF) && (secondary != Sec::None))
+    if constexpr ((cat==Cat::FOF || cat==Cat::RFOF || cat==Cat::OLDFOF)
+                  && (secondary != Sec::None))
         return false;
     if constexpr ((rsd == RSD::None) && have_vbias && !vgal_separate)
         return false;
@@ -616,6 +618,7 @@ PYBIND11_MODULE(pyglx, m)
         .value("rockstar", Cat::Rockstar)
         .value("fof", Cat::FOF)
         .value("rfof", Cat::RFOF)
+        .value("oldfof", Cat::OLDFOF)
         .export_values();
 
     pyb::module_ mSecondary = m.def_submodule("Secondary");

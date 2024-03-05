@@ -48,6 +48,9 @@ int get_galaxies (Globals &globals,
      HAVE_IF(vmode != VelMode::None, std::vector<float> &), \
      HAVE_IF(vmode != VelMode::None, std::vector<float> &))
 
+INSTANTIATE(Cat::OLDFOF, Sec::None, VelMode::None, false);
+INSTANTIATE(Cat::OLDFOF, Sec::None, VelMode::Biased, false);
+INSTANTIATE(Cat::OLDFOF, Sec::None, VelMode::Unbiased, false);
 INSTANTIATE(Cat::FOF, Sec::None, VelMode::None, false);
 INSTANTIATE(Cat::FOF, Sec::None, VelMode::Biased, false);
 INSTANTIATE(Cat::FOF, Sec::None, VelMode::Unbiased, false);
@@ -63,6 +66,9 @@ INSTANTIATE(Cat::Rockstar, Sec::Conc, VelMode::Unbiased, false);
 INSTANTIATE(Cat::Rockstar, Sec::TU, VelMode::None, false);
 INSTANTIATE(Cat::Rockstar, Sec::TU, VelMode::Biased, false);
 INSTANTIATE(Cat::Rockstar, Sec::TU, VelMode::Unbiased, false);
+INSTANTIATE(Cat::OLDFOF, Sec::None, VelMode::None, true);
+INSTANTIATE(Cat::OLDFOF, Sec::None, VelMode::Biased, true);
+INSTANTIATE(Cat::OLDFOF, Sec::None, VelMode::Unbiased, true);
 INSTANTIATE(Cat::FOF, Sec::None, VelMode::None, true);
 INSTANTIATE(Cat::FOF, Sec::None, VelMode::Biased, true);
 INSTANTIATE(Cat::FOF, Sec::None, VelMode::Unbiased, true);

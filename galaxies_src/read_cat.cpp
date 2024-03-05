@@ -9,6 +9,7 @@
 #include "halo.h"
 #include "read_hdf5.h"
 #include "read_bigfile.h"
+#include "read_fof.h"
 #include "err.h"
 #include "timing.h"
 
@@ -69,7 +70,8 @@ template<Cat cat_type, Sec secondary, bool have_vel>
 int read_cat (Globals &globals,
               std::vector<Halo<secondary != Sec::None>> &halos)
 {
-    static_assert(!((cat_type==Cat::FOF || cat_type==Cat::RFOF) && secondary != Sec::None));
+    static_assert(!((cat_type==Cat::FOF || cat_type==Cat::RFOF || cat_type==Cat::OLDFOF)
+                  && secondary != Sec::None));
 
     int status;
     
@@ -80,19 +82,25 @@ int read_cat (Globals &globals,
 
     float time = 1.0/(1.0+globals.z);
     char buffer[512];
-    sprintf(buffer, "%s/%s_%.4f", globals.base,
-            (cat_type==Cat::Rockstar) ? "rockstar"
-            : (cat_type==Cat::FOF) ? "fof"
-            : (cat_type==Cat::RFOF) ? "rfof"
-            : "none",
-            time);
+
+    if constexpr (cat_type == Cat::OLDFOF)
+        sprintf(buffer, "%s", globals.base);
+    else
+        sprintf(buffer, "%s/%s_%.4f", globals.base,
+                (cat_type==Cat::Rockstar) ? "rockstar"
+                : (cat_type==Cat::FOF) ? "fof"
+                : (cat_type==Cat::RFOF) ? "rfof"
+                : "none",
+                time);
 
     float other_z;
     float *M=nullptr, *pos=nullptr, *vel=nullptr, *sec=nullptr;
+
+    auto read_f = (cat_type == Cat::OLDFOF) ? read_fof<have_vel>
+                                            : read_bigfile<cat_type, secondary, have_vel>;
     
-    status = read_bigfile<cat_type, secondary, have_vel>
-        (buffer, &globals.BoxSize, &other_z, &globals.Nhalos, &M, &pos,
-         (have_vel) ? &vel : nullptr, (secondary != Sec::None) ? &sec : nullptr);
+    status = read_f(buffer, &globals.BoxSize, &other_z, &globals.Nhalos, &M, &pos,
+                    (have_vel) ? &vel : nullptr, (secondary != Sec::None) ? &sec : nullptr);
     
     CHECK(status, return 1);
     CHECK(std::fabs(globals.z-other_z) > 1e-2, return 1);
@@ -129,6 +137,8 @@ int read_cat (Globals &globals,
     template int read_cat<cat_type, secondary, have_vel> \
     (Globals &, std::vector<Halo<secondary != Sec::None>> &)
 
+INSTANTIATE(Cat::OLDFOF, Sec::None, true);
+INSTANTIATE(Cat::OLDFOF, Sec::None, false);
 INSTANTIATE(Cat::FOF, Sec::None, true);
 INSTANTIATE(Cat::FOF, Sec::None, false);
 INSTANTIATE(Cat::RFOF, Sec::None, true);

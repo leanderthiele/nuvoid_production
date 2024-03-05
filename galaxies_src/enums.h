@@ -7,7 +7,7 @@
 enum class HaloDef { c, v, m,
                      end_ };
 
-enum class Cat { Rockstar, FOF, RFOF,
+enum class Cat { Rockstar, FOF, RFOF, OLDFOF, 
                  end_ };
 
 // secondary for assembly bias

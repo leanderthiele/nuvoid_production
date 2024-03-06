@@ -61,7 +61,8 @@ tv = tv[mask]
 mv = mv[mask]
 sv = sv[mask]
 
-_, bins, _ = ax.hist(sv, bins=20, density=True, label='cosmo varied')
+bins = np.linspace(0.06, 0.18, num=32)
+ax.hist(sv, bins=bins, density=True, label='cosmo varied')
 ax.hist(sf, bins=bins, alpha=0.5, density=True, label='fiducial')
 ax.axvline(real_std, color='black', label='real data')
 

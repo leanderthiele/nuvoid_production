@@ -23,6 +23,9 @@ read_hdf5.o: read_hdf5.cpp
 read_bigfile.o: read_bigfile.cpp
 	$(CXX) -c $(CXXFLAGS) -I/home/lthiele/bigfile/src -o read_bigfile.o read_bigfile.cpp
 
+read_fof.o: read_fof.cpp
+	$(CXX) -c $(CXXFLAGS) -o read_fof.o read_fof.cpp
+
 mesh.o: mesh.cpp
 	$(CXX) -c $(CXXFLAGS) -o mesh.o mesh.cpp
 
@@ -38,8 +41,8 @@ power.o: power.cpp
 pyapi.o: pyapi.cpp
 	$(CXX) -c $(CXXFLAGS) -ftemplate-depth=4096 $(shell python3 -m pybind11 --includes) -o pyapi.o pyapi.cpp -fopenmp
 
-libgalaxies.a: galaxies.o populate.o read_cat.o read_bigfile.o mesh.o mark.o pk.o power.o
-	ar -r -o libgalaxies.a galaxies.o populate.o read_cat.o read_bigfile.o mesh.o mark.o pk.o power.o
+libgalaxies.a: galaxies.o populate.o read_cat.o read_bigfile.o read_fof.o mesh.o mark.o pk.o power.o
+	ar -r -o libgalaxies.a galaxies.o populate.o read_cat.o read_bigfile.o read_fof.o mesh.o mark.o pk.o power.o
 
 test: libgalaxies.a test.cpp
 	$(CXX) $(CXXFLAGS) -o test test.cpp -L. -lgalaxies $(LFLAGS)

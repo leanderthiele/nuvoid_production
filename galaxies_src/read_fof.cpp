@@ -84,6 +84,28 @@ int read_fof (const char *dirname,
 
     globfree(&glob_result);
 
+    for (int ii=0; ii<*N; ++ii)
+    {
+        *M[ii] *= 1e10; // convert to Msun/h
+        for (int jj=0; jj<3; ++jj)
+        {
+            *pos[3*ii+jj] *= 1e-3; // convert to Mpc/h
+            if constexpr (have_vel)
+                *vel[3*ii+jj] *= (1.0 + *z);
+        }
+    }
+
+    // FIXME for testing
+    {
+        auto fp = std::fopen("~/test.txt", "w");
+        std::fprintf(fp, "# mass, position[3], velocity[3]\n");
+        for (int ii=0; ii<*N; ++ii)
+            std::fprintf(fp, "%.4e %.4e %.4e %.4e %.4e %.4e %.4e\n",
+                             *M[ii], *pos[3*ii+0], *pos[3*ii+1], *pos[3*ii+2],
+                                     *vel[3*ii+0], *vel[3*ii+1], *vel[3*ii+2]);
+        std::fclose(fp);
+    }
+
     return 0;
 }
 

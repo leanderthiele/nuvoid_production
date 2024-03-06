@@ -84,7 +84,8 @@ int read_cat (Globals &globals,
     char buffer[512];
 
     if constexpr (cat_type == Cat::OLDFOF)
-        sprintf(buffer, "%s", globals.base);
+        // FIXME this is very hacky...
+        sprintf(buffer, "%s/groups_003", globals.base);
     else
         sprintf(buffer, "%s/%s_%.4f", globals.base,
                 (cat_type==Cat::Rockstar) ? "rockstar"

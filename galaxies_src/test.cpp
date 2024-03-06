@@ -11,7 +11,6 @@ int main (int argc, char **argv)
 {
     int status = 0;
 
-    std::printf("HERE!");
     Globals globals ("/scratch/gpfs/lthiele/quijote_fid_HR/0", /*z=*/0.5);
 
     std::vector<Halo</*have_abias=*/false>> halos;

@@ -224,7 +224,7 @@ static int write_galaxies (const std::string &fname, const Globals &globals,
 }
 
 
-template<RSD rsd, int cat_, int secondary_, int have_vbias_, int have_zdep_>
+template<int rsd_, int cat_, int secondary_, int have_vbias_, int have_zdep_>
 struct py_get_galaxies_templ
 // quick convenience function for our concrete application
 {
@@ -242,6 +242,7 @@ static void apply
      int64_t seed,
      HaloDef mdef)
 {// {{{
+    constexpr auto rsd = static_cast<RSD>(rsd_);
     constexpr auto cat = static_cast<Cat>(cat_);
     constexpr auto secondary = static_cast<Sec>(secondary_);
     constexpr auto have_vbias = static_cast<bool>(have_vbias_);

@@ -224,7 +224,7 @@ static int write_galaxies (const std::string &fname, const Globals &globals,
 }
 
 
-template<int cat_, int secondary_, int have_vbias_, int have_zdep_>
+template<RSD rsd, int cat_, int secondary_, int have_vbias_, int have_zdep_>
 struct py_get_galaxies_templ
 // quick convenience function for our concrete application
 {
@@ -284,7 +284,7 @@ static void apply
 
         char fname[512];
         std::sprintf(fname, "%s_%.4f.bin", galaxies_bin_base.c_str(), times[ii]);
-        status[ii] = write_galaxies<RSD::None, /*binary=*/true, /*vgal_separate*/true>
+        status[ii] = write_galaxies<rsd, /*binary=*/true, /*vgal_separate*/(rsd == RSD::None)>
             (fname, globals[ii], xgal, vgal, vhlo);
     }
 
@@ -306,7 +306,7 @@ static constexpr bool allowed ()
 
 void py_get_galaxies
     (const std::string base, const std::vector<double> times, const std::string galaxies_bin_base,
-     Cat cat=Cat::Rockstar, Sec secondary=Sec::None,
+     RSD rsd, Cat cat=Cat::Rockstar, Sec secondary=Sec::None,
      float hod_log_Mmin=13.03, float hod_sigma_logM=0.38,
      float hod_log_M0=13.27, float hod_log_M1=14.08,
      float hod_alpha=0.76, float hod_transfP1=0.0, float hod_abias=0.0,
@@ -318,9 +318,9 @@ void py_get_galaxies
      int64_t seed=std::numeric_limits<int64_t>::max(),
      HaloDef mdef=HaloDef::v)
 {
-    const auto dispatcher = Dispatcher<py_get_galaxies_templ, Cat, Sec, bool, bool>();
+    const auto dispatcher = Dispatcher<py_get_galaxies_templ, RSD, Cat, Sec, bool, bool>();
     
-    return dispatcher(cat, secondary, have_vbias, have_zdep)
+    return dispatcher(rsd, cat, secondary, have_vbias, have_zdep)
         (base, times, galaxies_bin_base,
          hod_log_Mmin, hod_sigma_logM,
          hod_log_M0, hod_log_M1,
@@ -666,7 +666,7 @@ PYBIND11_MODULE(pyglx, m)
           "base"_a, "times"_a, "galaxies_bin_base"_a,
           pyb::pos_only(),
           pyb::kw_only(),
-          "cat"_a=Cat::Rockstar, "secondary"_a=Sec::None,
+          "rsd"_a=RSD::None, "cat"_a=Cat::Rockstar, "secondary"_a=Sec::None,
           "hod_log_Mmin"_a=13.03, "hod_sigma_logM"_a=0.38,
           "hod_log_M0"_a=13.27, "hod_log_M1"_a=14.08,
           "hod_alpha"_a=0.76, "hod_transfP1"_a=0.0, "hod_abias"_a=0.0,

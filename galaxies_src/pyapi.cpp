@@ -139,17 +139,19 @@ static int write_galaxies (const std::string &fname, const Globals &globals,
                            const std::vector<float> &xgal,
                            HAVE_IF(rsd != RSD::None || vgal_separate, const std::vector<float> &) vgal,
                            HAVE_IF(rsd != RSD::None || vgal_separate, const std::vector<float> &) vhlo)
-// if binary, writes in the binary format read by zobov (posread in readfiles.c)
-// else, writes in the multidark format read by VIDE
+    // NOTE: This function used to do pretty unexpected things, because we were trying to cater
+    // to ZOBOV's binary file convention. I don't think there's a need for this anymore,
+    // so we do it more predictably now.
 {
-    [[maybe_unused]] float rsd_factor;
-    if constexpr (rsd != RSD::None || vgal_separate)
-        rsd_factor = (1.0F+globals.z)
-                     / (100.0F * std::sqrt(globals.O_m*std::pow(1.0F+globals.z, 3) + (1.0F-globals.O_m)));
-
     [[maybe_unused]] std::vector<float> xcomponents[3];
 
-    if constexpr (!vgal_separate)
+    [[maybe_unused]] std::vector<float> xgal_rsd {};
+
+    if constexpr (rsd != RSD::None) {
+        float rsd_factor = (1.0F+globals.z)
+                           / (100.0F * std::sqrt( globals.O_m*std::pow(1.0F+globals.z, 3)
+                                                  + (1.0F-globals.O_m) ));
+
         for (int64_t ii=0; ii<globals.Ngals; ++ii)
             for (int jj=0; jj<3; ++jj)
             {
@@ -162,37 +164,24 @@ static int write_galaxies (const std::string &fname, const Globals &globals,
                 float r = std::fmod(this_x, globals.BoxSize);
                 this_x = (r<0.0F) ? r+globals.BoxSize : r;
 
-                xcomponents[jj].push_back(this_x);
+                xgal_rsd.push_back(this_x);
+                //xcomponents[jj].push_back(this_x);
             }
+    }
+
+    const auto &xgal_to_write = (rsd==RSD::None) ? xgal : xgal_rsd;
 
     auto fp = std::fopen(fname.c_str(), "w");
     CHECK(!fp, return 1);
 
     if constexpr (binary)
     {
+        std::fwrite(xgal_to_write.data(), sizeof(float), 3*globals.Ngals, fp);
         if constexpr (vgal_separate)
         {
-            std::fwrite(xgal.data(), sizeof(float), 3*globals.Ngals, fp);
             std::fwrite(vgal.data(), sizeof(float), 3*globals.Ngals, fp);
             std::fwrite(vhlo.data(), sizeof(float), 3*globals.Ngals, fp);
         }
-        else
-            for (int ii=0; ii<3; ++ii)
-                std::fwrite(xcomponents[ii].data(), sizeof(float), globals.Ngals, fp);
-
-        /* The following is the zobov format which I don't think we want anymore
-
-        const int np = globals.Ngals;
-
-        for (int ii=0; ii<3; ++ii) std::fwrite(&np, sizeof(int), 1, fp);
-
-        for (int ii=0; ii<3; ++ii)
-        {
-            std::fwrite(&np, sizeof(int), 1, fp); // should be ignored
-            std::fwrite(xcomponents[ii].data(), sizeof(float), globals.Ngals, fp);
-            std::fwrite(&np, sizeof(int), 1, fp); // should be ignored
-        }
-        */
     }
     else // txt format, doesn't work with vhlo
     {
@@ -203,16 +192,17 @@ static int write_galaxies (const std::string &fname, const Globals &globals,
 
         // the galaxy positions
         for (int64_t ii=0; ii<globals.Ngals; ++ii)
+        {
+            std::fprintf(fp, "%ld %.6f %.6f %.6f ", ii,
+                             xgal_to_write[3*ii+0], xgal_to_write[3*ii+1], xgal_to_write[3*ii+2]);
             if constexpr (vgal_separate)
-                std::fprintf(fp, "%ld %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
-                                 ii,
-                                 xgal[3*ii+0], xgal[3*ii+1], xgal[3*ii+2],
-                                 vgal[3*ii+0], vgal[3*ii+1], vgal[3*ii+2],
-                                 0.0);
+                std::fprintf(fp, "%.6f %.6f %.6f ",
+                                 vgal[3*ii+0], vgal[3*ii+1], vgal[3*ii+2]);
             else
-                std::fprintf(fp, "%ld %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
-                                 ii, xcomponents[0][ii], xcomponents[1][ii], xcomponents[2][ii],
-                                 0.0, 0.0, 0.0, 0.0);
+                std::fprintf(fp, "%.6f %.6f %.6f ",
+                                 0.0, 0.0, 0.0);
+            std::fprintf(fp, "%.6f\n", 1.0); // bogus mass
+        }
         
         // the final line
         std::fprintf(fp, "-99 -99 -99 -99 -99 -99 -99 -99 -99\n");
@@ -224,12 +214,14 @@ static int write_galaxies (const std::string &fname, const Globals &globals,
 }
 
 
-template<int rsd_, int cat_, int secondary_, int have_vbias_, int have_zdep_>
+template<int have_vgal_, int binary_, int rsd_, int cat_,
+         int secondary_, int have_vbias_, int have_zdep_>
 struct py_get_galaxies_templ
 // quick convenience function for our concrete application
 {
 static void apply
-    (const std::string base, const std::vector<double> times, const std::string galaxies_bin_base,
+    (const std::string base, const std::vector<double> times,
+     const std::string galaxies_base,
      float hod_log_Mmin, float hod_sigma_logM,
      float hod_log_M0, float hod_log_M1,
      float hod_alpha,
@@ -242,6 +234,8 @@ static void apply
      int64_t seed,
      HaloDef mdef)
 {// {{{
+    constexpr auto have_vgal = static_cast<bool>(have_vgal_);
+    constexpr auto binary = static_cast<bool>(binary_);
     constexpr auto rsd = static_cast<RSD>(rsd_);
     constexpr auto cat = static_cast<Cat>(cat_);
     constexpr auto secondary = static_cast<Sec>(secondary_);
@@ -284,8 +278,9 @@ static void apply
         if (status[ii]) continue;
 
         char fname[512];
-        std::sprintf(fname, "%s_%.4f.bin", galaxies_bin_base.c_str(), times[ii]);
-        status[ii] = write_galaxies<rsd, /*binary=*/true, /*vgal_separate*/(rsd == RSD::None)>
+        std::sprintf(fname, "%s_%.4f.%s", galaxies_bin_base.c_str(), times[ii],
+                     (binary) ? "bin" : "txt");
+        status[ii] = write_galaxies<rsd, binary, have_vgal>
             (fname, globals[ii], xgal, vgal, vhlo);
     }
 
@@ -306,8 +301,10 @@ static constexpr bool allowed ()
 };
 
 void py_get_galaxies
-    (const std::string base, const std::vector<double> times, const std::string galaxies_bin_base,
-     RSD rsd, Cat cat=Cat::Rockstar, Sec secondary=Sec::None,
+    (const std::string base, const std::vector<double> times,
+     const std::string galaxies_base,
+     RSD rsd=RSD::None, have_vgal=true, binary=true,
+     Cat cat=Cat::Rockstar, Sec secondary=Sec::None,
      float hod_log_Mmin=13.03, float hod_sigma_logM=0.38,
      float hod_log_M0=13.27, float hod_log_M1=14.08,
      float hod_alpha=0.76, float hod_transfP1=0.0, float hod_abias=0.0,
@@ -319,9 +316,9 @@ void py_get_galaxies
      int64_t seed=std::numeric_limits<int64_t>::max(),
      HaloDef mdef=HaloDef::v)
 {
-    const auto dispatcher = Dispatcher<py_get_galaxies_templ, RSD, Cat, Sec, bool, bool>();
+    const auto dispatcher = Dispatcher<py_get_galaxies_templ, bool, bool, RSD, Cat, Sec, bool, bool>();
     
-    return dispatcher(rsd, cat, secondary, have_vbias, have_zdep)
+    return dispatcher(have_vgal, binary, rsd, cat, secondary, have_vbias, have_zdep)
         (base, times, galaxies_bin_base,
          hod_log_Mmin, hod_sigma_logM,
          hod_log_M0, hod_log_M1,
@@ -664,10 +661,11 @@ PYBIND11_MODULE(pyglx, m)
     // functions
 
     m.def("get_galaxies", &py_get_galaxies,
-          "base"_a, "times"_a, "galaxies_bin_base"_a,
+          "base"_a, "times"_a, "galaxies_base"_a,
           pyb::pos_only(),
           pyb::kw_only(),
-          "rsd"_a=RSD::None, "cat"_a=Cat::Rockstar, "secondary"_a=Sec::None,
+          "rsd"_a=RSD::None, "have_vgal"_a=true, "binary"_a=true,
+          "cat"_a=Cat::Rockstar, "secondary"_a=Sec::None,
           "hod_log_Mmin"_a=13.03, "hod_sigma_logM"_a=0.38,
           "hod_log_M0"_a=13.27, "hod_log_M1"_a=14.08,
           "hod_alpha"_a=0.76, "hod_transfP1"_a=0.0, "hod_abias"_a=0.0,

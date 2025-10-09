@@ -278,7 +278,8 @@ static void apply
         if (status[ii]) continue;
 
         char fname[512];
-        std::sprintf(fname, "%s_%.4f.%s", galaxies_bin_base.c_str(), times[ii],
+        // 10/5/2025 replaced galaxies_bin_base -> galaxies_base, not sure why this was there
+        std::sprintf(fname, "%s_%.4f.%s", galaxies_base.c_str(), times[ii],
                      (binary) ? "bin" : "txt");
         status[ii] = write_galaxies<rsd, binary, have_vgal>
             (fname, globals[ii], xgal, vgal, vhlo);
@@ -303,7 +304,7 @@ static constexpr bool allowed ()
 void py_get_galaxies
     (const std::string base, const std::vector<double> times,
      const std::string galaxies_base,
-     RSD rsd=RSD::None, have_vgal=true, binary=true,
+     RSD rsd=RSD::None, bool have_vgal=true, bool binary=true,
      Cat cat=Cat::Rockstar, Sec secondary=Sec::None,
      float hod_log_Mmin=13.03, float hod_sigma_logM=0.38,
      float hod_log_M0=13.27, float hod_log_M1=14.08,
@@ -319,7 +320,7 @@ void py_get_galaxies
     const auto dispatcher = Dispatcher<py_get_galaxies_templ, bool, bool, RSD, Cat, Sec, bool, bool>();
     
     return dispatcher(have_vgal, binary, rsd, cat, secondary, have_vbias, have_zdep)
-        (base, times, galaxies_bin_base,
+        (base, times, galaxies_base,
          hod_log_Mmin, hod_sigma_logM,
          hod_log_M0, hod_log_M1,
          hod_alpha, hod_transfP1, hod_abias,

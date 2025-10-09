@@ -1,4 +1,5 @@
 #include <cstring>
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 #include <glob.h>
@@ -21,7 +22,7 @@ int read_fof (const char *dirname,
 
     // FIXME this is where we are assuming a lot
     *BoxSize = 1e3;
-    *z = 0.5;
+    *z = 0.0;
 
     // initialize
     *N = 0;

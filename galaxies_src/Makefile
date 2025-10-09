@@ -3,7 +3,7 @@ CXX = g++
 
 CXXFLAGS = -std=c++17 -O3 -ffast-math -march=native -ggdb3 -fPIC -Wall -Wextra -Wpedantic -Wno-vla -DHAVE_INLINE
 
-LFLAGS = -lgsl -lgslcblas -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl -Wl,-rpath /home/lthiele/bigfile/shared -L/home/lthiele/bigfile/shared -lbigfile
+LFLAGS = -lgsl -lgslcblas -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl -Wl,-rpath /home/lthiele/bigfile/shared -L/home/lthiele/bigfile/shared/lib -lbigfile
 #-lfftw3f -lfftw3
 
 all: pyglx
@@ -39,7 +39,7 @@ power.o: power.cpp
 	$(CXX) -c $(CXXFLAGS) -o power.o power.cpp
 
 pyapi.o: pyapi.cpp
-	$(CXX) -c $(CXXFLAGS) -ftemplate-depth=4096 $(shell python3 -m pybind11 --includes) -o pyapi.o pyapi.cpp -fopenmp
+	$(CXX) -c $(CXXFLAGS) -fconstexpr-depth=8192 -ftemplate-depth=4096 $(shell python3 -m pybind11 --includes) -o pyapi.o pyapi.cpp -fopenmp
 
 libgalaxies.a: galaxies.o populate.o read_cat.o read_bigfile.o read_fof.o mesh.o mark.o pk.o power.o
 	ar -r -o libgalaxies.a galaxies.o populate.o read_cat.o read_bigfile.o read_fof.o mesh.o mark.o pk.o power.o

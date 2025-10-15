@@ -134,7 +134,7 @@ static void finish_output (size_t Nruns, const Globals *globals, RetVal &out)
     out.timing["bin"] = avg(Nruns, globals, offsetof(Globals, time_bin));
 }// }}}
 
-template<RSD rsd, bool binary, bool vgal_separate>
+template<RSD rsd, ftype ft, bool vgal_separate>
 static int write_galaxies (const std::string &fname, const Globals &globals,
                            const std::vector<float> &xgal,
                            HAVE_IF(rsd != RSD::None || vgal_separate, const std::vector<float> &) vgal,
@@ -174,7 +174,7 @@ static int write_galaxies (const std::string &fname, const Globals &globals,
     auto fp = std::fopen(fname.c_str(), "w");
     CHECK(!fp, return 1);
 
-    if constexpr (binary)
+    if constexpr (ft == ftype::bin) // our basic binary format
     {
         std::fwrite(xgal_to_write.data(), sizeof(float), 3*globals.Ngals, fp);
         if constexpr (vgal_separate)
@@ -183,7 +183,7 @@ static int write_galaxies (const std::string &fname, const Globals &globals,
             std::fwrite(vhlo.data(), sizeof(float), 3*globals.Ngals, fp);
         }
     }
-    else // txt format, doesn't work with vhlo
+    else if constexpr (ft == ftype::txt) // txt format, doesn't work with vhlo
     {
         // the header in multidark convention
         std::fprintf(fp, "%.1f\n%.4f\n%.4f\n%.4f\n%ld\n",
@@ -207,6 +207,10 @@ static int write_galaxies (const std::string &fname, const Globals &globals,
         // the final line
         std::fprintf(fp, "-99 -99 -99 -99 -99 -99 -99 -99 -99\n");
     }
+    else if constexpr (ft == ftype::gad2) // Gadget-2 format, can be read by VIDE
+    {
+        // FIXME
+    }
 
     std::fclose(fp);
 
@@ -214,7 +218,7 @@ static int write_galaxies (const std::string &fname, const Globals &globals,
 }
 
 
-template<int have_vgal_, int binary_, int rsd_, int cat_,
+template<int have_vgal_, int ft_, int rsd_, int cat_,
          int secondary_, int have_vbias_, int have_zdep_>
 struct py_get_galaxies_templ
 // quick convenience function for our concrete application
@@ -235,7 +239,7 @@ static void apply
      HaloDef mdef)
 {// {{{
     constexpr auto have_vgal = static_cast<bool>(have_vgal_);
-    constexpr auto binary = static_cast<bool>(binary_);
+    constexpr auto ft = static_cast<ftype>(ft_);
     constexpr auto rsd = static_cast<RSD>(rsd_);
     constexpr auto cat = static_cast<Cat>(cat_);
     constexpr auto secondary = static_cast<Sec>(secondary_);
@@ -280,8 +284,11 @@ static void apply
         char fname[512];
         // 10/5/2025 replaced galaxies_bin_base -> galaxies_base, not sure why this was there
         std::sprintf(fname, "%s_%.4f.%s", galaxies_base.c_str(), times[ii],
-                     (binary) ? "bin" : "txt");
-        status[ii] = write_galaxies<rsd, binary, have_vgal>
+                     (ft==ftype::bin) ? "bin"
+                     : (ft==ftype::txt) ? "txt"
+                     : (ft==ftype::gad2) ? "gad2"
+                     : "");
+        status[ii] = write_galaxies<rsd, ft, have_vgal>
             (fname, globals[ii], xgal, vgal, vhlo);
     }
 
@@ -304,7 +311,7 @@ static constexpr bool allowed ()
 void py_get_galaxies
     (const std::string base, const std::vector<double> times,
      const std::string galaxies_base,
-     RSD rsd=RSD::None, bool have_vgal=true, bool binary=true,
+     RSD rsd=RSD::None, bool have_vgal=true, ftype ft=ftype::txt,
      Cat cat=Cat::Rockstar, Sec secondary=Sec::None,
      float hod_log_Mmin=13.03, float hod_sigma_logM=0.38,
      float hod_log_M0=13.27, float hod_log_M1=14.08,
@@ -317,9 +324,9 @@ void py_get_galaxies
      int64_t seed=std::numeric_limits<int64_t>::max(),
      HaloDef mdef=HaloDef::v)
 {
-    const auto dispatcher = Dispatcher<py_get_galaxies_templ, bool, bool, RSD, Cat, Sec, bool, bool>();
+    const auto dispatcher = Dispatcher<py_get_galaxies_templ, bool, ftype, RSD, Cat, Sec, bool, bool>();
     
-    return dispatcher(have_vgal, binary, rsd, cat, secondary, have_vbias, have_zdep)
+    return dispatcher(have_vgal, ft, rsd, cat, secondary, have_vbias, have_zdep)
         (base, times, galaxies_base,
          hod_log_Mmin, hod_sigma_logM,
          hod_log_M0, hod_log_M1,
@@ -413,18 +420,19 @@ static RetVal apply
             (globals[ii], hod_params, xgal, vgal, vhlo);
         if (status[ii]) continue;
 
+        // FIXME the following as awkward and doesn't take gad2 into account
         if (galaxies_bin_base.size()) // empty string corresponds to no write
         {
             char fname[512];
             std::sprintf(fname, "%s_%.4f.bin", galaxies_bin_base.c_str(), 1.0/(1.0+z));
-            status[ii] = write_galaxies<rsd, /*binary=*/true, vgal_separate>(fname, globals[ii], xgal, vgal, vhlo);
+            status[ii] = write_galaxies<rsd, /*ftype=*/ftype::bin, vgal_separate>(fname, globals[ii], xgal, vgal, vhlo);
         }
         
         if (galaxies_txt_base.size())
         {
             char fname[512];
             std::sprintf(fname, "%s_%.4f.txt", galaxies_txt_base.c_str(), 1.0/(1.0+z));
-            status[ii] = write_galaxies<rsd, /*binary=*/false, vgal_separate>(fname, globals[ii], xgal, vgal, vhlo);
+            status[ii] = write_galaxies<rsd, /*ftype=*/ftype::txt, vgal_separate>(fname, globals[ii], xgal, vgal, vhlo);
         }
 
         std::vector<float> this_k; std::vector<int64_t> this_Nk;
@@ -665,7 +673,7 @@ PYBIND11_MODULE(pyglx, m)
           "base"_a, "times"_a, "galaxies_base"_a,
           pyb::pos_only(),
           pyb::kw_only(),
-          "rsd"_a=RSD::None, "have_vgal"_a=true, "binary"_a=true,
+          "rsd"_a=RSD::None, "have_vgal"_a=true, "ftype"_a=ftype::txt,
           "cat"_a=Cat::Rockstar, "secondary"_a=Sec::None,
           "hod_log_Mmin"_a=13.03, "hod_sigma_logM"_a=0.38,
           "hod_log_M0"_a=13.27, "hod_log_M1"_a=14.08,

@@ -24,5 +24,9 @@ enum class VelMode { None, Unbiased, Biased,
 enum class RSD { x, y, z, None,
                  end_ };
 
+// file format
+enum class ftype { txt, bin, gad2,
+                   end_ };
+
 
 #endif // ENUMS_H

@@ -651,6 +651,13 @@ PYBIND11_MODULE(pyglx, m)
         .value("none", RSD::None)
         .export_values();
 
+    pyb::module_ mft = m.def_submodule("FileType");
+    pyb::enum_<ftype>(mft, "FileType")
+        .value("txt", ftype::txt)
+        .value("bin", ftype::bin)
+        .value("gad2", ftype::gad2)
+        .export_values();
+
     // return structs
 
     pyb::class_<RetVal> (m, "RetVal")

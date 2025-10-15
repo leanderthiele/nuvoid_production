@@ -209,7 +209,96 @@ static int write_galaxies (const std::string &fname, const Globals &globals,
     }
     else if constexpr (ft == ftype::gad2) // Gadget-2 format, can be read by VIDE
     {
-        // FIXME
+        char *header_ = (char *)std::malloc(256);
+        char *header = header_; // running pointer
+        // NumPart_ThisFile
+        *(int32_t *)header = 0; header += sizeof(int32_t);
+        *(int32_t *)header = globals.Ngals; header += sizeof(int32_t);
+        *(int32_t *)header = 0; header += sizeof(int32_t);
+        *(int32_t *)header = 0; header += sizeof(int32_t);
+        *(int32_t *)header = 0; header += sizeof(int32_t);
+        *(int32_t *)header = 0; header += sizeof(int32_t);
+        // MassTable
+        *(double *)header = 0.0; header += sizeof(double);
+        *(double *)header = 1.0; header += sizeof(double);
+        *(double *)header = 0.0; header += sizeof(double);
+        *(double *)header = 0.0; header += sizeof(double);
+        *(double *)header = 0.0; header += sizeof(double);
+        *(double *)header = 0.0; header += sizeof(double);
+        // Time
+        *(double *)header = 1.0 / ( 1.0 + globals.z); header += sizeof(double);
+        // Redshift
+        *(double *)header = globals.z; header += sizeof(double);
+        // Flag_Sfr, Flag_Feeedback
+        *(int32_t *)header = 0; header += sizeof(int32_t);
+        *(int32_t *)header = 0; header += sizeof(int32_t);
+        // NumPart_Total
+        *(uint32_t *)header = 0; header += sizeof(uint32_t);
+        *(uint32_t *)header = globals.Ngals; header += sizeof(uint32_t);
+        *(uint32_t *)header = 0; header += sizeof(uint32_t);
+        *(uint32_t *)header = 0; header += sizeof(uint32_t);
+        *(uint32_t *)header = 0; header += sizeof(uint32_t);
+        *(uint32_t *)header = 0; header += sizeof(uint32_t);
+        // Flag_Cooling
+        *(int32_t *)header = 0; header += sizeof(int32_t);
+        // NumFilesPerSnapshot
+        *(int32_t *)header = 1; header += sizeof(int32_t);
+        // BoxSize
+        *(double *)header= globals.BoxSize; header += sizeof(double);
+        // Omega0
+        *(double *)header= globals.O_m; header += sizeof(double);
+        // OmegaLambda
+        *(double *)header= 1.0-globals.O_m; header += sizeof(double);
+        // HubbleParam
+        *(double *)header= globals.h; header += sizeof(double);
+        // Flag_StellarAge, Flag_Metals
+        *(int32_t *)header = 0; header += sizeof(int32_t);
+        *(int32_t *)header = 0; header += sizeof(int32_t);
+        // NumPart_Total_HighWord
+        *(uint32_t *)header = 0; header += sizeof(uint32_t);
+        *(uint32_t *)header = 0; header += sizeof(uint32_t);
+        *(uint32_t *)header = 0; header += sizeof(uint32_t);
+        *(uint32_t *)header = 0; header += sizeof(uint32_t);
+        *(uint32_t *)header = 0; header += sizeof(uint32_t);
+        *(uint32_t *)header = 0; header += sizeof(uint32_t);
+        // Flag_IC_Info
+        *(int32_t *)header = 0; header += sizeof(int32_t);
+
+        int32_t blksz = 256;
+
+        std::fwrite(&blksz, sizeof(int32_t), 1, fp);
+        std::fwrite(header_, sizeof(char), 256, fp);
+        std::fwrite(&blksz, sizeof(int32_t), 1, fp);
+
+        std::free(header_);
+
+        blksz = globals.Ngals * 3 * sizeof(float);
+
+        // positions
+        std::fwrite(&blksz, sizeof(int32_t), 1, fp);
+        std::fwrite(xgal_to_write.data(), sizeof(float), 3*globals.Ngals, fp);
+        std::fwrite(&blksz, sizeof(int32_t), 1, fp);
+
+        // velocities
+        std::fwrite(&blksz, sizeof(int32_t), 1, fp);
+        if constexpr (vgal_separate)
+            std::fwrite(vgal.data(), sizeof(float), 3*globals.Ngals, fp);
+        else
+        {
+            std::vector<float> zeros (3*globals.Ngals, 0.0);
+            std::fwrite(zeros.data(), sizeof(float), 3*globals.Ngals, fp);
+        }
+        std::fwrite(&blksz, sizeof(int32_t), 1, fp);
+
+        // "IDs" -- otherwise VIDE fails
+        blksz = globals.Ngals * sizeof(int32_t);
+
+        std::vector<int32_t> ids; ids.reserve(globals.Ngals);
+        for (int32_t ii=0; ii<globals.Ngals; ++ii) ids.push_back(ii);
+
+        std::fwrite(&blksz, sizeof(int32_t), 1, fp);
+        std::fwrite(ids.data(), sizeof(int32_t), globals.Ngals, fp);
+        std::fwrite(&blksz, sizeof(int32_t), 1, fp);
     }
 
     std::fclose(fp);
@@ -303,7 +392,7 @@ static constexpr bool allowed ()
     if constexpr ((cat==Cat::FOF || cat==Cat::RFOF || cat==Cat::OLDFOF)
                   && (secondary != Sec::None))
         return false;
-    
+
     return true;
 }// }}}
 };
